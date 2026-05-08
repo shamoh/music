@@ -68,7 +68,7 @@ function drawAccidentalScaled(svg, x, slot, type, staffTop, ls, nr) {
       fill: 'currentColor',
       'text-anchor': 'middle',
       'font-family': 'serif',
-    }), type === 'sharp' ? '♯' : '♭')
+    }), type === 'double-sharp' ? '𝄪' : type === 'sharp' ? '♯' : '♭')
   );
 }
 

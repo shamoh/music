@@ -5,139 +5,295 @@ import {
   getChordNotes,
   noteToStaffSlot,
   buildAltSaxRange,
-  preferFlats,
   accidentalType,
+  filteredScales,
+  noteNameToSemitone,
+  SCALE_CATALOG,
   ALTO_SAX_LOW,
   ALTO_SAX_HIGH,
 } from '../js/music.js';
 
-describe('generateScale', () => {
-  it('C major produces correct 8 notes', () => {
-    const scale = generateScale(0, 'major', 4);
-    const names = scale.map((n) => n.name);
-    assert.deepEqual(names, ['C','D','E','F','G','A','H','C']);
+describe('generateScale — major', () => {
+  it('C major returns correct 8 note names', () => {
+    const scale = generateScale('C-major', 4);
+    assert.deepEqual(scale.map((n) => n.name), ['C','D','E','F','G','A','H','C']);
   });
 
-  it('C major last note is octave 5', () => {
-    const scale = generateScale(0, 'major', 4);
-    assert.equal(scale[7].octave, 5);
+  it('C major octaves: starts 4, ends 5', () => {
+    const scale = generateScale('C-major', 4);
     assert.equal(scale[0].octave, 4);
+    assert.equal(scale[7].octave, 5);
   });
 
-  it('A natural minor produces correct notes', () => {
-    const scale = generateScale(9, 'naturalMinor', 4);
-    const names = scale.map((n) => n.name);
-    assert.deepEqual(names, ['A','H','C','D','E','F','G','A']);
+  it('G major has Fis as 7th note', () => {
+    const scale = generateScale('G-major', 4);
+    assert.equal(scale[6].name, 'Fis');
   });
 
-  it('A harmonic minor raises 7th (Gis)', () => {
-    const scale = generateScale(9, 'harmonicMinor', 4);
+  it('Fis major uses Eis as 7th note (not F)', () => {
+    const scale = generateScale('Fis-major', 4);
+    assert.equal(scale[6].name, 'Eis');
+  });
+
+  it('Des major: correct flat note names', () => {
+    const scale = generateScale('Des-major', 4);
+    assert.deepEqual(scale.map((n) => n.name), ['Des','Es','F','Ges','As','B','C','Des']);
+  });
+
+  it('Ges major: includes Ces', () => {
+    const scale = generateScale('Ges-major', 4);
+    assert.deepEqual(scale.map((n) => n.name), ['Ges','As','B','Ces','Des','Es','F','Ges']);
+  });
+
+  it('throws on unknown scale id', () => {
+    assert.throws(() => generateScale('X-major'), /Unknown scale id/);
+  });
+});
+
+describe('generateScale — minor variants', () => {
+  it('a minor natural', () => {
+    const scale = generateScale('a-minor', 4);
+    assert.deepEqual(scale.map((n) => n.name), ['A','H','C','D','E','F','G','A']);
+  });
+
+  it('a minor harmonic raises 7th to Gis', () => {
+    const scale = generateScale('a-minor', 4, 'harmonic');
     assert.equal(scale[6].name, 'Gis');
   });
 
-  it('A melodic minor ascending raises 6th and 7th', () => {
-    const scale = generateScale(9, 'melodicMinor', 4);
+  it('a minor melodic raises 6th Fis and 7th Gis', () => {
+    const scale = generateScale('a-minor', 4, 'melodic');
     assert.equal(scale[5].name, 'Fis');
     assert.equal(scale[6].name, 'Gis');
   });
 
-  it('Fis major uses sharps (7th shown as F, enharmonic to Eis)', () => {
-    const scale = generateScale(6, 'major', 4);
-    const names = scale.map((n) => n.name);
-    assert.deepEqual(names, ['Fis','Gis','Ais','H','Cis','Dis','F','Fis']);
+  it('d minor harmonic: C→Cis (7th)', () => {
+    const scale = generateScale('d-minor', 4, 'harmonic');
+    assert.equal(scale[6].name, 'Cis');
   });
 
-  it('throws on unknown scale type', () => {
-    assert.throws(() => generateScale(0, 'unknown'), /Unknown scale type/);
+  it('d minor melodic: B→H, C→Cis', () => {
+    const scale = generateScale('d-minor', 4, 'melodic');
+    assert.equal(scale[5].name, 'H');
+    assert.equal(scale[6].name, 'Cis');
+  });
+
+  it('c minor harmonic: B→H', () => {
+    const scale = generateScale('c-minor', 4, 'harmonic');
+    assert.equal(scale[6].name, 'H');
+  });
+
+  it('fis minor harmonic: E→Eis', () => {
+    const scale = generateScale('fis-minor', 4, 'harmonic');
+    assert.equal(scale[6].name, 'Eis');
+  });
+
+  it('cis minor harmonic: H→His', () => {
+    const scale = generateScale('cis-minor', 4, 'harmonic');
+    assert.equal(scale[6].name, 'His');
+  });
+
+  it('es minor has Ces in natural', () => {
+    const scale = generateScale('es-minor', 4);
+    assert.deepEqual(scale.map((n) => n.name), ['Es','F','Ges','As','B','Ces','Des','Es']);
+  });
+
+  it('es minor melodic raises Ces→C and Des→D', () => {
+    const scale = generateScale('es-minor', 4, 'melodic');
+    assert.equal(scale[5].name, 'C');
+    assert.equal(scale[6].name, 'D');
+  });
+});
+
+describe('generateScale — new scales', () => {
+  it('Cis major: correct 7-sharp note names', () => {
+    const scale = generateScale('Cis-major', 4);
+    assert.deepEqual(scale.map((n) => n.name), ['Cis','Dis','Eis','Fis','Gis','Ais','His','Cis']);
+  });
+
+  it('Ces major: correct 7-flat note names including Fes', () => {
+    const scale = generateScale('Ces-major', 4);
+    assert.deepEqual(scale.map((n) => n.name), ['Ces','Des','Es','Fes','Ges','As','B','Ces']);
+  });
+
+  it('gis minor harmonic: 7th is Fisis (double-sharp)', () => {
+    const scale = generateScale('gis-minor', 4, 'harmonic');
+    assert.equal(scale[6].name, 'Fisis');
+  });
+
+  it('gis minor melodic: 6th is Eis, 7th is Fisis', () => {
+    const scale = generateScale('gis-minor', 4, 'melodic');
+    assert.equal(scale[5].name, 'Eis');
+    assert.equal(scale[6].name, 'Fisis');
+  });
+
+  it('dis minor harmonic: 7th is Cisis (double-sharp)', () => {
+    const scale = generateScale('dis-minor', 4, 'harmonic');
+    assert.equal(scale[6].name, 'Cisis');
+  });
+
+  it('dis minor melodic: 6th is His, 7th is Cisis', () => {
+    const scale = generateScale('dis-minor', 4, 'melodic');
+    assert.equal(scale[5].name, 'His');
+    assert.equal(scale[6].name, 'Cisis');
+  });
+
+  it('ais minor harmonic: 7th is Gisis (double-sharp)', () => {
+    const scale = generateScale('ais-minor', 4, 'harmonic');
+    assert.equal(scale[6].name, 'Gisis');
+  });
+
+  it('ais minor melodic: 6th is Fisis, 7th is Gisis', () => {
+    const scale = generateScale('ais-minor', 4, 'melodic');
+    assert.equal(scale[5].name, 'Fisis');
+    assert.equal(scale[6].name, 'Gisis');
+  });
+
+  it('as minor natural: includes Ces and Fes', () => {
+    const scale = generateScale('as-minor', 4);
+    assert.deepEqual(scale.map((n) => n.name), ['As','B','Ces','Des','Es','Fes','Ges','As']);
+  });
+
+  it('as minor harmonic: 7th is G (raised from Ges)', () => {
+    const scale = generateScale('as-minor', 4, 'harmonic');
+    assert.equal(scale[6].name, 'G');
+  });
+
+  it('as minor melodic: 6th is F, 7th is G', () => {
+    const scale = generateScale('as-minor', 4, 'melodic');
+    assert.equal(scale[5].name, 'F');
+    assert.equal(scale[6].name, 'G');
+  });
+});
+
+describe('generateScale — octave assignment', () => {
+  it('G major: G4…G5', () => {
+    const scale = generateScale('G-major', 4);
+    assert.equal(scale[0].octave, 4);
+    assert.equal(scale[7].octave, 5);
+    assert.equal(scale[2].name, 'H');  // H4 (third note)
+    assert.equal(scale[2].octave, 4);
+    assert.equal(scale[3].name, 'C');  // C5 (octave jump)
+    assert.equal(scale[3].octave, 5);
+  });
+
+  it('a minor: A4…A5', () => {
+    const scale = generateScale('a-minor', 4);
+    assert.equal(scale[0].octave, 4);
+    assert.equal(scale[7].octave, 5);
+    assert.equal(scale[1].name, 'H');   // H4
+    assert.equal(scale[1].octave, 4);
+    assert.equal(scale[2].name, 'C');   // C5
+    assert.equal(scale[2].octave, 5);
   });
 });
 
 describe('getChordNotes', () => {
   it('C major chord is C E G', () => {
-    const scale = generateScale(0, 'major', 4);
-    const chord = getChordNotes(scale);
-    assert.deepEqual(chord.map((n) => n.name), ['C','E','G']);
+    const scale = generateScale('C-major', 4);
+    assert.deepEqual(getChordNotes(scale).map((n) => n.name), ['C','E','G']);
   });
 
-  it('A minor chord is A C E', () => {
-    const scale = generateScale(9, 'naturalMinor', 4);
-    const chord = getChordNotes(scale);
-    assert.deepEqual(chord.map((n) => n.name), ['A','C','E']);
+  it('a minor chord is A C E', () => {
+    const scale = generateScale('a-minor', 4);
+    assert.deepEqual(getChordNotes(scale).map((n) => n.name), ['A','C','E']);
   });
 });
 
 describe('noteToStaffSlot', () => {
-  it('G4 = slot 0', () => {
-    assert.equal(noteToStaffSlot('G', 4), 0);
+  it('G4 = slot 0',                () => assert.equal(noteToStaffSlot('G', 4), 0));
+  it('E4 = slot -2 (1st line)',    () => assert.equal(noteToStaffSlot('E', 4), -2));
+  it('C4 = slot -4 (middle C)',    () => assert.equal(noteToStaffSlot('C', 4), -4));
+  it('F5 = slot 6 (top line)',     () => assert.equal(noteToStaffSlot('F', 5), 6));
+  it('H3 = slot -5',               () => assert.equal(noteToStaffSlot('H', 3), -5));
+  it('B maps to H diatonic slot',  () => assert.equal(noteToStaffSlot('B', 3), -5));
+  it('A5 = slot 8',                () => assert.equal(noteToStaffSlot('A', 5), 8));
+  it('Eis slot = E slot (same diatonic step)', () => {
+    assert.equal(noteToStaffSlot('Eis', 4), noteToStaffSlot('E', 4));
   });
-
-  it('E4 = slot -2 (first line)', () => {
-    assert.equal(noteToStaffSlot('E', 4), -2);
-  });
-
-  it('C4 = slot -4 (middle C ledger line)', () => {
-    assert.equal(noteToStaffSlot('C', 4), -4);
-  });
-
-  it('F5 = slot 6 (top line)', () => {
-    assert.equal(noteToStaffSlot('F', 5), 6);
-  });
-
-  it('H3 = slot -5', () => {
-    assert.equal(noteToStaffSlot('H', 3), -5);
-  });
-
-  it('B (Bb) maps to H diatonic slot', () => {
-    // B in Czech = Bb, diatonic letter = H
-    assert.equal(noteToStaffSlot('B', 3), -5);
-  });
-
-  it('A5 = slot 8', () => {
-    assert.equal(noteToStaffSlot('A', 5), 8);
+  it('Ces slot = C slot (same diatonic step)', () => {
+    assert.equal(noteToStaffSlot('Ces', 5), noteToStaffSlot('C', 5));
   });
 });
 
 describe('buildAltSaxRange', () => {
-  it('starts at B3 (Bb3)', () => {
-    const range = buildAltSaxRange();
-    assert.equal(range[0].name, 'B');
-    assert.equal(range[0].octave, 3);
-  });
-
-  it('ends at Fis5', () => {
-    const range = buildAltSaxRange();
-    const last = range[range.length - 1];
-    assert.equal(last.name, 'Fis');
-    assert.equal(last.octave, 5);
-  });
-
-  it('contains 21 notes (Bb3 to F#5 inclusive)', () => {
-    const range = buildAltSaxRange();
-    // internal midi: Bb3=46, F#5=66 → 66-46+1 = 21 semitones
-    assert.equal(range.length, 21);
-  });
-});
-
-describe('preferFlats', () => {
-  it('C major does not prefer flats', () => {
-    assert.equal(preferFlats(0), false);
-  });
-
-  it('Es (Eb) prefers flats', () => {
-    assert.equal(preferFlats(3), true);
-  });
+  it('starts at B3 (Bb3)',     () => { const r = buildAltSaxRange(); assert.equal(r[0].name, 'B'); assert.equal(r[0].octave, 3); });
+  it('ends at Fis5',           () => { const r = buildAltSaxRange(); const l = r[r.length-1]; assert.equal(l.name, 'Fis'); assert.equal(l.octave, 5); });
+  it('contains 21 semitones',  () => assert.equal(buildAltSaxRange().length, 21));
 });
 
 describe('accidentalType', () => {
-  it('C is natural', () => {
-    assert.equal(accidentalType('C'), null);
+  it('C → null',              () => assert.equal(accidentalType('C'), null));
+  it('H → null',              () => assert.equal(accidentalType('H'), null));
+  it('Fis → sharp',           () => assert.equal(accidentalType('Fis'), 'sharp'));
+  it('Es → flat',             () => assert.equal(accidentalType('Es'), 'flat'));
+  it('B → flat',              () => assert.equal(accidentalType('B'), 'flat'));
+  it('Ces → flat',            () => assert.equal(accidentalType('Ces'), 'flat'));
+  it('Eis → sharp',           () => assert.equal(accidentalType('Eis'), 'sharp'));
+  it('His → sharp',           () => assert.equal(accidentalType('His'), 'sharp'));
+  it('As → flat',             () => assert.equal(accidentalType('As'), 'flat'));
+  it('Ais → sharp',           () => assert.equal(accidentalType('Ais'), 'sharp'));
+  it('Fisis → double-sharp',  () => assert.equal(accidentalType('Fisis'), 'double-sharp'));
+  it('Gisis → double-sharp',  () => assert.equal(accidentalType('Gisis'), 'double-sharp'));
+  it('Cisis → double-sharp',  () => assert.equal(accidentalType('Cisis'), 'double-sharp'));
+});
+
+describe('noteNameToSemitone', () => {
+  it('C = 0',      () => assert.equal(noteNameToSemitone('C'), 0));
+  it('Ces = 11',   () => assert.equal(noteNameToSemitone('Ces'), 11));
+  it('Eis = 5',    () => assert.equal(noteNameToSemitone('Eis'), 5));
+  it('His = 0',    () => assert.equal(noteNameToSemitone('His'), 0));
+  it('B = 10',     () => assert.equal(noteNameToSemitone('B'), 10));
+  it('Ges = 6',    () => assert.equal(noteNameToSemitone('Ges'), 6));
+  it('Fisis = 7',  () => assert.equal(noteNameToSemitone('Fisis'), 7));
+  it('Gisis = 9',  () => assert.equal(noteNameToSemitone('Gisis'), 9));
+  it('Cisis = 2',  () => assert.equal(noteNameToSemitone('Cisis'), 2));
+});
+
+describe('filteredScales', () => {
+  it('all types + all acc returns all 30 scales', () => {
+    const result = filteredScales(new Set(['major','minor']), new Set(['sharp','flat']));
+    assert.equal(result.length, SCALE_CATALOG.length);
+    assert.equal(result.length, 30);
   });
 
-  it('Fis is sharp', () => {
-    assert.equal(accidentalType('Fis'), 'sharp');
+  it('major only returns 15 scales', () => {
+    const result = filteredScales(new Set(['major']), new Set(['sharp','flat']));
+    assert.equal(result.length, 15);
+    assert.ok(result.every((s) => s.type === 'major'));
   });
 
-  it('Es is flat', () => {
-    assert.equal(accidentalType('Es'), 'flat');
+  it('minor only returns 15 scales', () => {
+    const result = filteredScales(new Set(['minor']), new Set(['sharp','flat']));
+    assert.equal(result.length, 15);
+    assert.ok(result.every((s) => s.type === 'minor'));
+  });
+
+  it('sharp filter includes natural scales', () => {
+    const result = filteredScales(new Set(['major','minor']), new Set(['sharp']));
+    const ids = result.map((s) => s.id);
+    assert.ok(ids.includes('C-major'));  // natural → included
+    assert.ok(ids.includes('a-minor'));  // natural → included
+    assert.ok(ids.includes('G-major'));  // sharp → included
+    assert.ok(!ids.includes('F-major')); // flat → excluded
+    assert.ok(!ids.includes('d-minor')); // flat → excluded
+  });
+
+  it('flat filter excludes sharp scales', () => {
+    const result = filteredScales(new Set(['major']), new Set(['flat']));
+    assert.ok(result.every((s) => s.accidental !== 'sharp'));
+  });
+
+  it('minor + sharp returns 8 scales (natural + 7 sharp minors)', () => {
+    const result = filteredScales(new Set(['minor']), new Set(['sharp']));
+    assert.equal(result.length, 8);
+    const ids = result.map((s) => s.id);
+    assert.ok(ids.includes('a-minor'));
+    assert.ok(ids.includes('cis-minor'));
+    assert.ok(ids.includes('gis-minor'));
+    assert.ok(ids.includes('dis-minor'));
+    assert.ok(ids.includes('ais-minor'));
+    assert.ok(!ids.includes('d-minor'));
+    assert.ok(!ids.includes('as-minor'));
   });
 });

@@ -31,8 +31,8 @@ header {
   flex-shrink: 0;
 }
 
-header h1   { font-size: 1.7rem; letter-spacing: 0.03em; }
-.subtitle   { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.2rem; }
+header h1 { font-size: 1.7rem; letter-spacing: 0.03em; }
+.subtitle { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.2rem; }
 
 /* ─── Main layout — mobile portrait (default) ─── */
 main {
@@ -44,11 +44,11 @@ main {
   gap: 1.2rem;
 }
 
-/* ─── Selector bar ─── */
-.selector-bar {
+/* ─── Filter bar ─── */
+.filter-bar {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem 0.8rem;
   flex-wrap: wrap;
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -56,25 +56,69 @@ main {
   padding: 0.8rem 1rem;
 }
 
-.selector-bar label {
-  font-size: 0.85rem;
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.filter-label {
+  font-size: 0.8rem;
   color: var(--text-muted);
+  white-space: nowrap;
+  margin-right: 0.1rem;
+}
+
+/* ─── Filter chips (toggle buttons) ─── */
+.filter-chip {
+  appearance: none;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 0.28rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  background: var(--bg-input);
+  color: var(--text-muted);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
   white-space: nowrap;
 }
 
-.selector-bar select {
+.filter-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.filter-chip:hover:not(.active) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.filter-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ─── Scale select (combo) ─── */
+.scale-select-group {
+  flex: 1;
+  min-width: 140px;
+}
+
+.scale-select-group select {
   background: var(--bg-input);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 0.4rem 0.7rem;
+  padding: 0.38rem 0.7rem;
   font-size: 0.95rem;
   cursor: pointer;
-  flex: 1;
-  min-width: 100px;
+  width: 100%;
 }
 
-.selector-bar select:focus {
+.scale-select-group select:focus {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -92,6 +136,28 @@ main {
 .range-section h2 { font-size: 1.2rem; margin-bottom: 0.3rem; }
 
 .chord-label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.8rem; }
+
+/* ─── Minor variant sub-sections ─── */
+.minor-variant {
+  border-top: 1px solid var(--border);
+  padding-top: 0.8rem;
+  margin-top: 0.8rem;
+}
+
+.minor-variant:first-of-type { border-top: none; padding-top: 0; margin-top: 0.5rem; }
+
+.minor-variant h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent2);
+  margin-bottom: 0.5rem;
+}
+
+.variant-hint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
 
 /* ─── Note chips ─── */
 .note-row {
@@ -125,7 +191,7 @@ main {
 /* ─── Staff containers ─── */
 .staff-container {
   color: var(--text);
-  overflow-x: auto;   /* horizontal scroll when notes are crowded */
+  overflow-x: auto;
 }
 
 .range-hint { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.6rem; }
@@ -141,7 +207,7 @@ main {
     align-items: start;
   }
 
-  .selector-bar  { grid-column: 1 / -1; }
+  .filter-bar    { grid-column: 1 / -1; }
   .scale-section { grid-column: 1; }
   .range-section { grid-column: 2; }
 
@@ -158,12 +224,12 @@ main {
     padding: 0.3rem 1rem;
   }
 
-  header h1   { font-size: 1.2rem; }
-  .subtitle   { display: none; }
+  header h1 { font-size: 1.2rem; }
+  .subtitle { display: none; }
 
-  main        { gap: 0.7rem; padding: 0.6rem 1rem; }
+  main { gap: 0.7rem; padding: 0.6rem 1rem; }
 
-  .selector-bar { padding: 0.5rem 0.8rem; }
+  .filter-bar { padding: 0.5rem 0.8rem; }
 
   .scale-section,
   .range-section { padding: 0.6rem 0.8rem; }
@@ -171,8 +237,9 @@ main {
   .scale-section h2,
   .range-section h2 { font-size: 1rem; margin-bottom: 0.2rem; }
 
-  .chord-label { margin-bottom: 0.4rem; }
-  .note-row    { margin-bottom: 0.5rem; }
+  .chord-label  { margin-bottom: 0.4rem; }
+  .note-row     { margin-bottom: 0.5rem; }
+  .minor-variant { margin-top: 0.5rem; padding-top: 0.5rem; }
 }
 
 /* ─── Landscape mobile 2-column (wide enough) ─── */
@@ -183,7 +250,7 @@ main {
     align-items: start;
   }
 
-  .selector-bar  { grid-column: 1 / -1; }
+  .filter-bar    { grid-column: 1 / -1; }
   .scale-section { grid-column: 1; }
   .range-section { grid-column: 2; }
 }
@@ -195,4 +262,6 @@ main {
 
   .scale-section h2,
   .range-section h2 { font-size: 1rem; }
+
+  .filter-chip { font-size: 0.75rem; padding: 0.22rem 0.55rem; }
 }

@@ -16,23 +16,61 @@
   </header>
 
   <main>
-    <section class="selector-bar" aria-label="Výběr stupnice">
-      <label for="root-select">Tónika</label>
-      <select id="root-select" aria-label="Výběr tóniky"></select>
+    <!-- Filter + scale selector -->
+    <section class="filter-bar" aria-label="Výběr stupnice">
 
-      <label for="type-select">Stupnice</label>
-      <select id="type-select" aria-label="Výběr typu stupnice"></select>
+      <div class="filter-group">
+        <span class="filter-label">Typ</span>
+        <button class="filter-chip active" data-filter-type="major" aria-pressed="true">Dur</button>
+        <button class="filter-chip active" data-filter-type="minor" aria-pressed="true">Moll</button>
+      </div>
+
+      <div class="filter-group">
+        <span class="filter-label">Klíč</span>
+        <button class="filter-chip active" data-filter-acc="sharp" aria-pressed="true"># Kříže</button>
+        <button class="filter-chip active" data-filter-acc="flat"  aria-pressed="true">♭ Béčka</button>
+      </div>
+
+      <div class="filter-group scale-select-group">
+        <label for="scale-select" class="filter-label">Stupnice</label>
+        <select id="scale-select" aria-label="Výběr stupnice"></select>
+      </div>
+
     </section>
 
-    <section class="scale-section">
-      <h2 id="scale-title"></h2>
-      <p id="chord-label" class="chord-label"></p>
-
-      <div id="note-row" class="note-row" role="list" aria-label="Noty stupnice"></div>
-
-      <div id="scale-staff" class="staff-container" aria-live="polite"></div>
+    <!-- Major view (single scale) -->
+    <section class="scale-section" id="major-view" hidden>
+      <h2 id="major-title"></h2>
+      <p id="major-chord" class="chord-label"></p>
+      <div id="major-note-row" class="note-row" role="list" aria-label="Noty stupnice"></div>
+      <div id="major-staff" class="staff-container" aria-live="polite"></div>
     </section>
 
+    <!-- Minor view (3 variants) -->
+    <section class="scale-section" id="minor-view" hidden>
+      <h2 id="minor-title"></h2>
+      <p id="minor-chord" class="chord-label"></p>
+
+      <div class="minor-variant" id="minor-natural">
+        <h3>Přirozená moll</h3>
+        <div class="note-row" role="list"></div>
+        <div class="staff-container" aria-live="polite"></div>
+      </div>
+
+      <div class="minor-variant" id="minor-harmonic">
+        <h3>Harmonická moll</h3>
+        <div class="note-row" role="list"></div>
+        <div class="staff-container" aria-live="polite"></div>
+      </div>
+
+      <div class="minor-variant" id="minor-melodic">
+        <h3>Melodická moll <span class="variant-hint">(vzestupná)</span></h3>
+        <div class="note-row" role="list"></div>
+        <div class="staff-container" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- Alto Saxophone range (always visible) -->
     <section class="range-section">
       <h2>Rozsah Alt Saxofonu</h2>
       <p class="range-hint">Noty stupnice jsou zvýrazněny</p>

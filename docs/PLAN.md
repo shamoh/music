@@ -47,12 +47,21 @@ Aplikace pro učení hudebních stupnic při hře na Alt Saxofon. Zobrazuje noty
 - Nejvyšší: **Fis5** (= F#5)
 - 38 chromatických not
 
-### Stupnice (intervaly v půltónech)
+### Stupnice — SCALE_CATALOG
 
-- Dur: `[2,2,1,2,2,2,1]`
-- Přirozená moll: `[2,1,2,2,1,2,2]`
-- Harmonická moll: `[2,1,2,2,1,3,1]`
-- Melodická moll (vzestupná): `[2,1,2,2,2,2,1]`
+Stupnice jsou definovány jako předem vypočítané seznamy správných názvů not (ne generovány z intervalů).
+Katalog obsahuje 13 dur + 13 moll = 26 stupnic. Každá moll stupnice má 3 varianty (přirozená, harmonická, melodická).
+
+- Kříže: C (bez předznamenání), G D A E H Fis dur; a (bez), e h fis cis moll
+- Béčka: F B Es As Des Ges dur; d g c f b es moll
+- Speciální noty: Eis (E#), His (H#), Ces (Cb), Fes (Fb) jsou platné české názvy
+
+### Výběr stupnic — UI
+
+- Filtry: **Dur/Moll** (toggle chips, oba aktivní = default) + **#/b** (toggle chips, oba aktivní = default)
+- `filteredScales(filterType, filterAcc)` — 'natural' stupnice (C, a) vždy zahrnuty
+- Výsledný `<select>` se s `<optgroup>` Dur/Moll, když jsou oba typy aktivní
+- Moll stupnice zobrazí vždy všechny 3 varianty najednou
 
 ### Pozice not v houslové osnově (slot = diatonická vzdálenost od G4=0)
 
@@ -78,13 +87,42 @@ slot  nota
 -11   C3
 ```
 
+## Budoucí rozšíření
+
+- Přepínač notace (česká / německá / anglická / italská)
+- Přepínač nástroje (Alt Sax / Tenorový Sax / klavír / ...)
+- Cvičení pro danou stupnici
+- Akordy (triády, septakordy) pro každý stupeň stupnice
+
 ## Průběh implementace
 
-- [x] Krok 1: Projekt setup (manifest, SW, package.json, adresáře)
-- [x] Krok 2: docs/PLAN.md
-- [x] Krok 3: js/music.js + unit testy (24/24 zelených)
-- [x] Krok 4: js/notation.js (SVG)
-- [x] Krok 5: js/app.js + index.html
-- [x] Krok 6: css/style.css
-- [x] Krok 7: PWA ikony
-- [ ] Krok 8: Ověření v prohlížeči a testování
+### Iterace 1 — základní PWA
+
+- [x] Projekt setup (manifest, SW, package.json)
+- [x] js/music.js + unit testy
+- [x] js/notation.js (SVG)
+- [x] js/app.js + index.html
+- [x] css/style.css (responzivní)
+- [x] PWA ikony
+
+### Iterace 2 — katalog stupnic + přepracovaný výběr
+
+- [x] CLAUDE.md
+- [x] SCALE_CATALOG (26 stupnic, správné názvy not)
+- [x] accidentalType() refaktoring (regex suffix)
+- [x] generateScale(scaleId, startOctave, variant)
+- [x] filteredScales(filterType, filterAcc)
+- [x] Filter chip UI (Dur/Moll + #/b toggle)
+- [x] Moll multi-view (3 varianty najednou)
+- [x] 55/55 unit testů zelených
+
+### Iterace 3 — kompletní katalog + předznamenání v názvech
+
+- [x] 6 chybějících stupnic: Cis-dur, Ces-dur, gis-moll, dis-moll, ais-moll, as-moll
+- [x] Double-sharp noty: Fisis, Gisis, Cisis (NOTE_SEMITONE + accidentalType)
+- [x] Zobrazení 𝄪 pro dvojitý křížek v notové osnově
+- [x] keySig pole na všech 30 stupnicích (kladné = kříže, záporné = béčka)
+- [x] Název stupnice s počtem předznamenání: „G dur (1#)", „F dur (1♭)"
+- [x] C dur a a moll bez závorky (keySig = 0)
+- [x] Malé „dur" místo „Dur" v názvech dur stupnic
+- [x] 72/72 unit testů zelených
