@@ -23,14 +23,23 @@ function buildScaleRange(scaleNotes) {
   }
   const lowMidi  = ALTO_SAX_LOW.octave  * 12 + ALTO_SAX_LOW.semitone;
   const highMidi = ALTO_SAX_HIGH.octave * 12 + ALTO_SAX_HIGH.semitone;
+
+  // Ces (C-flat, semitone 11) crosses the octave boundary downward: Ces4 sounds like H3.
+  // His (H-sharp, semitone  0) crosses the octave boundary upward:  His4 sounds like C5.
+  function pitchMidi(name, semitone, oct) {
+    if (name === 'Ces') return (oct - 1) * 12 + 11;
+    if (name === 'His') return (oct + 1) * 12;
+    return oct * 12 + semitone;
+  }
+
   const result = [];
   for (const { name, semitone } of entries) {
     for (let oct = 3; oct <= 6; oct++) {
-      const midi = oct * 12 + semitone;
+      const midi = pitchMidi(name, semitone, oct);
       if (midi >= lowMidi && midi <= highMidi) result.push({ name, semitone, octave: oct });
     }
   }
-  return result.sort((a, b) => (a.octave * 12 + a.semitone) - (b.octave * 12 + b.semitone));
+  return result.sort((a, b) => pitchMidi(a.name, a.semitone, a.octave) - pitchMidi(b.name, b.semitone, b.octave));
 }
 
 const state = {
@@ -235,13 +244,13 @@ function update() {
   if (entry.type === 'major') {
     $('range-major').hidden = false;
     $('range-minor').hidden = true;
-    renderRangeStaff($('range-major-staff'), buildScaleRange(naturalScale), naturalScale, chordNames, 0);
+    renderRangeStaff($('range-major-staff'), buildScaleRange(naturalScale), naturalScale, chordNames, 0, false);
   } else {
     $('range-major').hidden = true;
     $('range-minor').hidden = false;
     for (const variant of ['natural', 'harmonic', 'melodic']) {
       const variantScale = generateScale(entry.id, 4, variant);
-      renderRangeStaff($(`range-${variant}-staff`), buildScaleRange(variantScale), variantScale, chordNames, 0);
+      renderRangeStaff($(`range-${variant}-staff`), buildScaleRange(variantScale), variantScale, chordNames, 0, true);
     }
   }
 }
@@ -340,6 +349,30 @@ document.addEventListener('DOMContentLoaded', () => {
   repopulateSelect();
   update();
   registerSW();
+
+  // ─── Range staff note tooltip ────────────────────────────────────────────────
+  const rangeTooltip = document.createElement('div');
+  rangeTooltip.className = 'note-tooltip';
+  rangeTooltip.hidden = true;
+  document.body.appendChild(rangeTooltip);
+
+  function showRangeTooltip(e) {
+    const g = e.target.closest('[data-tooltip]');
+    if (g) {
+      rangeTooltip.textContent = g.dataset.tooltip;
+      rangeTooltip.style.left = e.clientX + 'px';
+      rangeTooltip.style.top  = e.clientY + 'px';
+      rangeTooltip.hidden = false;
+    } else if (e.type === 'pointermove') {
+      rangeTooltip.hidden = true;
+    }
+  }
+
+  const rangeSection = document.querySelector('.range-section');
+  rangeSection.addEventListener('pointermove', showRangeTooltip);
+  rangeSection.addEventListener('pointerdown', showRangeTooltip);
+  rangeSection.addEventListener('pointerleave', () => { rangeTooltip.hidden = true; });
+  rangeSection.addEventListener('pointerup',    () => { setTimeout(() => { rangeTooltip.hidden = true; }, 1200); });
 
   if (typeof ResizeObserver !== 'undefined') {
     const ro = new ResizeObserver(() => update());

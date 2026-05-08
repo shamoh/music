@@ -10,6 +10,7 @@ import {
   noteNameToSemitone,
   computeInlineAccidentals,
   scaleStartOctave,
+  enharmonicEquivalent,
   SCALE_CATALOG,
   ALTO_SAX_LOW,
   ALTO_SAX_HIGH,
@@ -390,6 +391,25 @@ describe('computeInlineAccidentals', () => {
     assert.equal(r[5], 'natural');
     assert.equal(r[6], 'natural');
   });
+});
+
+describe('enharmonicEquivalent', () => {
+  it('Cis4 → Des4',       () => assert.deepEqual(enharmonicEquivalent('Cis', 4), { name: 'Des', octave: 4 }));
+  it('Des4 → Cis4',       () => assert.deepEqual(enharmonicEquivalent('Des', 4), { name: 'Cis', octave: 4 }));
+  it('Fis4 → Ges4',       () => assert.deepEqual(enharmonicEquivalent('Fis', 4), { name: 'Ges', octave: 4 }));
+  it('Ges4 → Fis4',       () => assert.deepEqual(enharmonicEquivalent('Ges', 4), { name: 'Fis', octave: 4 }));
+  it('Ais4 → B4',         () => assert.deepEqual(enharmonicEquivalent('Ais', 4), { name: 'B',   octave: 4 }));
+  it('B4 → Ais4',         () => assert.deepEqual(enharmonicEquivalent('B',   4), { name: 'Ais', octave: 4 }));
+  it('Eis4 → F4',         () => assert.deepEqual(enharmonicEquivalent('Eis', 4), { name: 'F',   octave: 4 }));
+  it('Fes4 → E4',         () => assert.deepEqual(enharmonicEquivalent('Fes', 4), { name: 'E',   octave: 4 }));
+  it('His4 → C5',         () => assert.deepEqual(enharmonicEquivalent('His', 4), { name: 'C',   octave: 5 }));
+  it('Ces4 → H3',         () => assert.deepEqual(enharmonicEquivalent('Ces', 4), { name: 'H',   octave: 3 }));
+  it('Fisis4 → G4',       () => assert.deepEqual(enharmonicEquivalent('Fisis', 4), { name: 'G', octave: 4 }));
+  it('Cisis4 → D4',       () => assert.deepEqual(enharmonicEquivalent('Cisis', 4), { name: 'D', octave: 4 }));
+  it('Gisis4 → A4',       () => assert.deepEqual(enharmonicEquivalent('Gisis', 4), { name: 'A', octave: 4 }));
+  it('natural C → null',  () => assert.equal(enharmonicEquivalent('C', 4), null));
+  it('natural G → null',  () => assert.equal(enharmonicEquivalent('G', 4), null));
+  it('natural H → null',  () => assert.equal(enharmonicEquivalent('H', 4), null));
 });
 
 describe('scaleStartOctave', () => {

@@ -1,16 +1,12 @@
-import { noteToStaffSlot, accidentalType, computeInlineAccidentals } from './music.js';
+import { noteToStaffSlot, accidentalType, computeInlineAccidentals, enharmonicEquivalent } from './music.js';
 
 // Short note label for display on staff: "Fis"→"F#", "Es"→"E♭", "B"→"B♭", "C"→"C"
 // lowercase=true converts the base letter to lowercase (minor scales)
 function shortNoteLabel(noteName, lowercase = false) {
-  let base, suffix;
-  if (noteName === 'B') {
-    base = 'B'; suffix = '♭';
-  } else {
-    base = noteName[0];
-    const acc = accidentalType(noteName);
-    suffix = acc === 'double-sharp' ? '×' : acc === 'sharp' ? '#' : acc === 'flat' ? '♭' : '';
-  }
+  if (noteName === 'B') return lowercase ? 'b' : 'B';
+  const base = noteName[0];
+  const acc = accidentalType(noteName);
+  const suffix = acc === 'double-sharp' ? '×' : acc === 'sharp' ? '#' : acc === 'flat' ? '♭' : '';
   return (lowercase ? base.toLowerCase() : base) + suffix;
 }
 
@@ -225,14 +221,17 @@ const RANGE_SECTION_COLORS = [
 ];
 
 function rangeSection(note) {
-  const midi = note.octave * 12 + note.semitone;
+  // Use pitch MIDI, same boundary-crossing correction as buildScaleRange in app.js
+  const midi = note.name === 'Ces' ? (note.octave - 1) * 12 + 11
+             : note.name === 'His' ? (note.octave + 1) * 12
+             : note.octave * 12 + note.semitone;
   if (midi <= 47) return 0;  // B3/Ais3, H3
   if (midi <= 61) return 1;  // C4..Cis5
   if (midi <= 73) return 2;  // D5..Cis6
   return 3;                   // D6..F6
 }
 
-export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteNames, keySig = 0) {
+export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteNames, keySig = 0, isMinor = false) {
   clearEl(containerEl);
 
   const scaleSet = new Set(scaleNotes.map((n) => n.name));
@@ -287,6 +286,17 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
                 : chordSet.has(note.name) ? 'var(--note-chord)'
                 :                           'var(--note-scale)';
     const inlineAcc = accidentalType(note.name);
-    drawNoteScaled(svg, x, note, staffTop, ls, noteRadius, { color, ledgerHalfW, showLabel: isTonic, labelY, inlineAcc });
+    const enh = enharmonicEquivalent(note.name, note.octave);
+    const displayName = (isMinor ? note.name.toLowerCase() : note.name) + note.octave;
+    const enhSuffix = enh
+      ? ` (=${(isMinor ? enh.name.toLowerCase() : enh.name)}${enh.octave})`
+      : '';
+    const tooltipLabel = displayName + enhSuffix;
+
+    const g = svgEl('g', { 'data-tooltip': tooltipLabel });
+    g.appendChild(svgEl('rect', { x: x - step * 0.5, y: 0, width: step, height: totalHeight, fill: 'transparent' }));
+    svg.appendChild(g);
+
+    drawNoteScaled(g, x, note, staffTop, ls, noteRadius, { color, ledgerHalfW, showLabel: isTonic, labelY, inlineAcc, lowercase: isMinor });
   });
 }

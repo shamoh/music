@@ -214,6 +214,22 @@ main {
 
 .range-hint { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.6rem; }
 
+/* ─── Range staff note tooltip ─── */
+.note-tooltip {
+  position: fixed;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.18rem 0.55rem;
+  border-radius: 5px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  pointer-events: none;
+  z-index: 200;
+  white-space: nowrap;
+  transform: translate(-50%, calc(-100% - 10px));
+}
+
 /* ─── Minor range variants ─── */
 .range-variant {
   border-top: 1px solid var(--border);

@@ -13,6 +13,26 @@ const NOTE_SEMITONE = {
   H: 11, His: 0,              B: 10,
 };
 
+// Returns enharmonic equivalent { name, octave } for accidental notes, null for naturals.
+// Covers: Cis/Des, Dis/Es, Fis/Ges, Gis/As, Ais/B, Eis/F, Fes/E, His/C (+1 oct), Ces/H (-1 oct),
+// and double-sharps Fisis/G, Cisis/D, Gisis/A.
+export function enharmonicEquivalent(name, octave) {
+  const map = {
+    Cis: { name: 'Des', dOct: 0 },  Des: { name: 'Cis', dOct: 0 },
+    Dis: { name: 'Es',  dOct: 0 },  Es:  { name: 'Dis', dOct: 0 },
+    Fis: { name: 'Ges', dOct: 0 },  Ges: { name: 'Fis', dOct: 0 },
+    Gis: { name: 'As',  dOct: 0 },  As:  { name: 'Gis', dOct: 0 },
+    Ais: { name: 'B',   dOct: 0 },  B:   { name: 'Ais', dOct: 0 },
+    Eis: { name: 'F',   dOct: 0 },  Fes: { name: 'E',   dOct: 0 },
+    His: { name: 'C',   dOct: +1 }, Ces: { name: 'H',   dOct: -1 },
+    Fisis: { name: 'G', dOct: 0 },  Cisis: { name: 'D', dOct: 0 },
+    Gisis: { name: 'A', dOct: 0 },
+  };
+  const eq = map[name];
+  if (!eq) return null;
+  return { name: eq.name, octave: octave + eq.dOct };
+}
+
 export function noteNameToSemitone(name) {
   const s = NOTE_SEMITONE[name];
   if (s === undefined) throw new Error(`Unknown note name: ${name}`);
