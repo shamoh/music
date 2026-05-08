@@ -173,11 +173,15 @@ function clearEl(el) {
 
 function renderNoteRow(containerEl, scaleNotes, chordNoteNames) {
   const chordSet = new Set(chordNoteNames);
+  const tonicName = scaleNotes[0]?.name;
   clearEl(containerEl);
   scaleNotes.forEach((note) => {
     const span = document.createElement('span');
     span.textContent = noteChipLabel(note.name);
-    span.className = 'note-chip' + (chordSet.has(note.name) ? ' chord' : '');
+    let cls = 'note-chip';
+    if (note.name === tonicName)       cls += ' tonic';
+    else if (chordSet.has(note.name))  cls += ' chord';
+    span.className = cls;
     span.setAttribute('role', 'listitem');
     containerEl.appendChild(span);
   });
@@ -200,10 +204,11 @@ function update() {
     renderMinorView(entry);
   }
 
-  // Range staff: highlight natural scale notes; use flat/sharp names based on key
+  // Range staff: highlight scale notes across all octaves; chord notes in accent color
   const altSaxRange = buildAltSaxRange(entry.keySig < 0);
   const naturalScale = generateScale(entry.id, 4, 'natural');
-  renderRangeStaff($('range-staff'), altSaxRange, naturalScale, entry.keySig);
+  const chordNames = getChordNotes(naturalScale).map((n) => n.name);
+  renderRangeStaff($('range-staff'), altSaxRange, naturalScale, chordNames, entry.keySig);
 }
 
 function renderMajorView(entry) {

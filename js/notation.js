@@ -120,7 +120,7 @@ function drawKeySigAccidental(svg, cx, slot, type, staffTop, ls) {
 
 function keySignatureWidth(keySig, ls) {
   const count = Math.abs(keySig);
-  return count > 0 ? count * ls * 0.46 + ls * 0.56 : 0;
+  return count > 0 ? count * ls * 0.46 + ls * 0.75 : 0;
 }
 
 function drawKeySignature(svg, keySig, staffTop, ls, startX) {
@@ -181,6 +181,7 @@ export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig
   clearEl(containerEl);
 
   const chordSet = new Set(chordNoteNames);
+  const tonicName = scaleNotes[0]?.name;
   const containerWidth = containerEl.clientWidth || 400;
   const ls = Math.min(14, Math.max(9, Math.floor(containerWidth / 38)));
   const noteRadius = ls * 0.45;
@@ -195,7 +196,7 @@ export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig
   containerEl.appendChild(svg);
   drawStaffLinesScaled(svg, clefWidth, containerWidth - ls * 0.5, staffTop, ls);
   drawTrebleClefScaled(svg, clefWidth - ls * 0.5, staffTop, ls);
-  drawKeySignature(svg, keySig, staffTop, ls, clefWidth + ls * 0.46);
+  drawKeySignature(svg, keySig, staffTop, ls, clefWidth + ls * 0.65);
 
   const inlineAccs = computeInlineAccidentals(scaleNotes.map((n) => n.name), keySig);
 
@@ -207,15 +208,36 @@ export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig
 
   scaleNotes.forEach((note, i) => {
     const x = notesStartX + (i + 1) * step;
-    const color = chordSet.has(note.name) ? 'var(--accent)' : 'var(--text)';
+    const color = note.name === tonicName    ? 'var(--note-tonic)'
+                : chordSet.has(note.name)    ? 'var(--note-chord)'
+                :                              'var(--note-scale)';
     drawNoteScaled(svg, x, note, staffTop, ls, noteRadius, { color, showLabel: true, lowercase: isMinor, inlineAcc: inlineAccs[i], labelY });
   });
 }
 
-export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, keySig = 0) {
+// Range staff section boundaries (by MIDI = octave*12 + semitone)
+// Section 1: B3/Ais3, H3  |  Section 2: C4–Cis5  |  Section 3: D5–Cis6  |  Section 4: D6–F6
+const RANGE_SECTION_COLORS = [
+  'rgba(160, 120, 220, 0.15)',
+  'rgba(80,  120, 210, 0.12)',
+  'rgba(80,  190, 160, 0.12)',
+  'rgba(210, 150, 80,  0.15)',
+];
+
+function rangeSection(note) {
+  const midi = note.octave * 12 + note.semitone;
+  if (midi <= 47) return 0;  // B3/Ais3, H3
+  if (midi <= 61) return 1;  // C4..Cis5
+  if (midi <= 73) return 2;  // D5..Cis6
+  return 3;                   // D6..F6
+}
+
+export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteNames, keySig = 0) {
   clearEl(containerEl);
 
-  const scaleSet = new Set(scaleNotes.map((n) => `${n.name}${n.octave}`));
+  const scaleSet = new Set(scaleNotes.map((n) => n.name));
+  const chordSet = new Set(chordNoteNames);
+  const tonicName = scaleNotes[0]?.name;
   const containerWidth = containerEl.clientWidth || 400;
   const minWidth = rangeNotes.length * 14 + 60;
   const width = Math.max(containerWidth, minWidth);
@@ -223,7 +245,7 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, keySig = 0
   const ls = Math.min(12, Math.max(9, Math.floor(containerWidth / 42)));
   const noteRadius = ls * 0.45;
   const staffTop = ls * 8;
-  const totalHeight = staffTop + ls * 4 + ls * 4;
+  const totalHeight = staffTop + ls * 4 + ls * 6;
   const clefWidth = ls * 3.5;
   const keySigW = keySignatureWidth(keySig, ls);
   const notesStartX = clefWidth + keySigW;
@@ -232,18 +254,43 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, keySig = 0
   const svg = buildStaffSvg(width, totalHeight, 'Rozsah Alt Saxofonu');
   svg.setAttribute('width', width > containerWidth ? width : '100%');
   containerEl.appendChild(svg);
+
+  // Section background bands — drawn before staff lines so they stay behind
+  let secStartIdx = 0;
+  for (let i = 1; i <= rangeNotes.length; i++) {
+    const atEnd = i === rangeNotes.length;
+    const prevSec = rangeSection(rangeNotes[i - 1]);
+    if (atEnd || rangeSection(rangeNotes[i]) !== prevSec) {
+      const x1 = notesStartX + (secStartIdx + 1) * step - step * 0.5;
+      const x2 = notesStartX + (i - 1     + 1) * step + step * 0.5;
+      svg.appendChild(svgEl('rect', {
+        x: x1, y: 0, width: x2 - x1, height: totalHeight,
+        fill: RANGE_SECTION_COLORS[prevSec],
+      }));
+      secStartIdx = i;
+    }
+  }
+
   drawStaffLinesScaled(svg, clefWidth, width - ls * 0.5, staffTop, ls);
   drawTrebleClefScaled(svg, clefWidth - ls * 0.5, staffTop, ls);
-  drawKeySignature(svg, keySig, staffTop, ls, clefWidth + ls * 0.46);
+  drawKeySignature(svg, keySig, staffTop, ls, clefWidth + ls * 0.65);
 
   // Ledger lines drawn on top of note heads — cap width so consecutive lines don't merge
   const ledgerHalfW = Math.min(noteRadius * 2.5, step * 0.46);
 
+  const lowestSlot = Math.min(...rangeNotes.map((n) => noteToStaffSlot(n.name, n.octave)));
+  const labelY = Math.max(
+    staffTop + ls * 4 + ls * 2.8,
+    slotToY(lowestSlot, staffTop, ls) + ls * 1.3,
+  );
+
   rangeNotes.forEach((note, i) => {
     const x = notesStartX + (i + 1) * step;
-    const color = scaleSet.has(`${note.name}${note.octave}`)
-      ? 'var(--accent)'
-      : 'var(--text-muted)';
-    drawNoteScaled(svg, x, note, staffTop, ls, noteRadius, { color, ledgerHalfW });
+    const isTonic = note.name === tonicName;
+    const color = isTonic                  ? 'var(--note-tonic)'
+                : chordSet.has(note.name) ? 'var(--note-chord)'
+                : scaleSet.has(note.name) ? 'var(--note-scale)'
+                :                           'var(--note-muted)';
+    drawNoteScaled(svg, x, note, staffTop, ls, noteRadius, { color, ledgerHalfW, showLabel: isTonic, labelY });
   });
 }

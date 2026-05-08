@@ -8,6 +8,12 @@
   --accent2:    #f5a623;
   --border:     #2a2a4a;
   --radius:     10px;
+
+  /* Note color hierarchy — used in SVG staffs and note chips */
+  --note-tonic:  #ff3355;   /* root note of scale */
+  --note-chord:  #e94560;   /* other chord notes */
+  --note-scale:  #e07888;   /* remaining scale notes */
+  --note-muted:  #444464;   /* out-of-scale notes (range staff) */
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -182,15 +188,21 @@ main {
   border-radius: 6px;
   font-size: 0.95rem;
   font-weight: 600;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  color: var(--text);
+  background: var(--note-scale);
+  border: 1px solid var(--note-scale);
+  color: #fff;
   transition: background 0.15s;
 }
 
 .note-chip.chord {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--note-chord);
+  border-color: var(--note-chord);
+  color: #fff;
+}
+
+.note-chip.tonic {
+  background: var(--note-tonic);
+  border-color: var(--note-tonic);
   color: #fff;
 }
 
