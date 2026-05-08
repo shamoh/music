@@ -11,7 +11,6 @@ const NOTE_SEMITONE = {
   G: 7,  Gis: 8,  Ges: 6,
   A: 9,  Ais: 10, As: 8,
   H: 11, His: 0,  B: 10,
-  Fisis: 7, Gisis: 9, Cisis: 2,
 };
 
 export function noteNameToSemitone(name) {
@@ -24,7 +23,6 @@ export function noteNameToSemitone(name) {
 export function accidentalType(noteName) {
   if (noteName === 'B') return 'flat';
   const lower = noteName.toLowerCase();
-  if (lower.endsWith('isis')) return 'double-sharp';
   if (lower.length > 1 && lower.endsWith('is')) return 'sharp';
   if (lower.endsWith('es') || lower.endsWith('as')) return 'flat';
   return null;
@@ -104,16 +102,16 @@ export const SCALE_CATALOG = [
     melodicNotes:  ['Cis','Dis','E','Fis','Gis','Ais','His','Cis'] },
   { id: 'gis-minor', root: 'gis', semitone: 8,  type: 'minor', accidental: 'sharp',   keySig: 5,
     notes:         ['Gis','Ais','H','Cis','Dis','E','Fis','Gis'],
-    harmonicNotes: ['Gis','Ais','H','Cis','Dis','E','Fisis','Gis'],
-    melodicNotes:  ['Gis','Ais','H','Cis','Dis','Eis','Fisis','Gis'] },
+    harmonicNotes: ['Gis','Ais','H','Cis','Dis','E','G','Gis'],
+    melodicNotes:  ['Gis','Ais','H','Cis','Dis','Eis','G','Gis'] },
   { id: 'dis-minor', root: 'dis', semitone: 3,  type: 'minor', accidental: 'sharp',   keySig: 6,
     notes:         ['Dis','Eis','Fis','Gis','Ais','H','Cis','Dis'],
-    harmonicNotes: ['Dis','Eis','Fis','Gis','Ais','H','Cisis','Dis'],
-    melodicNotes:  ['Dis','Eis','Fis','Gis','Ais','His','Cisis','Dis'] },
+    harmonicNotes: ['Dis','Eis','Fis','Gis','Ais','H','D','Dis'],
+    melodicNotes:  ['Dis','Eis','Fis','Gis','Ais','His','D','Dis'] },
   { id: 'ais-minor', root: 'ais', semitone: 10, type: 'minor', accidental: 'sharp',   keySig: 7,
     notes:         ['Ais','His','Cis','Dis','Eis','Fis','Gis','Ais'],
-    harmonicNotes: ['Ais','His','Cis','Dis','Eis','Fis','Gisis','Ais'],
-    melodicNotes:  ['Ais','His','Cis','Dis','Eis','Fisis','Gisis','Ais'] },
+    harmonicNotes: ['Ais','His','Cis','Dis','Eis','Fis','A','Ais'],
+    melodicNotes:  ['Ais','His','Cis','Dis','Eis','G','A','Ais'] },
   { id: 'd-minor',   root: 'd',   semitone: 2,  type: 'minor', accidental: 'flat',    keySig: -1,
     notes:         ['D','E','F','G','A','B','C','D'],
     harmonicNotes: ['D','E','F','G','A','B','Cis','D'],
@@ -147,16 +145,19 @@ export const SCALE_CATALOG = [
 // ─── Scale generation ────────────────────────────────────────────────────────
 
 // Assigns octaves and semitone numbers to a raw note-name array.
-// When a note's semitone value is <= previous note's semitone, the octave increments.
+// Octave increments when the diatonic letter steps backward (e.g. H→C).
+// Semitone comparison fails for B→Ces (10→11 looks like same octave but Ces is C-flat in next octave).
 function assignOctaves(noteNames, startOctave) {
   const result = [];
   let octave = startOctave;
-  let prevSemitone = -1;
+  let prevDi = -1;
   for (const name of noteNames) {
+    const letter = diatonicLetter(name);
+    const di = DIATONIC_NAMES.indexOf(letter);
+    if (prevDi !== -1 && di < prevDi) octave++;
     const semitone = noteNameToSemitone(name);
-    if (prevSemitone !== -1 && semitone <= prevSemitone) octave++;
     result.push({ name, semitone, octave, midi: octave * 12 + semitone });
-    prevSemitone = semitone;
+    prevDi = di;
   }
   return result;
 }
@@ -186,30 +187,33 @@ export function getChordNotes(scaleNotes) {
 // filterAcc:  Set of 'sharp' | 'flat'
 // 'natural' scales always included when at least one type matches.
 export function filteredScales(filterType, filterAcc) {
-  return SCALE_CATALOG.filter((s) => {
-    if (!filterType.has(s.type)) return false;
-    if (s.accidental === 'natural') return true;
-    return filterAcc.has(s.accidental);
-  });
+  return SCALE_CATALOG
+    .filter((s) => {
+      if (!filterType.has(s.type)) return false;
+      if (s.accidental === 'natural') return true;
+      return filterAcc.has(s.accidental);
+    })
+    .sort((a, b) => b.keySig - a.keySig);
 }
 
 // ─── Alto Saxophone range ────────────────────────────────────────────────────
 
-const FLAT_RANGE_SEMITONES = new Set([1, 3, 8, 10]); // Des Es As B
-
 export const ALTO_SAX_LOW  = { name: 'B',   semitone: 10, octave: 3 };
-export const ALTO_SAX_HIGH = { name: 'Fis', semitone: 6,  octave: 5 };
+export const ALTO_SAX_HIGH = { name: 'E',   semitone: 4,  octave: 6 };
 
-export function buildAltSaxRange() {
+// useFlats=true → flat names for chromatic accidentals (Des/Es/As/B)
+// useFlats=false → sharp names (Cis/Dis/Gis/Ais)
+export function buildAltSaxRange(useFlats = true) {
   const notes = [];
   let { semitone, octave } = ALTO_SAX_LOW;
   const highMidi = ALTO_SAX_HIGH.octave * 12 + ALTO_SAX_HIGH.semitone;
   while (true) {
     const midi = octave * 12 + semitone;
     if (midi > highMidi) break;
-    const useFlats = CHROMATIC_FLAT[semitone] !== CHROMATIC_SHARP[semitone]
-      && FLAT_RANGE_SEMITONES.has(semitone);
-    notes.push({ name: useFlats ? CHROMATIC_FLAT[semitone] : CHROMATIC_SHARP[semitone], semitone, octave, midi });
+    const name = (useFlats && CHROMATIC_FLAT[semitone] !== CHROMATIC_SHARP[semitone])
+      ? CHROMATIC_FLAT[semitone]
+      : CHROMATIC_SHARP[semitone];
+    notes.push({ name, semitone, octave, midi });
     semitone++;
     if (semitone === 12) { semitone = 0; octave++; }
   }

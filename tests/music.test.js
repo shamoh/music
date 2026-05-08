@@ -116,37 +116,37 @@ describe('generateScale — new scales', () => {
     assert.deepEqual(scale.map((n) => n.name), ['Ces','Des','Es','Fes','Ges','As','B','Ces']);
   });
 
-  it('gis minor harmonic: 7th is Fisis (double-sharp)', () => {
+  it('gis minor harmonic: 7th is G (raised from Fis)', () => {
     const scale = generateScale('gis-minor', 4, 'harmonic');
-    assert.equal(scale[6].name, 'Fisis');
+    assert.equal(scale[6].name, 'G');
   });
 
-  it('gis minor melodic: 6th is Eis, 7th is Fisis', () => {
+  it('gis minor melodic: 6th is Eis, 7th is G', () => {
     const scale = generateScale('gis-minor', 4, 'melodic');
     assert.equal(scale[5].name, 'Eis');
-    assert.equal(scale[6].name, 'Fisis');
+    assert.equal(scale[6].name, 'G');
   });
 
-  it('dis minor harmonic: 7th is Cisis (double-sharp)', () => {
+  it('dis minor harmonic: 7th is D (raised from Cis)', () => {
     const scale = generateScale('dis-minor', 4, 'harmonic');
-    assert.equal(scale[6].name, 'Cisis');
+    assert.equal(scale[6].name, 'D');
   });
 
-  it('dis minor melodic: 6th is His, 7th is Cisis', () => {
+  it('dis minor melodic: 6th is His, 7th is D', () => {
     const scale = generateScale('dis-minor', 4, 'melodic');
     assert.equal(scale[5].name, 'His');
-    assert.equal(scale[6].name, 'Cisis');
+    assert.equal(scale[6].name, 'D');
   });
 
-  it('ais minor harmonic: 7th is Gisis (double-sharp)', () => {
+  it('ais minor harmonic: 7th is A (raised from Gis)', () => {
     const scale = generateScale('ais-minor', 4, 'harmonic');
-    assert.equal(scale[6].name, 'Gisis');
+    assert.equal(scale[6].name, 'A');
   });
 
-  it('ais minor melodic: 6th is Fisis, 7th is Gisis', () => {
+  it('ais minor melodic: 6th is G, 7th is A', () => {
     const scale = generateScale('ais-minor', 4, 'melodic');
-    assert.equal(scale[5].name, 'Fisis');
-    assert.equal(scale[6].name, 'Gisis');
+    assert.equal(scale[5].name, 'G');
+    assert.equal(scale[6].name, 'A');
   });
 
   it('as minor natural: includes Ces and Fes', () => {
@@ -217,9 +217,10 @@ describe('noteToStaffSlot', () => {
 });
 
 describe('buildAltSaxRange', () => {
-  it('starts at B3 (Bb3)',     () => { const r = buildAltSaxRange(); assert.equal(r[0].name, 'B'); assert.equal(r[0].octave, 3); });
-  it('ends at Fis5',           () => { const r = buildAltSaxRange(); const l = r[r.length-1]; assert.equal(l.name, 'Fis'); assert.equal(l.octave, 5); });
-  it('contains 21 semitones',  () => assert.equal(buildAltSaxRange().length, 21));
+  it('useFlats=true: starts at B3 (Bb3)',  () => { const r = buildAltSaxRange(true);  assert.equal(r[0].name, 'B');   assert.equal(r[0].octave, 3); });
+  it('useFlats=false: starts at Ais3',     () => { const r = buildAltSaxRange(false); assert.equal(r[0].name, 'Ais'); assert.equal(r[0].octave, 3); });
+  it('ends at E6',                         () => { const r = buildAltSaxRange(true);  const l = r[r.length-1]; assert.equal(l.name, 'E'); assert.equal(l.octave, 6); });
+  it('contains 31 semitones',              () => assert.equal(buildAltSaxRange(true).length, 31));
 });
 
 describe('accidentalType', () => {
@@ -233,9 +234,6 @@ describe('accidentalType', () => {
   it('His → sharp',           () => assert.equal(accidentalType('His'), 'sharp'));
   it('As → flat',             () => assert.equal(accidentalType('As'), 'flat'));
   it('Ais → sharp',           () => assert.equal(accidentalType('Ais'), 'sharp'));
-  it('Fisis → double-sharp',  () => assert.equal(accidentalType('Fisis'), 'double-sharp'));
-  it('Gisis → double-sharp',  () => assert.equal(accidentalType('Gisis'), 'double-sharp'));
-  it('Cisis → double-sharp',  () => assert.equal(accidentalType('Cisis'), 'double-sharp'));
 });
 
 describe('noteNameToSemitone', () => {
@@ -245,9 +243,6 @@ describe('noteNameToSemitone', () => {
   it('His = 0',    () => assert.equal(noteNameToSemitone('His'), 0));
   it('B = 10',     () => assert.equal(noteNameToSemitone('B'), 10));
   it('Ges = 6',    () => assert.equal(noteNameToSemitone('Ges'), 6));
-  it('Fisis = 7',  () => assert.equal(noteNameToSemitone('Fisis'), 7));
-  it('Gisis = 9',  () => assert.equal(noteNameToSemitone('Gisis'), 9));
-  it('Cisis = 2',  () => assert.equal(noteNameToSemitone('Cisis'), 2));
 });
 
 describe('filteredScales', () => {

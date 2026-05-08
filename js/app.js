@@ -4,6 +4,7 @@ import {
   getChordNotes,
   filteredScales,
   buildAltSaxRange,
+  accidentalType,
 } from './music.js';
 import { renderScaleStaff, renderRangeStaff } from './notation.js';
 
@@ -13,16 +14,81 @@ const state = {
   filterAcc:  new Set(['sharp', 'flat']),
 };
 
-const altSaxRange = buildAltSaxRange();
 
 function $(id) { return document.getElementById(id); }
 
-// ─── Key signature label ─────────────────────────────────────────────────────
+// ─── Key signature labels and variant helpers ─────────────────────────────────
 
+const SHARP_NAMES = ['fis', 'cis', 'gis', 'dis', 'ais', 'eis', 'his'];
+const FLAT_NAMES  = ['be',  'es',  'as',  'des', 'ges', 'ces', 'fes'];
+
+// Main scale title label: "(2# fis, cis)" or "(3♭ be, es, as)"
 function keySigLabel(keySig) {
   if (keySig === 0) return '';
-  if (keySig > 0) return ` (${keySig}#)`;
-  return ` (${Math.abs(keySig)}♭)`;
+  if (keySig > 0) {
+    return ` (${keySig}# : ${SHARP_NAMES.slice(0, keySig).join(', ')})`;
+  }
+  const n = Math.abs(keySig);
+  return ` (${n}♭ : ${FLAT_NAMES.slice(0, n).join(', ')})`;
+}
+
+function noteDisplayName(name) {
+  return name === 'B' ? 'be' : name.toLowerCase();
+}
+
+// Compute label like "(2♭ es, as)" or "(1♭ be, 1# cis)" from actual variant notes
+function scaleAccidentalLabel(notes) {
+  const flatNames = [], sharpNames = [];
+  const seen = new Set();
+  for (const name of notes.slice(0, 7)) {
+    const letter = name === 'B' ? 'H' : name[0].toUpperCase();
+    if (seen.has(letter)) continue;
+    seen.add(letter);
+    const acc = accidentalType(name);
+    if (acc === 'flat') flatNames.push(noteDisplayName(name));
+    else if (acc === 'sharp') sharpNames.push(noteDisplayName(name));
+  }
+  const parts = [];
+  if (flatNames.length > 0)  parts.push(`${flatNames.length}♭ : ${flatNames.join(', ')}`);
+  if (sharpNames.length > 0) parts.push(`${sharpNames.length}# : ${sharpNames.join(', ')}`);
+  return parts.length > 0 ? ` (${parts.join(', ')})` : '';
+}
+
+// "G → Gis, F → Fis" — notes that differ in a variant vs natural
+function variantChangeText(entry, variant) {
+  const natural = entry.notes;
+  const varied  = variant === 'harmonic' ? entry.harmonicNotes : entry.melodicNotes;
+  if (!varied) return '';
+  const changes = [];
+  for (let i = 0; i < natural.length - 1; i++) {
+    if (natural[i] !== varied[i]) changes.push(`${natural[i]} → ${varied[i]}`);
+  }
+  return changes.join(', ');
+}
+
+// Rebuild h3 content (preserves variant-hint span if hintText given)
+function setVariantHeader(sectionId, baseTitle, variantNotes, hintText) {
+  const h3 = $(sectionId).querySelector('h3');
+  clearEl(h3);
+  h3.appendChild(document.createTextNode(baseTitle + scaleAccidentalLabel(variantNotes)));
+  if (hintText) {
+    const span = document.createElement('span');
+    span.className = 'variant-hint';
+    span.textContent = ' ' + hintText;
+    h3.appendChild(span);
+  }
+}
+
+// Update (or lazily create) the .variant-changes paragraph below h3
+function setVariantChanges(sectionId, changeText) {
+  const section = $(sectionId);
+  let el = section.querySelector('.variant-changes');
+  if (!el) {
+    el = document.createElement('p');
+    el.className = 'variant-changes';
+    section.querySelector('h3').insertAdjacentElement('afterend', el);
+  }
+  el.textContent = changeText;
 }
 
 // ─── Filter chips ────────────────────────────────────────────────────────────
@@ -114,6 +180,7 @@ function renderNoteRow(containerEl, scaleNotes, chordNoteNames) {
 function update() {
   const entry = SCALE_CATALOG.find((s) => s.id === state.scaleId);
   if (!entry) return;
+  pushHash();
 
   if (entry.type === 'major') {
     $('major-view').hidden = false;
@@ -125,9 +192,10 @@ function update() {
     renderMinorView(entry);
   }
 
-  // Range staff: highlight natural scale notes
+  // Range staff: highlight natural scale notes; use flat/sharp names based on key
+  const altSaxRange = buildAltSaxRange(entry.keySig < 0);
   const naturalScale = generateScale(entry.id, 4, 'natural');
-  renderRangeStaff($('range-staff'), altSaxRange, naturalScale);
+  renderRangeStaff($('range-staff'), altSaxRange, naturalScale, entry.keySig);
 }
 
 function renderMajorView(entry) {
@@ -138,7 +206,7 @@ function renderMajorView(entry) {
   $('major-title').textContent = `${entry.root} dur${keySigLabel(entry.keySig)}`;
   $('major-chord').textContent = `Akord: ${chordNames.join(' – ')}`;
   renderNoteRow($('major-note-row'), scale, chordNames);
-  renderScaleStaff($('major-staff'), scale, chordNames);
+  renderScaleStaff($('major-staff'), scale, chordNames, entry.keySig, false);
 }
 
 function renderMinorView(entry) {
@@ -149,16 +217,51 @@ function renderMinorView(entry) {
   $('minor-title').textContent = `${entry.root} moll${keySigLabel(entry.keySig)}`;
   $('minor-chord').textContent = `Akord: ${chordNames.join(' – ')}`;
 
-  renderVariant('minor-natural',  entry.id, 'natural',  chordNames);
-  renderVariant('minor-harmonic', entry.id, 'harmonic', chordNames);
-  renderVariant('minor-melodic',  entry.id, 'melodic',  chordNames);
+  renderVariant('minor-natural',  entry.id, 'natural',  chordNames, entry.keySig, true);
+
+  setVariantHeader('minor-harmonic', 'Harmonická moll', entry.harmonicNotes, null);
+  setVariantChanges('minor-harmonic', variantChangeText(entry, 'harmonic'));
+  renderVariant('minor-harmonic', entry.id, 'harmonic', chordNames, entry.keySig, true);
+
+  setVariantHeader('minor-melodic', 'Melodická moll', entry.melodicNotes, '(vzestupná)');
+  setVariantChanges('minor-melodic', variantChangeText(entry, 'melodic'));
+  renderVariant('minor-melodic', entry.id, 'melodic', chordNames, entry.keySig, true);
 }
 
-function renderVariant(sectionId, scaleId, variant, chordNames) {
+function renderVariant(sectionId, scaleId, variant, chordNames, keySig = 0, isMinor = false) {
   const section = $(sectionId);
   const scale = generateScale(scaleId, 4, variant);
   renderNoteRow(section.querySelector('.note-row'), scale, chordNames);
-  renderScaleStaff(section.querySelector('.staff-container'), scale, chordNames);
+  renderScaleStaff(section.querySelector('.staff-container'), scale, chordNames, keySig, isMinor);
+}
+
+// ─── URL hash sync ───────────────────────────────────────────────────────────
+
+function scaleIdToHash(id) {
+  return id.replace('-major', '-dur').replace('-minor', '-moll');
+}
+
+function hashToScaleId(hash) {
+  const fragment = hash.startsWith('#') ? hash.slice(1) : hash;
+  return fragment.replace('-dur', '-major').replace('-moll', '-minor');
+}
+
+function applyHash(hash) {
+  if (!hash) return;
+  const id = hashToScaleId(hash);
+  const entry = SCALE_CATALOG.find((s) => s.id === id);
+  if (!entry) return;
+  // Ensure the required filters are active so the scale is visible
+  if (!state.filterType.has(entry.type)) state.filterType.add(entry.type);
+  if (entry.accidental !== 'natural' && !state.filterAcc.has(entry.accidental)) {
+    state.filterAcc.add(entry.accidental);
+  }
+  state.scaleId = id;
+}
+
+function pushHash() {
+  const hash = '#' + scaleIdToHash(state.scaleId);
+  if (location.hash !== hash) history.replaceState(null, '', hash);
 }
 
 // ─── Bootstrap ───────────────────────────────────────────────────────────────
@@ -170,10 +273,17 @@ function registerSW() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  applyHash(location.hash);
   initFilterChips();
 
   $('scale-select').addEventListener('change', (e) => {
     state.scaleId = e.target.value;
+    update();
+  });
+
+  window.addEventListener('hashchange', () => {
+    applyHash(location.hash);
+    repopulateSelect();
     update();
   });
 

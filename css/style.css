@@ -159,6 +159,12 @@ main {
   color: var(--text-muted);
 }
 
+.variant-changes {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 0.15rem 0 0.6rem;
+}
+
 /* ─── Note chips ─── */
 .note-row {
   display: flex;
