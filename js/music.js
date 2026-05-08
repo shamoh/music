@@ -4,13 +4,13 @@ export const CHROMATIC_FLAT  = ['C','Des','D','Es', 'E','F','Ges','G','As', 'A',
 
 // Semitone value for each Czech note name (including extended names)
 const NOTE_SEMITONE = {
-  C: 0,  Cis: 1,  Ces: 11,
-  D: 2,  Dis: 3,  Des: 1,
-  E: 4,  Eis: 5,  Es: 3,
-  F: 5,  Fis: 6,  Fes: 4,
-  G: 7,  Gis: 8,  Ges: 6,
-  A: 9,  Ais: 10, As: 8,
-  H: 11, His: 0,  B: 10,
+  C: 0,  Cis: 1,   Cisis: 2,  Ces: 11,
+  D: 2,  Dis: 3,              Des: 1,
+  E: 4,  Eis: 5,   Es: 3,
+  F: 5,  Fis: 6,   Fisis: 7,  Fes: 4,
+  G: 7,  Gis: 8,   Gisis: 9,  Ges: 6,
+  A: 9,  Ais: 10,             As: 8,
+  H: 11, His: 0,              B: 10,
 };
 
 export function noteNameToSemitone(name) {
@@ -23,6 +23,7 @@ export function noteNameToSemitone(name) {
 export function accidentalType(noteName) {
   if (noteName === 'B') return 'flat';
   const lower = noteName.toLowerCase();
+  if (lower.endsWith('isis')) return 'double-sharp'; // must check before 'is'
   if (lower.length > 1 && lower.endsWith('is')) return 'sharp';
   if (lower.endsWith('es') || lower.endsWith('as')) return 'flat';
   return null;
@@ -102,16 +103,16 @@ export const SCALE_CATALOG = [
     melodicNotes:  ['Cis','Dis','E','Fis','Gis','Ais','His','Cis'] },
   { id: 'gis-minor', root: 'gis', semitone: 8,  type: 'minor', accidental: 'sharp',   keySig: 5,
     notes:         ['Gis','Ais','H','Cis','Dis','E','Fis','Gis'],
-    harmonicNotes: ['Gis','Ais','H','Cis','Dis','E','G','Gis'],
-    melodicNotes:  ['Gis','Ais','H','Cis','Dis','Eis','G','Gis'] },
+    harmonicNotes: ['Gis','Ais','H','Cis','Dis','E','Fisis','Gis'],
+    melodicNotes:  ['Gis','Ais','H','Cis','Dis','Eis','Fisis','Gis'] },
   { id: 'dis-minor', root: 'dis', semitone: 3,  type: 'minor', accidental: 'sharp',   keySig: 6,
     notes:         ['Dis','Eis','Fis','Gis','Ais','H','Cis','Dis'],
-    harmonicNotes: ['Dis','Eis','Fis','Gis','Ais','H','D','Dis'],
-    melodicNotes:  ['Dis','Eis','Fis','Gis','Ais','His','D','Dis'] },
+    harmonicNotes: ['Dis','Eis','Fis','Gis','Ais','H','Cisis','Dis'],
+    melodicNotes:  ['Dis','Eis','Fis','Gis','Ais','His','Cisis','Dis'] },
   { id: 'ais-minor', root: 'ais', semitone: 10, type: 'minor', accidental: 'sharp',   keySig: 7,
     notes:         ['Ais','His','Cis','Dis','Eis','Fis','Gis','Ais'],
-    harmonicNotes: ['Ais','His','Cis','Dis','Eis','Fis','A','Ais'],
-    melodicNotes:  ['Ais','His','Cis','Dis','Eis','G','A','Ais'] },
+    harmonicNotes: ['Ais','His','Cis','Dis','Eis','Fis','Gisis','Ais'],
+    melodicNotes:  ['Ais','His','Cis','Dis','Eis','Fisis','Gisis','Ais'] },
   { id: 'd-minor',   root: 'd',   semitone: 2,  type: 'minor', accidental: 'flat',    keySig: -1,
     notes:         ['D','E','F','G','A','B','C','D'],
     harmonicNotes: ['D','E','F','G','A','B','Cis','D'],
@@ -173,6 +174,21 @@ export function generateScale(scaleId, startOctave = 4, variant = 'natural') {
   return assignOctaves(names, startOctave);
 }
 
+// Returns the preferred start octave for displaying a scale on the staff.
+// Prefers octave 3 when octave 4 would produce upper ledger lines (slot >= 8),
+// but stays at octave 4 if the root note at octave 3 falls below the alto sax
+// lowest playable note (Ais3/B3, MIDI 46) — A and As are the affected roots.
+export function scaleStartOctave(scaleId) {
+  const entry = SCALE_CATALOG.find((s) => s.id === scaleId);
+  if (!entry) return 4;
+  const notes4 = assignOctaves(entry.notes, 4);
+  const maxSlot = Math.max(...notes4.map((n) => noteToStaffSlot(n.name, n.octave)));
+  if (maxSlot < 8) return 4;
+  const rootMidi3 = 3 * 12 + noteNameToSemitone(entry.notes[0]);
+  const saxLowMidi = ALTO_SAX_LOW.octave * 12 + ALTO_SAX_LOW.semitone;
+  return rootMidi3 < saxLowMidi ? 4 : 3;
+}
+
 // ─── Chord ───────────────────────────────────────────────────────────────────
 
 export function getChordIndices() { return [0, 2, 4]; }
@@ -199,7 +215,7 @@ export function filteredScales(filterType, filterAcc) {
 // ─── Alto Saxophone range ────────────────────────────────────────────────────
 
 export const ALTO_SAX_LOW  = { name: 'B',   semitone: 10, octave: 3 };
-export const ALTO_SAX_HIGH = { name: 'E',   semitone: 4,  octave: 6 };
+export const ALTO_SAX_HIGH = { name: 'F',   semitone: 5,  octave: 6 };
 
 // useFlats=true → flat names for chromatic accidentals (Des/Es/As/B)
 // useFlats=false → sharp names (Cis/Dis/Gis/Ais)
@@ -231,6 +247,39 @@ export function noteToStaffSlot(noteName, octave) {
   const absoluteStep = octave * 7 + di;
   const g4Step = 4 * 7 + 4; // G4: octave=4, di=4
   return absoluteStep - g4Step;
+}
+
+// ─── Inline accidentals (harmonic/melodic minor) ─────────────────────────────
+
+const KEY_SIG_SHARP_LETTERS = ['F','C','G','D','A','E','H'];
+const KEY_SIG_SHARP_NAMES   = ['Fis','Cis','Gis','Dis','Ais','Eis','His'];
+const KEY_SIG_FLAT_LETTERS  = ['H','E','A','D','G','C','F'];
+const KEY_SIG_FLAT_NAMES    = ['B','Es','As','Des','Ges','Ces','Fes'];
+
+function buildKeySigMap(keySig) {
+  const map = { C:'C', D:'D', E:'E', F:'F', G:'G', A:'A', H:'H' };
+  if (keySig > 0) {
+    for (let i = 0; i < keySig; i++) map[KEY_SIG_SHARP_LETTERS[i]] = KEY_SIG_SHARP_NAMES[i];
+  } else {
+    for (let i = 0; i < -keySig; i++) map[KEY_SIG_FLAT_LETTERS[i]] = KEY_SIG_FLAT_NAMES[i];
+  }
+  return map;
+}
+
+// Returns 'sharp' | 'flat' | 'natural' | null for each note — the inline
+// accidental that must be shown before the note head on the staff.
+// Tracks state within the sequence so that a ♮ on A forces an explicit ♯ on
+// a following Ais (since the ♮ cancelled the key-signature sharp).
+export function computeInlineAccidentals(noteNames, keySig) {
+  const state = buildKeySigMap(keySig);
+  return noteNames.map((name) => {
+    const letter = diatonicLetter(name);
+    const expected = state[letter];
+    if (name === expected) return null;
+    const acc = accidentalType(name);
+    state[letter] = name;
+    return acc ?? 'natural';
+  });
 }
 
 // ─── Legacy constants (kept for notation.js compatibility) ───────────────────

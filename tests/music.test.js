@@ -8,6 +8,8 @@ import {
   accidentalType,
   filteredScales,
   noteNameToSemitone,
+  computeInlineAccidentals,
+  scaleStartOctave,
   SCALE_CATALOG,
   ALTO_SAX_LOW,
   ALTO_SAX_HIGH,
@@ -116,37 +118,37 @@ describe('generateScale — new scales', () => {
     assert.deepEqual(scale.map((n) => n.name), ['Ces','Des','Es','Fes','Ges','As','B','Ces']);
   });
 
-  it('gis minor harmonic: 7th is G (raised from Fis)', () => {
+  it('gis minor harmonic: 7th is Fisis (double-sharp, same F-line as Fis)', () => {
     const scale = generateScale('gis-minor', 4, 'harmonic');
-    assert.equal(scale[6].name, 'G');
+    assert.equal(scale[6].name, 'Fisis');
   });
 
-  it('gis minor melodic: 6th is Eis, 7th is G', () => {
+  it('gis minor melodic: 6th is Eis, 7th is Fisis', () => {
     const scale = generateScale('gis-minor', 4, 'melodic');
     assert.equal(scale[5].name, 'Eis');
-    assert.equal(scale[6].name, 'G');
+    assert.equal(scale[6].name, 'Fisis');
   });
 
-  it('dis minor harmonic: 7th is D (raised from Cis)', () => {
+  it('dis minor harmonic: 7th is Cisis (double-sharp, same C-line as Cis)', () => {
     const scale = generateScale('dis-minor', 4, 'harmonic');
-    assert.equal(scale[6].name, 'D');
+    assert.equal(scale[6].name, 'Cisis');
   });
 
-  it('dis minor melodic: 6th is His, 7th is D', () => {
+  it('dis minor melodic: 6th is His, 7th is Cisis', () => {
     const scale = generateScale('dis-minor', 4, 'melodic');
     assert.equal(scale[5].name, 'His');
-    assert.equal(scale[6].name, 'D');
+    assert.equal(scale[6].name, 'Cisis');
   });
 
-  it('ais minor harmonic: 7th is A (raised from Gis)', () => {
+  it('ais minor harmonic: 7th is Gisis (double-sharp, same G-line as Gis)', () => {
     const scale = generateScale('ais-minor', 4, 'harmonic');
-    assert.equal(scale[6].name, 'A');
+    assert.equal(scale[6].name, 'Gisis');
   });
 
-  it('ais minor melodic: 6th is G, 7th is A', () => {
+  it('ais minor melodic: 6th is Fisis, 7th is Gisis', () => {
     const scale = generateScale('ais-minor', 4, 'melodic');
-    assert.equal(scale[5].name, 'G');
-    assert.equal(scale[6].name, 'A');
+    assert.equal(scale[5].name, 'Fisis');
+    assert.equal(scale[6].name, 'Gisis');
   });
 
   it('as minor natural: includes Ces and Fes', () => {
@@ -219,8 +221,8 @@ describe('noteToStaffSlot', () => {
 describe('buildAltSaxRange', () => {
   it('useFlats=true: starts at B3 (Bb3)',  () => { const r = buildAltSaxRange(true);  assert.equal(r[0].name, 'B');   assert.equal(r[0].octave, 3); });
   it('useFlats=false: starts at Ais3',     () => { const r = buildAltSaxRange(false); assert.equal(r[0].name, 'Ais'); assert.equal(r[0].octave, 3); });
-  it('ends at E6',                         () => { const r = buildAltSaxRange(true);  const l = r[r.length-1]; assert.equal(l.name, 'E'); assert.equal(l.octave, 6); });
-  it('contains 31 semitones',              () => assert.equal(buildAltSaxRange(true).length, 31));
+  it('ends at F6',                         () => { const r = buildAltSaxRange(true);  const l = r[r.length-1]; assert.equal(l.name, 'F'); assert.equal(l.octave, 6); });
+  it('contains 32 semitones',              () => assert.equal(buildAltSaxRange(true).length, 32));
 });
 
 describe('accidentalType', () => {
@@ -234,6 +236,9 @@ describe('accidentalType', () => {
   it('His → sharp',           () => assert.equal(accidentalType('His'), 'sharp'));
   it('As → flat',             () => assert.equal(accidentalType('As'), 'flat'));
   it('Ais → sharp',           () => assert.equal(accidentalType('Ais'), 'sharp'));
+  it('Fisis → double-sharp',  () => assert.equal(accidentalType('Fisis'), 'double-sharp'));
+  it('Cisis → double-sharp',  () => assert.equal(accidentalType('Cisis'), 'double-sharp'));
+  it('Gisis → double-sharp',  () => assert.equal(accidentalType('Gisis'), 'double-sharp'));
 });
 
 describe('noteNameToSemitone', () => {
@@ -243,6 +248,9 @@ describe('noteNameToSemitone', () => {
   it('His = 0',    () => assert.equal(noteNameToSemitone('His'), 0));
   it('B = 10',     () => assert.equal(noteNameToSemitone('B'), 10));
   it('Ges = 6',    () => assert.equal(noteNameToSemitone('Ges'), 6));
+  it('Fisis = 7',  () => assert.equal(noteNameToSemitone('Fisis'), 7));
+  it('Cisis = 2',  () => assert.equal(noteNameToSemitone('Cisis'), 2));
+  it('Gisis = 9',  () => assert.equal(noteNameToSemitone('Gisis'), 9));
 });
 
 describe('filteredScales', () => {
@@ -291,4 +299,118 @@ describe('filteredScales', () => {
     assert.ok(!ids.includes('d-minor'));
     assert.ok(!ids.includes('as-minor'));
   });
+});
+
+describe('computeInlineAccidentals', () => {
+  it('C major: all null', () => {
+    assert.deepEqual(
+      computeInlineAccidentals(['C','D','E','F','G','A','H','C'], 0),
+      Array(8).fill(null)
+    );
+  });
+
+  it('G major: all null (Fis already in key sig)', () => {
+    assert.deepEqual(
+      computeInlineAccidentals(['G','A','H','C','D','E','Fis','G'], 1),
+      Array(8).fill(null)
+    );
+  });
+
+  it('a minor natural: all null', () => {
+    assert.deepEqual(
+      computeInlineAccidentals(['A','H','C','D','E','F','G','A'], 0),
+      Array(8).fill(null)
+    );
+  });
+
+  it('a minor harmonic: Gis gets sharp', () => {
+    const r = computeInlineAccidentals(['A','H','C','D','E','F','Gis','A'], 0);
+    assert.equal(r[6], 'sharp');
+    assert.deepEqual(r.filter(Boolean), ['sharp']);
+  });
+
+  it('a minor melodic: Fis sharp, Gis sharp', () => {
+    const r = computeInlineAccidentals(['A','H','C','D','E','Fis','Gis','A'], 0);
+    assert.equal(r[5], 'sharp');
+    assert.equal(r[6], 'sharp');
+  });
+
+  it('c minor harmonic: H gets natural (cancels key-sig B)', () => {
+    const r = computeInlineAccidentals(['C','D','Es','F','G','As','H','C'], -3);
+    assert.equal(r[6], 'natural');
+    assert.deepEqual(r.filter(Boolean), ['natural']);
+  });
+
+  it('d minor harmonic: Cis gets sharp', () => {
+    const r = computeInlineAccidentals(['D','E','F','G','A','B','Cis','D'], -1);
+    assert.equal(r[6], 'sharp');
+  });
+
+  it('ais minor harmonic: Gisis gets double-sharp (no conflict with root Ais)', () => {
+    const r = computeInlineAccidentals(['Ais','His','Cis','Dis','Eis','Fis','Gisis','Ais'], 7);
+    assert.equal(r[6], 'double-sharp');
+    assert.deepEqual(r.filter(Boolean), ['double-sharp']);
+  });
+
+  it('gis minor harmonic: Fisis gets double-sharp (no conflict with root Gis)', () => {
+    const r = computeInlineAccidentals(['Gis','Ais','H','Cis','Dis','E','Fisis','Gis'], 5);
+    assert.equal(r[6], 'double-sharp');
+    assert.deepEqual(r.filter(Boolean), ['double-sharp']);
+  });
+
+  it('dis minor harmonic: Cisis gets double-sharp (no conflict with root Dis)', () => {
+    const r = computeInlineAccidentals(['Dis','Eis','Fis','Gis','Ais','H','Cisis','Dis'], 6);
+    assert.equal(r[6], 'double-sharp');
+    assert.deepEqual(r.filter(Boolean), ['double-sharp']);
+  });
+
+  it('gis minor melodic: Eis sharp, Fisis double-sharp', () => {
+    const r = computeInlineAccidentals(['Gis','Ais','H','Cis','Dis','Eis','Fisis','Gis'], 5);
+    assert.equal(r[5], 'sharp');
+    assert.equal(r[6], 'double-sharp');
+    assert.equal(r[7], null);
+  });
+
+  it('dis minor melodic: His sharp, Cisis double-sharp', () => {
+    const r = computeInlineAccidentals(['Dis','Eis','Fis','Gis','Ais','His','Cisis','Dis'], 6);
+    assert.equal(r[5], 'sharp');
+    assert.equal(r[6], 'double-sharp');
+    assert.equal(r[7], null);
+  });
+
+  it('ais minor melodic: Fisis double-sharp, Gisis double-sharp', () => {
+    const r = computeInlineAccidentals(['Ais','His','Cis','Dis','Eis','Fisis','Gisis','Ais'], 7);
+    assert.equal(r[5], 'double-sharp');
+    assert.equal(r[6], 'double-sharp');
+    assert.equal(r[7], null);
+  });
+
+  it('es minor melodic: C natural, D natural', () => {
+    const r = computeInlineAccidentals(['Es','F','Ges','As','B','C','D','Es'], -6);
+    assert.equal(r[5], 'natural');
+    assert.equal(r[6], 'natural');
+  });
+});
+
+describe('scaleStartOctave', () => {
+  // Scales that shift to octave 3 (avoids upper ledger lines, root >= Ais3/B3 sax minimum)
+  it('H major → octave 3 (H5=slot9, H3=MIDI47≥46)', () => assert.equal(scaleStartOctave('H-major'), 3));
+  it('B major → octave 3 (B5=slot9, B3=MIDI46=sax low)', () => assert.equal(scaleStartOctave('B-major'), 3));
+  it('h minor → octave 3 (H5=slot9, H3=MIDI47≥46)', () => assert.equal(scaleStartOctave('h-minor'), 3));
+  it('ais minor → octave 3 (Ais5=slot8, Ais3=MIDI46=sax low)', () => assert.equal(scaleStartOctave('ais-minor'), 3));
+  it('b minor → octave 3 (B5=slot9, B3=MIDI46=sax low)', () => assert.equal(scaleStartOctave('b-minor'), 3));
+
+  // Scales that stay at octave 4: root at octave 3 would be below sax range (A3/As3 < Ais3)
+  it('A major → octave 4 (A3=MIDI45 < sax low 46)', () => assert.equal(scaleStartOctave('A-major'), 4));
+  it('As major → octave 4 (As3=MIDI44 < sax low 46)', () => assert.equal(scaleStartOctave('As-major'), 4));
+  it('a minor → octave 4 (A3=MIDI45 < sax low 46)', () => assert.equal(scaleStartOctave('a-minor'), 4));
+  it('as minor → octave 4 (As3=MIDI44 < sax low 46)', () => assert.equal(scaleStartOctave('as-minor'), 4));
+
+  // Scales that fit within the staff or reach only the space above → use octave 4
+  it('C major → octave 4',   () => assert.equal(scaleStartOctave('C-major'), 4));
+  it('G major → octave 4 (G5 = slot 7, space, no ledger)', () => assert.equal(scaleStartOctave('G-major'), 4));
+  it('gis minor → octave 4 (Gis5 = slot 7)', () => assert.equal(scaleStartOctave('gis-minor'), 4));
+  it('e minor → octave 4',   () => assert.equal(scaleStartOctave('e-minor'), 4));
+  it('d minor → octave 4',   () => assert.equal(scaleStartOctave('d-minor'), 4));
+  it('Ces major → octave 4', () => assert.equal(scaleStartOctave('Ces-major'), 4));
 });

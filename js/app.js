@@ -5,6 +5,7 @@ import {
   filteredScales,
   buildAltSaxRange,
   accidentalType,
+  scaleStartOctave,
 } from './music.js';
 import { renderScaleStaff, renderRangeStaff } from './notation.js';
 
@@ -36,6 +37,13 @@ function noteDisplayName(name) {
   return name === 'B' ? 'be' : name.toLowerCase();
 }
 
+const DOUBLE_SHARP_ENHARMONIC = { Fisis: 'G', Cisis: 'D', Gisis: 'A' };
+
+function noteChipLabel(name) {
+  const enh = DOUBLE_SHARP_ENHARMONIC[name];
+  return enh ? `${name} (=${enh})` : name;
+}
+
 // Compute label like "(2♭ es, as)" or "(1♭ be, 1# cis)" from actual variant notes
 function scaleAccidentalLabel(notes) {
   const flatNames = [], sharpNames = [];
@@ -61,7 +69,7 @@ function variantChangeText(entry, variant) {
   if (!varied) return '';
   const changes = [];
   for (let i = 0; i < natural.length - 1; i++) {
-    if (natural[i] !== varied[i]) changes.push(`${natural[i]} → ${varied[i]}`);
+    if (natural[i] !== varied[i]) changes.push(`${natural[i]} → ${noteChipLabel(varied[i])}`);
   }
   return changes.join(', ');
 }
@@ -168,7 +176,7 @@ function renderNoteRow(containerEl, scaleNotes, chordNoteNames) {
   clearEl(containerEl);
   scaleNotes.forEach((note) => {
     const span = document.createElement('span');
-    span.textContent = note.name;
+    span.textContent = noteChipLabel(note.name);
     span.className = 'note-chip' + (chordSet.has(note.name) ? ' chord' : '');
     span.setAttribute('role', 'listitem');
     containerEl.appendChild(span);
@@ -199,7 +207,8 @@ function update() {
 }
 
 function renderMajorView(entry) {
-  const scale = generateScale(entry.id, 4);
+  const octave = scaleStartOctave(entry.id);
+  const scale = generateScale(entry.id, octave);
   const chord = getChordNotes(scale);
   const chordNames = chord.map((n) => n.name);
 
@@ -210,27 +219,28 @@ function renderMajorView(entry) {
 }
 
 function renderMinorView(entry) {
-  const naturalScale = generateScale(entry.id, 4, 'natural');
+  const octave = scaleStartOctave(entry.id);
+  const naturalScale = generateScale(entry.id, octave, 'natural');
   const chord = getChordNotes(naturalScale);
   const chordNames = chord.map((n) => n.name);
 
   $('minor-title').textContent = `${entry.root} moll${keySigLabel(entry.keySig)}`;
   $('minor-chord').textContent = `Akord: ${chordNames.join(' – ')}`;
 
-  renderVariant('minor-natural',  entry.id, 'natural',  chordNames, entry.keySig, true);
+  renderVariant('minor-natural',  entry.id, 'natural',  chordNames, entry.keySig, true, octave);
 
   setVariantHeader('minor-harmonic', 'Harmonická moll', entry.harmonicNotes, null);
   setVariantChanges('minor-harmonic', variantChangeText(entry, 'harmonic'));
-  renderVariant('minor-harmonic', entry.id, 'harmonic', chordNames, entry.keySig, true);
+  renderVariant('minor-harmonic', entry.id, 'harmonic', chordNames, entry.keySig, true, octave);
 
   setVariantHeader('minor-melodic', 'Melodická moll', entry.melodicNotes, '(vzestupná)');
   setVariantChanges('minor-melodic', variantChangeText(entry, 'melodic'));
-  renderVariant('minor-melodic', entry.id, 'melodic', chordNames, entry.keySig, true);
+  renderVariant('minor-melodic', entry.id, 'melodic', chordNames, entry.keySig, true, octave);
 }
 
-function renderVariant(sectionId, scaleId, variant, chordNames, keySig = 0, isMinor = false) {
+function renderVariant(sectionId, scaleId, variant, chordNames, keySig = 0, isMinor = false, octave = 4) {
   const section = $(sectionId);
-  const scale = generateScale(scaleId, 4, variant);
+  const scale = generateScale(scaleId, octave, variant);
   renderNoteRow(section.querySelector('.note-row'), scale, chordNames);
   renderScaleStaff(section.querySelector('.staff-container'), scale, chordNames, keySig, isMinor);
 }

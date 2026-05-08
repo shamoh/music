@@ -1,4 +1,4 @@
-import { noteToStaffSlot, accidentalType } from './music.js';
+import { noteToStaffSlot, accidentalType, computeInlineAccidentals } from './music.js';
 
 // Short note label for display on staff: "Fis"→"F#", "Es"→"E♭", "B"→"B♭", "C"→"C"
 // lowercase=true converts the base letter to lowercase (minor scales)
@@ -9,7 +9,7 @@ function shortNoteLabel(noteName, lowercase = false) {
   } else {
     base = noteName[0];
     const acc = accidentalType(noteName);
-    suffix = acc === 'sharp' ? '#' : acc === 'flat' ? '♭' : '';
+    suffix = acc === 'double-sharp' ? '×' : acc === 'sharp' ? '#' : acc === 'flat' ? '♭' : '';
   }
   return (lowercase ? base.toLowerCase() : base) + suffix;
 }
@@ -82,6 +82,7 @@ function drawLedgerLinesScaled(svg, x, slot, staffTop, ls, nr, halfW = nr * 2.5)
 
 function drawAccidentalScaled(svg, x, slot, type, staffTop, ls, nr) {
   const y = slotToY(slot, staffTop, ls);
+  const char = type === 'double-sharp' ? '𝄪' : type === 'sharp' ? '♯' : type === 'flat' ? '♭' : '♮';
   svg.appendChild(
     svgText(svgEl('text', {
       x: x - nr * 2.2,
@@ -90,7 +91,7 @@ function drawAccidentalScaled(svg, x, slot, type, staffTop, ls, nr) {
       fill: 'currentColor',
       'text-anchor': 'middle',
       'font-family': 'serif',
-    }), type === 'sharp' ? '♯' : '♭')
+    }), char)
   );
 }
 
@@ -119,7 +120,7 @@ function drawKeySigAccidental(svg, cx, slot, type, staffTop, ls) {
 
 function keySignatureWidth(keySig, ls) {
   const count = Math.abs(keySig);
-  return count > 0 ? count * ls * 0.46 + ls * 0.4 : 0;
+  return count > 0 ? count * ls * 0.46 + ls * 0.56 : 0;
 }
 
 function drawKeySignature(svg, keySig, staffTop, ls, startX) {
@@ -135,7 +136,7 @@ function drawKeySignature(svg, keySig, staffTop, ls, startX) {
   }
 }
 
-function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor', showLabel = false, lowercase = false, ledgerHalfW = nr * 2.5 } = {}) {
+function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor', showLabel = false, lowercase = false, ledgerHalfW = nr * 2.5, inlineAcc = null, labelY = null } = {}) {
   const slot = noteToStaffSlot(note.name, note.octave);
   const y = slotToY(slot, staffTop, ls);
 
@@ -149,18 +150,19 @@ function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor'
   // Ledger lines drawn after the note head so they appear on top of it
   drawLedgerLinesScaled(svg, x, slot, staffTop, ls, nr, ledgerHalfW);
 
+  if (inlineAcc) drawAccidentalScaled(svg, x, slot, inlineAcc, staffTop, ls, nr);
+
   if (showLabel) {
-    // Fixed baseline below the bottom staff line (slot -2) — consistent for all notes
-    const labelY = staffTop + ls * 4 + ls * 2.8;
+    const ly = labelY !== null ? labelY : staffTop + ls * 4 + ls * 2.8;
     svg.appendChild(
       svgText(svgEl('text', {
         x,
-        y: labelY,
+        y: ly,
         'font-size': ls * 0.95,
         fill: color,
         'text-anchor': 'middle',
         'font-family': 'sans-serif',
-      'font-weight': 'bold',
+        'font-weight': 'bold',
       }), shortNoteLabel(note.name, lowercase))
     );
   }
@@ -193,12 +195,20 @@ export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig
   containerEl.appendChild(svg);
   drawStaffLinesScaled(svg, clefWidth, containerWidth - ls * 0.5, staffTop, ls);
   drawTrebleClefScaled(svg, clefWidth - ls * 0.5, staffTop, ls);
-  drawKeySignature(svg, keySig, staffTop, ls, clefWidth + ls * 0.3);
+  drawKeySignature(svg, keySig, staffTop, ls, clefWidth + ls * 0.46);
+
+  const inlineAccs = computeInlineAccidentals(scaleNotes.map((n) => n.name), keySig);
+
+  const lowestSlot = Math.min(...scaleNotes.map((n) => noteToStaffSlot(n.name, n.octave)));
+  const labelY = Math.max(
+    staffTop + ls * 4 + ls * 2.8,
+    slotToY(lowestSlot, staffTop, ls) + ls * 1.3,
+  );
 
   scaleNotes.forEach((note, i) => {
     const x = notesStartX + (i + 1) * step;
     const color = chordSet.has(note.name) ? 'var(--accent)' : 'var(--text)';
-    drawNoteScaled(svg, x, note, staffTop, ls, noteRadius, { color, showLabel: true, lowercase: isMinor });
+    drawNoteScaled(svg, x, note, staffTop, ls, noteRadius, { color, showLabel: true, lowercase: isMinor, inlineAcc: inlineAccs[i], labelY });
   });
 }
 
@@ -224,7 +234,7 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, keySig = 0
   containerEl.appendChild(svg);
   drawStaffLinesScaled(svg, clefWidth, width - ls * 0.5, staffTop, ls);
   drawTrebleClefScaled(svg, clefWidth - ls * 0.5, staffTop, ls);
-  drawKeySignature(svg, keySig, staffTop, ls, clefWidth + ls * 0.3);
+  drawKeySignature(svg, keySig, staffTop, ls, clefWidth + ls * 0.46);
 
   // Ledger lines drawn on top of note heads — cap width so consecutive lines don't merge
   const ledgerHalfW = Math.min(noteRadius * 2.5, step * 0.46);
