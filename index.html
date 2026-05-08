@@ -70,11 +70,29 @@
       </div>
     </section>
 
-    <!-- Alto Saxophone range (always visible) -->
+    <!-- Alto Saxophone range -->
     <section class="range-section">
       <h2>Rozsah Alt Saxofonu</h2>
       <p class="range-hint">Noty stupnice jsou zvýrazněny</p>
-      <div id="range-staff" class="staff-container range-staff" aria-live="polite"></div>
+
+      <div id="range-major">
+        <div id="range-major-staff" class="staff-container" aria-live="polite"></div>
+      </div>
+
+      <div id="range-minor" hidden>
+        <div class="range-variant">
+          <h3>Přirozená moll</h3>
+          <div id="range-natural-staff" class="staff-container" aria-live="polite"></div>
+        </div>
+        <div class="range-variant">
+          <h3>Harmonická moll</h3>
+          <div id="range-harmonic-staff" class="staff-container" aria-live="polite"></div>
+        </div>
+        <div class="range-variant">
+          <h3>Melodická moll</h3>
+          <div id="range-melodic-staff" class="staff-container" aria-live="polite"></div>
+        </div>
+      </div>
     </section>
   </main>
 

@@ -214,6 +214,26 @@ main {
 
 .range-hint { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.6rem; }
 
+/* ─── Minor range variants ─── */
+.range-variant {
+  border-top: 1px solid var(--border);
+  padding-top: 0.6rem;
+  margin-top: 0.6rem;
+}
+
+.range-variant:first-child {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0.2rem;
+}
+
+.range-variant h3 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent2);
+  margin-bottom: 0.3rem;
+}
+
 /* ─── Desktop: 2-column grid (≥ 900 px) ─── */
 @media (min-width: 900px) {
   main {

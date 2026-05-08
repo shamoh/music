@@ -255,25 +255,21 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
   svg.setAttribute('width', width > containerWidth ? width : '100%');
   containerEl.appendChild(svg);
 
-  // Section background bands — drawn before staff lines so they stay behind
-  let secStartIdx = 0;
-  for (let i = 1; i <= rangeNotes.length; i++) {
-    const atEnd = i === rangeNotes.length;
-    const prevSec = rangeSection(rangeNotes[i - 1]);
-    if (atEnd || rangeSection(rangeNotes[i]) !== prevSec) {
-      const x1 = notesStartX + (secStartIdx + 1) * step - step * 0.5;
-      const x2 = notesStartX + (i - 1     + 1) * step + step * 0.5;
-      svg.appendChild(svgEl('rect', {
-        x: x1, y: 0, width: x2 - x1, height: totalHeight,
-        fill: RANGE_SECTION_COLORS[prevSec],
-      }));
-      secStartIdx = i;
-    }
-  }
+  // Per-note section background bands with small gap — drawn before staff lines
+  const noteGap = Math.max(1.5, step * 0.06);
+  rangeNotes.forEach((note, i) => {
+    const cx = notesStartX + (i + 1) * step;
+    svg.appendChild(svgEl('rect', {
+      x: cx - step * 0.5 + noteGap,
+      y: 0,
+      width: step - noteGap * 2,
+      height: totalHeight,
+      fill: RANGE_SECTION_COLORS[rangeSection(note)],
+    }));
+  });
 
   drawStaffLinesScaled(svg, clefWidth, width - ls * 0.5, staffTop, ls);
   drawTrebleClefScaled(svg, clefWidth - ls * 0.5, staffTop, ls);
-  drawKeySignature(svg, keySig, staffTop, ls, clefWidth + ls * 0.65);
 
   // Ledger lines drawn on top of note heads — cap width so consecutive lines don't merge
   const ledgerHalfW = Math.min(noteRadius * 2.5, step * 0.46);
@@ -289,8 +285,8 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
     const isTonic = note.name === tonicName;
     const color = isTonic                  ? 'var(--note-tonic)'
                 : chordSet.has(note.name) ? 'var(--note-chord)'
-                : scaleSet.has(note.name) ? 'var(--note-scale)'
-                :                           'var(--note-muted)';
-    drawNoteScaled(svg, x, note, staffTop, ls, noteRadius, { color, ledgerHalfW, showLabel: isTonic, labelY });
+                :                           'var(--note-scale)';
+    const inlineAcc = accidentalType(note.name);
+    drawNoteScaled(svg, x, note, staffTop, ls, noteRadius, { color, ledgerHalfW, showLabel: isTonic, labelY, inlineAcc });
   });
 }

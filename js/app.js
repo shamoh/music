@@ -3,11 +3,35 @@ import {
   generateScale,
   getChordNotes,
   filteredScales,
-  buildAltSaxRange,
+  ALTO_SAX_LOW,
+  ALTO_SAX_HIGH,
+  noteNameToSemitone,
   accidentalType,
   scaleStartOctave,
 } from './music.js';
 import { renderScaleStaff, renderRangeStaff } from './notation.js';
+
+// Build all occurrences of scale notes within the playable alto sax range, sorted by pitch.
+function buildScaleRange(scaleNotes) {
+  const seen = new Set();
+  const entries = [];
+  for (const n of scaleNotes.slice(0, 7)) {
+    if (!seen.has(n.name)) {
+      seen.add(n.name);
+      entries.push({ name: n.name, semitone: noteNameToSemitone(n.name) });
+    }
+  }
+  const lowMidi  = ALTO_SAX_LOW.octave  * 12 + ALTO_SAX_LOW.semitone;
+  const highMidi = ALTO_SAX_HIGH.octave * 12 + ALTO_SAX_HIGH.semitone;
+  const result = [];
+  for (const { name, semitone } of entries) {
+    for (let oct = 3; oct <= 6; oct++) {
+      const midi = oct * 12 + semitone;
+      if (midi >= lowMidi && midi <= highMidi) result.push({ name, semitone, octave: oct });
+    }
+  }
+  return result.sort((a, b) => (a.octave * 12 + a.semitone) - (b.octave * 12 + b.semitone));
+}
 
 const state = {
   scaleId: 'C-major',
@@ -204,11 +228,22 @@ function update() {
     renderMinorView(entry);
   }
 
-  // Range staff: highlight scale notes across all octaves; chord notes in accent color
-  const altSaxRange = buildAltSaxRange(entry.keySig < 0);
+  // Range staff: scale notes only, no key signature, individual accidentals per note
   const naturalScale = generateScale(entry.id, 4, 'natural');
   const chordNames = getChordNotes(naturalScale).map((n) => n.name);
-  renderRangeStaff($('range-staff'), altSaxRange, naturalScale, chordNames, entry.keySig);
+
+  if (entry.type === 'major') {
+    $('range-major').hidden = false;
+    $('range-minor').hidden = true;
+    renderRangeStaff($('range-major-staff'), buildScaleRange(naturalScale), naturalScale, chordNames, 0);
+  } else {
+    $('range-major').hidden = true;
+    $('range-minor').hidden = false;
+    for (const variant of ['natural', 'harmonic', 'melodic']) {
+      const variantScale = generateScale(entry.id, 4, variant);
+      renderRangeStaff($(`range-${variant}-staff`), buildScaleRange(variantScale), variantScale, chordNames, 0);
+    }
+  }
 }
 
 function renderMajorView(entry) {
@@ -308,8 +343,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (typeof ResizeObserver !== 'undefined') {
     const ro = new ResizeObserver(() => update());
-    ro.observe($('range-staff'));
-    // observe dynamically-shown staff containers via document-level fallback
     document.querySelectorAll('.staff-container').forEach((el) => ro.observe(el));
   } else {
     window.addEventListener('resize', () => update());
