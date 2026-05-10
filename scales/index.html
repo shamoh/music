@@ -5,13 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#1a1a2e" />
   <meta name="description" content="Hudební stupnice pro Alt Saxofon" />
-  <title>SaxScale</title>
+  <title>Sax Scales</title>
   <link rel="manifest" href="/scales/manifest.json" />
+  <link rel="apple-touch-icon" href="/scales/icons/icon.svg" />
   <link rel="stylesheet" href="/scales/css/style.css" />
+  <script>
+    // Apply saved visual profile before first paint to prevent flash
+    try {
+      const vars = JSON.parse(localStorage.getItem('sax-scales-profile-vars') || 'null');
+      if (vars) {
+        const r = document.documentElement;
+        for (const [k, v] of Object.entries(vars)) r.style.setProperty(k, v);
+      }
+    } catch (_) {}
+  </script>
 </head>
 <body>
   <header>
-    <h1>🎷 SaxScale</h1>
+    <h1>🎷 Sax Scales</h1>
     <p class="subtitle">Stupnice pro Alt Saxofon</p>
   </header>
 
@@ -34,6 +45,11 @@
       <div class="filter-group scale-select-group">
         <label for="scale-select" class="filter-label">Stupnice</label>
         <select id="scale-select" aria-label="Výběr stupnice"></select>
+      </div>
+
+      <div class="filter-group profile-select-group">
+        <label for="profile-select" class="filter-label">Vzhled</label>
+        <select id="profile-select" aria-label="Vizuální profil"></select>
       </div>
 
     </section>

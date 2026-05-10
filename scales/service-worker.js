@@ -1,4 +1,4 @@
-const CACHE_NAME = 'saxscale-v2';
+const CACHE_NAME = 'sax-scales-v3';
 const ASSETS = [
   '/scales/',
   '/scales/index.html',
@@ -7,6 +7,9 @@ const ASSETS = [
   '/scales/js/music.js',
   '/scales/js/notation.js',
   '/scales/js/app.js',
+  '/scales/js/themes.js',
+  '/scales/js/defaults.js',
+  '/scales/icons/icon.svg',
   '/scales/icons/icon-192.png',
   '/scales/icons/icon-512.png',
 ];

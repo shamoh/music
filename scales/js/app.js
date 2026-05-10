@@ -10,6 +10,8 @@ import {
   scaleStartOctave,
 } from './music.js';
 import { renderScaleStaff, renderRangeStaff } from './notation.js';
+import { VISUAL_PROFILES, applyProfile, savedProfileId } from './themes.js';
+import { DEFAULT_SCALE_ID } from './defaults.js';
 
 // Build all occurrences of scale notes within the playable alto sax range, sorted by pitch.
 function buildScaleRange(scaleNotes) {
@@ -43,7 +45,7 @@ function buildScaleRange(scaleNotes) {
 }
 
 const state = {
-  scaleId: 'C-major',
+  scaleId: DEFAULT_SCALE_ID,
   filterType: new Set(['major', 'minor']),
   filterAcc:  new Set(['sharp', 'flat']),
 };
@@ -158,7 +160,7 @@ function toggleFilter(btn, stateKey, value) {
   // If selected scale no longer visible, pick first visible scale
   const visible = filteredScales(state.filterType, state.filterAcc);
   if (!visible.find((s) => s.id === state.scaleId)) {
-    state.scaleId = visible[0]?.id ?? 'C-major';
+    state.scaleId = visible[0]?.id ?? DEFAULT_SCALE_ID;
   }
   repopulateSelect();
   update();
@@ -331,9 +333,27 @@ function registerSW() {
   }
 }
 
+function initProfileSelect() {
+  const sel = $('profile-select');
+  const currentId = savedProfileId();
+  VISUAL_PROFILES.forEach((p) => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name;
+    if (p.id === currentId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', (e) => {
+    applyProfile(e.target.value);
+    update();
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  applyProfile(savedProfileId());
   applyHash(location.hash);
   initFilterChips();
+  initProfileSelect();
 
   $('scale-select').addEventListener('change', (e) => {
     state.scaleId = e.target.value;
@@ -356,13 +376,21 @@ document.addEventListener('DOMContentLoaded', () => {
   rangeTooltip.hidden = true;
   document.body.appendChild(rangeTooltip);
 
+  let tooltipTimer = null;
+
   function showRangeTooltip(e) {
     const g = e.target.closest('[data-tooltip]');
+    const isTouch = e.pointerType === 'touch';
     if (g) {
       rangeTooltip.textContent = g.dataset.tooltip;
       rangeTooltip.style.left = e.clientX + 'px';
-      rangeTooltip.style.top  = e.clientY + 'px';
+      // On touch, shift tooltip up so it clears the finger
+      rangeTooltip.style.top  = (e.clientY - (isTouch ? 60 : 0)) + 'px';
       rangeTooltip.hidden = false;
+      if (isTouch) {
+        clearTimeout(tooltipTimer);
+        tooltipTimer = setTimeout(() => { rangeTooltip.hidden = true; }, 3000);
+      }
     } else if (e.type === 'pointermove') {
       rangeTooltip.hidden = true;
     }
@@ -372,7 +400,9 @@ document.addEventListener('DOMContentLoaded', () => {
   rangeSection.addEventListener('pointermove', showRangeTooltip);
   rangeSection.addEventListener('pointerdown', showRangeTooltip);
   rangeSection.addEventListener('pointerleave', () => { rangeTooltip.hidden = true; });
-  rangeSection.addEventListener('pointerup',    () => { setTimeout(() => { rangeTooltip.hidden = true; }, 1200); });
+  rangeSection.addEventListener('pointerup', (e) => {
+    if (e.pointerType !== 'touch') setTimeout(() => { rangeTooltip.hidden = true; }, 1200);
+  });
 
   if (typeof ResizeObserver !== 'undefined') {
     const ro = new ResizeObserver(() => update());

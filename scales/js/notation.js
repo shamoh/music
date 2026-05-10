@@ -12,6 +12,11 @@ function shortNoteLabel(noteName, lowercase = false) {
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+function profileFontScale() {
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--font-scale');
+  return parseFloat(v) || 1;
+}
+
 const STAFF_LINE_SLOTS = [-2, 0, 2, 4, 6]; // E4, G4, H4, D5, F5
 
 // Treble clef key signature accidental positions (slot numbers)
@@ -179,7 +184,7 @@ export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig
   const chordSet = new Set(chordNoteNames);
   const tonicName = scaleNotes[0]?.name;
   const containerWidth = containerEl.clientWidth || 400;
-  const ls = Math.min(14, Math.max(9, Math.floor(containerWidth / 38)));
+  const ls = Math.min(14, Math.max(9, Math.floor(containerWidth / 38))) * profileFontScale();
   const noteRadius = ls * 0.45;
   const staffTop = ls * 6;
   const totalHeight = staffTop + ls * 4 + ls * 7;
@@ -254,7 +259,7 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
   const minWidth = rangeNotes.length * 14 + 60;
   const width = Math.max(containerWidth, minWidth);
 
-  const ls = Math.min(12, Math.max(9, Math.floor(containerWidth / 42)));
+  const ls = Math.min(12, Math.max(9, Math.floor(containerWidth / 42))) * profileFontScale();
   const noteRadius = ls * 0.45;
   const staffTop = ls * 8;
   const totalHeight = staffTop + ls * 4 + ls * 6;
