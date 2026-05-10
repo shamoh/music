@@ -145,6 +145,13 @@ main {
   gap: 1.2rem;
 }
 
+/* ─── Range page: full-width layout ─── */
+.range-main {
+  max-width: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 /* ─── Filter bar ─── */
 .filter-bar {
   display: flex;

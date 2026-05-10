@@ -25,12 +25,40 @@
     <h1>Rozsah Alt Saxofonu</h1>
   </header>
 
-  <main>
-    <section class="range-section">
-      <h2 id="range-title"></h2>
-      <p class="range-hint">Noty stupnice jsou zvýrazněny. Klepnutím na notu zobrazíte název.</p>
+  <main class="range-main">
+    <!-- Filter + scale selector -->
+    <section class="filter-bar" aria-label="Výběr stupnice">
 
-      <nav id="type-nav" class="type-nav" hidden></nav>
+      <div class="filter-group">
+        <span class="filter-label">Typ</span>
+        <button class="filter-chip active" data-filter-type="major" aria-pressed="true">Dur</button>
+        <button class="filter-chip active" data-filter-type="minor" aria-pressed="true">Moll</button>
+      </div>
+
+      <div class="filter-group">
+        <span class="filter-label">Klíč</span>
+        <button class="filter-chip active" data-filter-acc="sharp" aria-pressed="true"># Kříže</button>
+        <button class="filter-chip active" data-filter-acc="flat"  aria-pressed="true">♭ Béčka</button>
+      </div>
+
+      <div class="filter-group scale-select-group">
+        <label for="scale-select" class="filter-label">Stupnice</label>
+        <select id="scale-select" aria-label="Výběr stupnice"></select>
+      </div>
+
+      <div class="filter-group profile-select-group">
+        <label for="profile-select" class="filter-label">Vzhled</label>
+        <select id="profile-select" aria-label="Vizuální profil"></select>
+      </div>
+
+    </section>
+
+    <section class="range-section">
+      <div class="title-row">
+        <h2 id="range-title"></h2>
+        <nav id="type-nav" class="type-nav" hidden></nav>
+      </div>
+      <p class="range-hint">Noty stupnice zvýrazněny barevně, ostatní šedě. Klepnutím zobrazíte název.</p>
 
       <div id="range-staff" class="staff-container" aria-live="polite"></div>
     </section>

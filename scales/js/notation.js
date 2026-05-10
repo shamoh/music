@@ -67,7 +67,7 @@ function drawTrebleClefScaled(svg, x, staffTop, ls) {
   );
 }
 
-function drawLedgerLinesScaled(svg, x, slot, staffTop, ls, nr, halfW = nr * 2.5) {
+function drawLedgerLinesScaled(svg, x, slot, staffTop, ls, nr, halfW = nr * 2.5, stroke = 'currentColor') {
   const ledgerSlots = [];
   if (slot <= -4) for (let s = -4; s >= slot; s -= 2) ledgerSlots.push(s);
   if (slot >= 8)  for (let s = 8;  s <= slot; s += 2) ledgerSlots.push(s);
@@ -76,12 +76,12 @@ function drawLedgerLinesScaled(svg, x, slot, staffTop, ls, nr, halfW = nr * 2.5)
     svg.appendChild(svgEl('line', {
       x1: x - halfW, y1: y,
       x2: x + halfW, y2: y,
-      stroke: 'currentColor', 'stroke-width': 1.5,
+      stroke, 'stroke-width': 1.5,
     }));
   }
 }
 
-function drawAccidentalScaled(svg, x, slot, type, staffTop, ls, nr) {
+function drawAccidentalScaled(svg, x, slot, type, staffTop, ls, nr, fill = 'currentColor') {
   const y = slotToY(slot, staffTop, ls);
   const char = type === 'double-sharp' ? '𝄪' : type === 'sharp' ? '♯' : type === 'flat' ? '♭' : '♮';
   svg.appendChild(
@@ -89,7 +89,7 @@ function drawAccidentalScaled(svg, x, slot, type, staffTop, ls, nr) {
       x: x - nr * 2.2,
       y: y + nr * 0.5,
       'font-size': ls * 1.4,
-      fill: 'currentColor',
+      fill,
       'text-anchor': 'middle',
       'font-family': 'serif',
     }), char)
@@ -149,9 +149,9 @@ function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor'
   }));
 
   // Ledger lines drawn after the note head so they appear on top of it
-  drawLedgerLinesScaled(svg, x, slot, staffTop, ls, nr, ledgerHalfW);
+  drawLedgerLinesScaled(svg, x, slot, staffTop, ls, nr, ledgerHalfW, color);
 
-  if (inlineAcc) drawAccidentalScaled(svg, x, slot, inlineAcc, staffTop, ls, nr);
+  if (inlineAcc) drawAccidentalScaled(svg, x, slot, inlineAcc, staffTop, ls, nr, color);
 
   if (showLabel) {
     const ly = labelY !== null ? labelY : staffTop + ls * 4 + ls * 2.8;
@@ -249,20 +249,32 @@ function rangeSection(note) {
   return idx === -1 ? 3 : idx;
 }
 
+// Build a name set that also includes enharmonic equivalents so that e.g.
+// "Fis" in the scale matches "Ges" in the chromatic range display.
+function nameSetWithEnharmonics(names) {
+  const set = new Set(names);
+  for (const name of [...set]) {
+    const enh = enharmonicEquivalent(name, 4);
+    if (enh) set.add(enh.name);
+  }
+  return set;
+}
+
 export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteNames, keySig = 0, isMinor = false) {
   clearEl(containerEl);
 
-  const scaleSet = new Set(scaleNotes.map((n) => n.name));
-  const chordSet = new Set(chordNoteNames);
+  const scaleSet  = nameSetWithEnharmonics(scaleNotes.map((n) => n.name));
+  const chordSet  = nameSetWithEnharmonics(chordNoteNames);
   const tonicName = scaleNotes[0]?.name;
+  const tonicSet  = nameSetWithEnharmonics(tonicName ? [tonicName] : []);
   const containerWidth = containerEl.clientWidth || 400;
-  const minWidth = rangeNotes.length * 14 + 60;
+  const minWidth = rangeNotes.length * 40 + 60;
   const width = Math.max(containerWidth, minWidth);
 
   const ls = Math.min(12, Math.max(9, Math.floor(containerWidth / 42))) * profileFontScale();
   const noteRadius = ls * 0.45;
-  const staffTop = ls * 8;
-  const totalHeight = staffTop + ls * 4 + ls * 6;
+  const staffTop = ls * 6;
+  const totalHeight = staffTop + ls * 4 + ls * 5;
   const clefWidth = ls * 3.5;
   const keySigW = keySignatureWidth(keySig, ls);
   const notesStartX = clefWidth + keySigW;
@@ -276,7 +288,7 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
   const noteGap = Math.max(1.5, step * 0.06);
   rangeNotes.forEach((note, i) => {
     const cx = notesStartX + (i + 1) * step;
-    const isChordNote = note.name === tonicName || chordSet.has(note.name);
+    const isChordNote = tonicSet.has(note.name) || chordSet.has(note.name);
     const colors = isChordNote ? RANGE_SECTION_COLORS_CHORD : RANGE_SECTION_COLORS;
     svg.appendChild(svgEl('rect', {
       x: cx - step * 0.5 + noteGap,
@@ -295,16 +307,17 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
 
   const lowestSlot = Math.min(...rangeNotes.map((n) => noteToStaffSlot(n.name, n.octave)));
   const labelY = Math.max(
-    staffTop + ls * 4 + ls * 2.8,
-    slotToY(lowestSlot, staffTop, ls) + ls * 1.3,
+    staffTop + ls * 4 + ls * 3.5,
+    slotToY(lowestSlot, staffTop, ls) + ls * 2.2,
   );
 
   rangeNotes.forEach((note, i) => {
     const x = notesStartX + (i + 1) * step;
-    const isTonic = note.name === tonicName;
+    const isTonic = tonicSet.has(note.name);
     const color = isTonic                  ? 'var(--note-tonic)'
-                : chordSet.has(note.name) ? 'var(--note-chord)'
-                :                           'var(--note-scale)';
+                : chordSet.has(note.name)  ? 'var(--note-chord)'
+                : scaleSet.has(note.name)  ? 'var(--note-scale)'
+                :                            'var(--note-muted)';
     const inlineAcc = accidentalType(note.name);
     const enh = enharmonicEquivalent(note.name, note.octave);
     const displayName = (isMinor ? note.name.toLowerCase() : note.name) + note.octave;
