@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#1a1a2e" />
   <meta name="description" content="Hudební stupnice pro Alt Saxofon" />
-  <title>Sax Scales</title>
+  <title>Scales</title>
   <link rel="manifest" href="/scales/manifest.json" />
   <link rel="apple-touch-icon" href="/scales/icons/icon.svg" />
   <link rel="stylesheet" href="/scales/css/style.css" />
   <script>
     // Apply saved visual profile before first paint to prevent flash
     try {
-      const vars = JSON.parse(localStorage.getItem('sax-scales-profile-vars') || 'null');
+      const vars = JSON.parse(localStorage.getItem('scales-profile-vars') || 'null');
       if (vars) {
         const r = document.documentElement;
         for (const [k, v] of Object.entries(vars)) r.style.setProperty(k, v);
@@ -22,7 +22,7 @@
 </head>
 <body>
   <header>
-    <h1>🎷 Sax Scales</h1>
+    <h1>🎷 Scales</h1>
     <p class="subtitle">Stupnice pro Alt Saxofon</p>
   </header>
 
@@ -56,7 +56,10 @@
 
     <!-- Major view (single scale) -->
     <section class="scale-section" id="major-view" hidden>
-      <h2 id="major-title"></h2>
+      <div class="title-row">
+        <h2 id="major-title"></h2>
+        <a id="major-range-link" class="range-link" href="/scales/instrument/saxophone-alto/" aria-label="Rozsah Alt Saxofonu">🎷 Rozsah</a>
+      </div>
       <p id="major-chord" class="chord-label"></p>
       <div id="major-note-row" class="note-row" role="list" aria-label="Noty stupnice"></div>
       <div id="major-staff" class="staff-container" aria-live="polite"></div>
@@ -68,50 +71,36 @@
       <p id="minor-chord" class="chord-label"></p>
 
       <div class="minor-variant" id="minor-natural">
-        <h3>Přirozená moll</h3>
+        <div class="title-row">
+          <h3>Přirozená moll</h3>
+          <a class="range-link" data-range-type="natural" href="/scales/instrument/saxophone-alto/" aria-label="Rozsah Alt Saxofonu">🎷 Rozsah</a>
+        </div>
         <div class="note-row" role="list"></div>
         <div class="staff-container" aria-live="polite"></div>
       </div>
 
       <div class="minor-variant" id="minor-harmonic">
-        <h3>Harmonická moll</h3>
+        <div class="title-row">
+          <h3>Harmonická moll</h3>
+          <a class="range-link" data-range-type="harmonic" href="/scales/instrument/saxophone-alto/" aria-label="Rozsah Alt Saxofonu">🎷 Rozsah</a>
+        </div>
         <div class="note-row" role="list"></div>
         <div class="staff-container" aria-live="polite"></div>
       </div>
 
       <div class="minor-variant" id="minor-melodic">
-        <h3>Melodická moll <span class="variant-hint">(vzestupná)</span></h3>
+        <div class="title-row">
+          <h3>Melodická moll <span class="variant-hint">(vzestupná)</span></h3>
+          <a class="range-link" data-range-type="melodic" href="/scales/instrument/saxophone-alto/" aria-label="Rozsah Alt Saxofonu">🎷 Rozsah</a>
+        </div>
         <div class="note-row" role="list"></div>
         <div class="staff-container" aria-live="polite"></div>
       </div>
     </section>
 
-    <!-- Alto Saxophone range -->
-    <section class="range-section">
-      <h2>Rozsah Alt Saxofonu</h2>
-      <p class="range-hint">Noty stupnice jsou zvýrazněny</p>
-
-      <div id="range-major">
-        <div id="range-major-staff" class="staff-container" aria-live="polite"></div>
-      </div>
-
-      <div id="range-minor" hidden>
-        <div class="range-variant">
-          <h3>Přirozená moll</h3>
-          <div id="range-natural-staff" class="staff-container" aria-live="polite"></div>
-        </div>
-        <div class="range-variant">
-          <h3>Harmonická moll</h3>
-          <div id="range-harmonic-staff" class="staff-container" aria-live="polite"></div>
-        </div>
-        <div class="range-variant">
-          <h3>Melodická moll</h3>
-          <div id="range-melodic-staff" class="staff-container" aria-live="polite"></div>
-        </div>
-      </div>
-    </section>
   </main>
 
+  <footer class="app-footer" id="app-footer"></footer>
   <script type="module" src="/scales/js/app.js"></script>
 </body>
 </html>

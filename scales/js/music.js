@@ -256,6 +256,36 @@ export function buildAltSaxRange(useFlats = true) {
   return notes;
 }
 
+// Build all occurrences of scale note names within the playable alto sax range, sorted by pitch.
+// Takes the first 7 unique note names from scaleNotes and finds every occurrence in the range.
+export function buildScaleRange(scaleNotes) {
+  const seen = new Set();
+  const entries = [];
+  for (const n of scaleNotes.slice(0, 7)) {
+    if (!seen.has(n.name)) {
+      seen.add(n.name);
+      entries.push({ name: n.name, semitone: noteNameToSemitone(n.name) });
+    }
+  }
+  const lowMidi  = ALTO_SAX_LOW.octave  * 12 + ALTO_SAX_LOW.semitone;
+  const highMidi = ALTO_SAX_HIGH.octave * 12 + ALTO_SAX_HIGH.semitone;
+
+  function pitchMidi(name, semitone, oct) {
+    if (name === 'Ces') return (oct - 1) * 12 + 11;
+    if (name === 'His') return (oct + 1) * 12;
+    return oct * 12 + semitone;
+  }
+
+  const result = [];
+  for (const { name, semitone } of entries) {
+    for (let oct = 3; oct <= 6; oct++) {
+      const midi = pitchMidi(name, semitone, oct);
+      if (midi >= lowMidi && midi <= highMidi) result.push({ name, semitone, octave: oct });
+    }
+  }
+  return result.sort((a, b) => pitchMidi(a.name, a.semitone, a.octave) - pitchMidi(b.name, b.semitone, b.octave));
+}
+
 // ─── Staff slot calculation ──────────────────────────────────────────────────
 
 const DIATONIC_NAMES = ['C','D','E','F','G','A','H'];

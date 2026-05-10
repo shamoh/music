@@ -46,6 +46,95 @@ header {
 header h1 { font-size: 1.7rem; letter-spacing: 0.03em; }
 .subtitle { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.2rem; }
 
+/* ─── Title row: heading + range link side by side ─── */
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+/* ─── Range page link inside scale boxes ─── */
+.range-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 0.18rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+.range-link:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+/* ─── Saxophone-alto page header ─── */
+.sax-page-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.8rem 1.2rem;
+}
+
+.back-link {
+  text-decoration: none;
+  color: var(--accent);
+  font-size: 0.85rem;
+  align-self: flex-start;
+}
+.back-link:hover { text-decoration: underline; }
+
+.sax-page-header h1 {
+  font-size: 1.3rem;
+  letter-spacing: 0.02em;
+}
+
+/* ─── Type sub-nav (minor variants on saxophone-alto page) ─── */
+.type-nav {
+  display: inline-flex;
+  align-items: stretch;
+  margin: 0.5rem 0 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  font-size: 0.87rem;
+}
+.type-nav a,
+.type-nav strong {
+  padding: 0.35rem 1rem;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+}
+.type-nav strong {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+.type-nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s;
+}
+.type-nav a:hover {
+  background: var(--bg-card);
+  color: var(--text);
+}
+.type-nav-sep {
+  width: 1px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
 /* ─── Main layout — mobile portrait (default) ─── */
 main {
   width: 100%;
@@ -152,7 +241,7 @@ main {
 }
 
 .scale-section h2,
-.range-section h2 { font-size: 1.2rem; margin-bottom: 0.3rem; }
+.range-section h2 { font-size: 1.2rem; }
 
 .chord-label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.8rem; }
 
@@ -169,7 +258,6 @@ main {
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--accent2);
-  margin-bottom: 0.5rem;
 }
 
 .variant-hint {
@@ -263,22 +351,10 @@ main {
   margin-bottom: 0.3rem;
 }
 
-/* ─── Desktop: 2-column grid (≥ 900 px) ─── */
+/* ─── Desktop: wider max-width (≥ 900 px) ─── */
 @media (min-width: 900px) {
-  main {
-    max-width: 1200px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
-    gap: 1.2rem;
-    align-items: start;
-  }
-
-  .filter-bar    { grid-column: 1 / -1; }
-  .scale-section { grid-column: 1; }
-  .range-section { grid-column: 2; }
-
-  header h1      { font-size: 2rem; }
+  main { max-width: 900px; }
+  header h1 { font-size: 2rem; }
 }
 
 /* ─── Landscape mobile: compact header + tighter layout ─── */
@@ -301,7 +377,7 @@ main {
   .scale-section,
   .range-section { padding: 0.6rem 0.8rem; }
 
-  .scale-section h2,
+  .scale-section h2 { font-size: 1rem; margin-bottom: 0.2rem; }
   .range-section h2 { font-size: 1rem; margin-bottom: 0.2rem; }
 
   .chord-label  { margin-bottom: 0.4rem; }
@@ -309,26 +385,21 @@ main {
   .minor-variant { margin-top: 0.5rem; padding-top: 0.5rem; }
 }
 
-/* ─── Landscape mobile 2-column (wide enough) ─── */
-@media (orientation: landscape) and (max-height: 560px) and (min-width: 700px) {
-  main {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    align-items: start;
-  }
-
-  .filter-bar    { grid-column: 1 / -1; }
-  .scale-section { grid-column: 1; }
-  .range-section { grid-column: 2; }
+/* ─── App footer ─── */
+.app-footer {
+  width: 100%;
+  text-align: center;
+  padding: 0.6rem 1rem;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: auto;
+  flex-shrink: 0;
 }
 
 /* ─── Small portrait phones (< 380 px) ─── */
 @media (max-width: 380px) {
   header h1  { font-size: 1.35rem; }
   .note-chip { font-size: 0.8rem; min-width: 2rem; padding: 0.25rem 0.4rem; }
-
-  .scale-section h2,
-  .range-section h2 { font-size: 1rem; }
-
+  .scale-section h2 { font-size: 1rem; }
   .filter-chip { font-size: 0.75rem; padding: 0.22rem 0.55rem; }
 }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sax-scales-v3';
+const CACHE_NAME = 'scales-1.0.1';
 const ASSETS = [
   '/scales/',
   '/scales/index.html',
@@ -12,6 +12,9 @@ const ASSETS = [
   '/scales/icons/icon.svg',
   '/scales/icons/icon-192.png',
   '/scales/icons/icon-512.png',
+  '/scales/instrument/saxophone-alto/',
+  '/scales/instrument/saxophone-alto/index.html',
+  '/scales/instrument/saxophone-alto/app.js',
 ];
 
 self.addEventListener('install', (event) => {

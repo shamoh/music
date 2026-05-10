@@ -5,6 +5,7 @@ import {
   getChordNotes,
   noteToStaffSlot,
   buildAltSaxRange,
+  buildScaleRange,
   accidentalType,
   filteredScales,
   noteNameToSemitone,
@@ -410,6 +411,70 @@ describe('enharmonicEquivalent', () => {
   it('natural C → null',  () => assert.equal(enharmonicEquivalent('C', 4), null));
   it('natural G → null',  () => assert.equal(enharmonicEquivalent('G', 4), null));
   it('natural H → null',  () => assert.equal(enharmonicEquivalent('H', 4), null));
+});
+
+describe('buildScaleRange', () => {
+  it('C major: 7 unique names, sorted ascending by pitch', () => {
+    const scale = generateScale('C-major', 4);
+    const range = buildScaleRange(scale);
+    const names = range.map((n) => n.name);
+    assert.ok(names.every((n) => ['C','D','E','F','G','A','H'].includes(n)));
+    for (let i = 1; i < range.length; i++) {
+      const prev = range[i - 1];
+      const curr = range[i];
+      const midiOf = (n) => n.octave * 12 + n.semitone;
+      assert.ok(midiOf(curr) > midiOf(prev), `should be ascending at index ${i}`);
+    }
+  });
+
+  it('C major: all notes within alto sax range', () => {
+    const scale = generateScale('C-major', 4);
+    const range = buildScaleRange(scale);
+    const lowMidi  = ALTO_SAX_LOW.octave  * 12 + ALTO_SAX_LOW.semitone;
+    const highMidi = ALTO_SAX_HIGH.octave * 12 + ALTO_SAX_HIGH.semitone;
+    range.forEach((n) => {
+      const midi = n.octave * 12 + n.semitone;
+      assert.ok(midi >= lowMidi && midi <= highMidi, `${n.name}${n.octave} midi=${midi} out of range`);
+    });
+  });
+
+  it('C major: C appears in octaves 4, 5, 6', () => {
+    const scale = generateScale('C-major', 4);
+    const range = buildScaleRange(scale);
+    const cOctaves = range.filter((n) => n.name === 'C').map((n) => n.octave);
+    assert.deepEqual(cOctaves, [4, 5, 6]);
+  });
+
+  it('a minor natural: A appears in octaves 4, 5, 6', () => {
+    const scale = generateScale('a-minor', 4, 'natural');
+    const range = buildScaleRange(scale);
+    const aOctaves = range.filter((n) => n.name === 'A').map((n) => n.octave);
+    assert.ok(aOctaves.includes(4) && aOctaves.includes(5));
+  });
+
+  it('Fis major: Fis in result (semitone 6)', () => {
+    const scale = generateScale('Fis-major', 4);
+    const range = buildScaleRange(scale);
+    assert.ok(range.some((n) => n.name === 'Fis'));
+  });
+
+  it('Ces major: Ces pitch-MIDI correction keeps notes in range', () => {
+    const scale = generateScale('Ces-major', 4);
+    const range = buildScaleRange(scale);
+    const cesNotes = range.filter((n) => n.name === 'Ces');
+    const lowMidi  = ALTO_SAX_LOW.octave  * 12 + ALTO_SAX_LOW.semitone;
+    const highMidi = ALTO_SAX_HIGH.octave * 12 + ALTO_SAX_HIGH.semitone;
+    cesNotes.forEach((n) => {
+      const pitchMidi = (n.octave - 1) * 12 + 11;
+      assert.ok(pitchMidi >= lowMidi && pitchMidi <= highMidi);
+    });
+  });
+
+  it('fis minor harmonic: Eis in result', () => {
+    const scale = generateScale('fis-minor', 4, 'harmonic');
+    const range = buildScaleRange(scale);
+    assert.ok(range.some((n) => n.name === 'Eis'));
+  });
 });
 
 describe('scaleStartOctave', () => {

@@ -84,12 +84,12 @@ export function applyProfile(id) {
   const root = document.documentElement;
   for (const [k, v] of Object.entries(profile.vars)) root.style.setProperty(k, v);
   try {
-    localStorage.setItem('sax-scales-profile', profile.id);
-    localStorage.setItem('sax-scales-profile-vars', JSON.stringify(profile.vars));
+    localStorage.setItem('scales-profile', profile.id);
+    localStorage.setItem('scales-profile-vars', JSON.stringify(profile.vars));
   } catch (_) {}
   return profile;
 }
 
 export function savedProfileId() {
-  try { return localStorage.getItem('sax-scales-profile') ?? DEFAULT_PROFILE_ID; } catch (_) { return DEFAULT_PROFILE_ID; }
+  try { return localStorage.getItem('scales-profile') ?? DEFAULT_PROFILE_ID; } catch (_) { return DEFAULT_PROFILE_ID; }
 }

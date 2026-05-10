@@ -1,4 +1,4 @@
-# Sax Scales
+# Scales
 
 A progressive web app (PWA) for learning musical scales on the Alto Saxophone.
 
@@ -8,7 +8,7 @@ A progressive web app (PWA) for learning musical scales on the Alto Saxophone.
 - **Scale types** — Major (Dur), Natural Minor, Harmonic Minor, Melodic Minor
 - **Chord highlighting** — tonic triad (1st, 3rd, 5th degree) highlighted in each scale
 - **Visual staff** — custom SVG treble clef notation, no external libraries
-- **Alto Saxophone range** — full written range (B3 – F#5) with scale notes highlighted
+- **Alto Saxophone range** — separate page (`/scales/instrument/saxophone-alto/`) with the full written range and scale notes highlighted; URL routing via hash (`#a-moll?type=harmonic`)
 - **Offline support** — installable as a PWA in Chrome and on Android, works without internet
 - **Responsive** — adapts to mobile portrait, landscape, and wide desktop layouts
 
@@ -35,20 +35,35 @@ Tests use the Node.js built-in test runner (Node 18+), no dependencies needed.
 ### Project structure
 
 ```
-index.html               redirect to /scales/
+index.html                              redirect to /scales/
 scales/
-  index.html             app shell
-  manifest.json          PWA manifest
-  service-worker.js      cache-first offline strategy
-  css/style.css          responsive styles (mobile, landscape, desktop)
-  js/music.js            music theory — scales, chords, Czech note names
-  js/notation.js         SVG staff rendering
-  js/app.js              UI logic, event handling, ResizeObserver
-  js/themes.js           visual profiles (colors, font scale)
-  icons/                 PWA icons (SVG + 192×192 and 512×512 PNG)
-tests/music.test.js      unit tests for music.js
-docs/PLAN.md             design decisions and implementation notes
+  index.html                            main page — scale filter + staff
+  manifest.json                         PWA manifest
+  service-worker.js                     cache-first offline strategy
+  css/style.css                         responsive styles (mobile, landscape, desktop)
+  js/music.js                           music theory — scales, chords, Czech note names
+  js/notation.js                        SVG staff rendering
+  js/app.js                             main page UI logic, event handling
+  js/themes.js                          visual profiles (colors, font scale)
+  js/defaults.js                        APP_VERSION, default scale and profile IDs
+  instrument/saxophone-alto/
+    index.html                          range staff page
+    app.js                              URL routing, range rendering
+  icons/                                PWA icons (SVG + 192×192 and 512×512 PNG)
+tests/music.test.js                     unit tests for music.js
+docs/PLAN.md                            design decisions and implementation notes
 ```
+
+### Releasing a new version
+
+Two files must be updated together — bump at least the patch digit:
+
+```text
+scales/js/defaults.js       APP_VERSION = '1.0.1'
+scales/service-worker.js    CACHE_NAME  = 'scales-1.0.1'
+```
+
+`APP_VERSION` is shown in the app footer. `CACHE_NAME` tells the browser to drop the old PWA cache and re-fetch all assets on the next visit.
 
 ### Visual profiles
 

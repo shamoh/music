@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="description" content="Rozsah Alt Saxofonu — Scales" />
+  <title>Scales — Rozsah Alt Saxofonu</title>
+  <link rel="manifest" href="/scales/manifest.json" />
+  <link rel="apple-touch-icon" href="/scales/icons/icon.svg" />
+  <link rel="stylesheet" href="/scales/css/style.css" />
+  <script>
+    try {
+      const vars = JSON.parse(localStorage.getItem('scales-profile-vars') || 'null');
+      if (vars) {
+        const r = document.documentElement;
+        for (const [k, v] of Object.entries(vars)) r.style.setProperty(k, v);
+      }
+    } catch (_) {}
+  </script>
+</head>
+<body>
+  <header class="sax-page-header">
+    <a id="back-link" href="/scales/" class="back-link">← Scales</a>
+    <h1>Rozsah Alt Saxofonu</h1>
+  </header>
+
+  <main>
+    <section class="range-section">
+      <h2 id="range-title"></h2>
+      <p class="range-hint">Noty stupnice jsou zvýrazněny. Klepnutím na notu zobrazíte název.</p>
+
+      <nav id="type-nav" class="type-nav" hidden></nav>
+
+      <div id="range-staff" class="staff-container" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <footer class="app-footer" id="app-footer"></footer>
+  <script type="module" src="/scales/instrument/saxophone-alto/app.js"></script>
+</body>
+</html>
