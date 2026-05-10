@@ -116,7 +116,7 @@ function drawKeySigAccidental(svg, cx, slot, type, staffTop, ls) {
 
 function keySignatureWidth(keySig, ls) {
   const count = Math.abs(keySig);
-  return count > 0 ? count * ls * 0.46 + ls * 0.75 : 0;
+  return count > 0 ? count * ls * 0.46 + ls * 1.3 : 0;
 }
 
 function drawKeySignature(svg, keySig, staffTop, ls, startX) {
@@ -154,7 +154,7 @@ function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor'
       svgText(svgEl('text', {
         x,
         y: ly,
-        'font-size': ls * 0.95,
+        'font-size': ls * 1.2,
         fill: color,
         'text-anchor': 'middle',
         'font-family': 'sans-serif',
@@ -192,7 +192,7 @@ export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig
   containerEl.appendChild(svg);
   drawStaffLinesScaled(svg, clefWidth, containerWidth - ls * 0.5, staffTop, ls);
   drawTrebleClefScaled(svg, clefWidth - ls * 0.5, staffTop, ls);
-  drawKeySignature(svg, keySig, staffTop, ls, clefWidth + ls * 0.65);
+  drawKeySignature(svg, keySig, staffTop, ls, clefWidth + ls * 1.2);
 
   const inlineAccs = computeInlineAccidentals(scaleNotes.map((n) => n.name), keySig);
 
@@ -211,8 +211,16 @@ export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig
   });
 }
 
-// Range staff section boundaries (by MIDI = octave*12 + semitone)
-// Section 1: B3/Ais3, H3  |  Section 2: C4–Cis5  |  Section 3: D5–Cis6  |  Section 4: D6–F6
+// Sections are fixed by pitch (frequency), independent of scale or key signature.
+// App MIDI = octave*12 + semitone  (C4=48, H3=47).
+// Ces/His cross octave boundaries: Ces4 pitchMidi=(4-1)*12+11=47, His3 pitchMidi=(3+1)*12=48.
+//
+// Sec 1 (≤47):   Ais3/B3  H3/Ces4
+// Sec 2 (48–61): His3/C4  Cis4/Des4  D4  Dis4/Es4  E4/Fes4  Eis4/F4  Fis4/Ges4  G4  Gis4/As4  A4  Ais4/B4  H4/Ces5  His4/C5  Cis5/Des5
+// Sec 3 (62–73): D5  Dis5/Es5  E5/Fes5  Eis5/F5  Fis5/Ges5  G5  Gis5/As5  A5  Ais5/B5  H5/Ces6  His5/C6  Cis6/Des6
+// Sec 4 (≥74):   D6  Dis6/Es6  E6/Fes6  Eis6/F6
+const RANGE_SECTION_MIDI_MAX = [47, 61, 73]; // section i = pitchMidi ≤ value[i]; section 3 = remainder
+
 const RANGE_SECTION_COLORS = [
   'rgba(160, 120, 220, 0.15)',
   'rgba(80,  120, 210, 0.12)',
@@ -220,15 +228,20 @@ const RANGE_SECTION_COLORS = [
   'rgba(210, 150, 80,  0.15)',
 ];
 
+// Slightly lighter variant of each section color — used for chord/tonic notes
+const RANGE_SECTION_COLORS_CHORD = [
+  'rgba(160, 120, 220, 0.32)',
+  'rgba(80,  120, 210, 0.28)',
+  'rgba(80,  190, 160, 0.28)',
+  'rgba(210, 150, 80,  0.32)',
+];
+
 function rangeSection(note) {
-  // Use pitch MIDI, same boundary-crossing correction as buildScaleRange in app.js
   const midi = note.name === 'Ces' ? (note.octave - 1) * 12 + 11
              : note.name === 'His' ? (note.octave + 1) * 12
              : note.octave * 12 + note.semitone;
-  if (midi <= 47) return 0;  // B3/Ais3, H3
-  if (midi <= 61) return 1;  // C4..Cis5
-  if (midi <= 73) return 2;  // D5..Cis6
-  return 3;                   // D6..F6
+  const idx = RANGE_SECTION_MIDI_MAX.findIndex((max) => midi <= max);
+  return idx === -1 ? 3 : idx;
 }
 
 export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteNames, keySig = 0, isMinor = false) {
@@ -258,12 +271,14 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
   const noteGap = Math.max(1.5, step * 0.06);
   rangeNotes.forEach((note, i) => {
     const cx = notesStartX + (i + 1) * step;
+    const isChordNote = note.name === tonicName || chordSet.has(note.name);
+    const colors = isChordNote ? RANGE_SECTION_COLORS_CHORD : RANGE_SECTION_COLORS;
     svg.appendChild(svgEl('rect', {
       x: cx - step * 0.5 + noteGap,
       y: 0,
       width: step - noteGap * 2,
       height: totalHeight,
-      fill: RANGE_SECTION_COLORS[rangeSection(note)],
+      fill: colors[rangeSection(note)],
     }));
   });
 
