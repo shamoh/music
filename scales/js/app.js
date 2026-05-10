@@ -377,6 +377,16 @@ document.addEventListener('DOMContentLoaded', () => {
   document.body.appendChild(rangeTooltip);
 
   let tooltipTimer = null;
+  let activeHighlight = null;
+
+  function clearHighlight() {
+    if (activeHighlight) { activeHighlight.setAttribute('fill', 'none'); activeHighlight = null; }
+  }
+
+  function hideTooltip() {
+    rangeTooltip.hidden = true;
+    clearHighlight();
+  }
 
   function showRangeTooltip(e) {
     const g = e.target.closest('[data-tooltip]');
@@ -384,24 +394,29 @@ document.addEventListener('DOMContentLoaded', () => {
     if (g) {
       rangeTooltip.textContent = g.dataset.tooltip;
       rangeTooltip.style.left = e.clientX + 'px';
-      // On touch, shift tooltip up so it clears the finger
       rangeTooltip.style.top  = (e.clientY - (isTouch ? 60 : 0)) + 'px';
       rangeTooltip.hidden = false;
+
+      // Highlight the active column
+      clearHighlight();
+      activeHighlight = g.querySelector('[data-highlight]');
+      if (activeHighlight) activeHighlight.setAttribute('fill', 'rgba(255,255,255,0.22)');
+
       if (isTouch) {
         clearTimeout(tooltipTimer);
-        tooltipTimer = setTimeout(() => { rangeTooltip.hidden = true; }, 3000);
+        tooltipTimer = setTimeout(hideTooltip, 5000);
       }
     } else if (e.type === 'pointermove') {
-      rangeTooltip.hidden = true;
+      hideTooltip();
     }
   }
 
   const rangeSection = document.querySelector('.range-section');
   rangeSection.addEventListener('pointermove', showRangeTooltip);
   rangeSection.addEventListener('pointerdown', showRangeTooltip);
-  rangeSection.addEventListener('pointerleave', () => { rangeTooltip.hidden = true; });
+  rangeSection.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') hideTooltip(); });
   rangeSection.addEventListener('pointerup', (e) => {
-    if (e.pointerType !== 'touch') setTimeout(() => { rangeTooltip.hidden = true; }, 1200);
+    if (e.pointerType !== 'touch') setTimeout(hideTooltip, 1200);
   });
 
   if (typeof ResizeObserver !== 'undefined') {

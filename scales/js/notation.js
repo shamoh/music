@@ -315,6 +315,11 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
 
     const g = svgEl('g', { 'data-tooltip': tooltipLabel });
     g.appendChild(svgEl('rect', { x: x - step * 0.5, y: 0, width: step, height: totalHeight, fill: 'transparent' }));
+    g.appendChild(svgEl('rect', {
+      x: x - step * 0.5 + noteGap, y: 0,
+      width: step - noteGap * 2, height: totalHeight,
+      fill: 'none', 'data-highlight': '',
+    }));
     svg.appendChild(g);
 
     drawNoteScaled(g, x, note, staffTop, ls, noteRadius, { color, ledgerHalfW, showLabel: isTonic, labelY, inlineAcc, lowercase: isMinor });
