@@ -14,7 +14,7 @@ import {
   SCALE_CATALOG,
   ALTO_SAX_LOW,
   ALTO_SAX_HIGH,
-} from '../js/music.js';
+} from '../scales/js/music.js';
 
 describe('generateScale — major', () => {
   it('C major returns correct 8 note names', () => {

@@ -1,0 +1,25 @@
+{
+  "name": "SaxScale",
+  "short_name": "SaxScale",
+  "description": "Hudební stupnice pro Alt Saxofon",
+  "start_url": "/scales/",
+  "scope": "/scales/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/scales/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/scales/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
