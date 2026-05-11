@@ -17,6 +17,11 @@ function profileFontScale() {
   return parseFloat(v) || 1;
 }
 
+function profileNoteColWidth() {
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--note-col-width');
+  return parseFloat(v) || 33;
+}
+
 const STAFF_LINE_SLOTS = [-2, 0, 2, 4, 6]; // E4, G4, H4, D5, F5
 
 // Treble clef key signature accidental positions (slot numbers)
@@ -270,7 +275,8 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
   const tonicSet  = nameSetWithEnharmonics(tonicName ? [tonicName] : []);
   const containerWidth = containerEl.clientWidth || 400;
   const fontScale = profileFontScale();
-  const minWidth = Math.round(rangeNotes.length * 33 * fontScale) + 60;
+  const noteColWidth = profileNoteColWidth();
+  const minWidth = Math.round(rangeNotes.length * noteColWidth) + 60;
   const width = Math.max(containerWidth, minWidth);
   const ls = Math.min(12, Math.max(9, Math.floor(containerWidth / 42))) * fontScale;
   const noteRadius = ls * 0.45;

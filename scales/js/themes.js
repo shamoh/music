@@ -38,6 +38,7 @@ export const VISUAL_PROFILES = [
       '--section-chord-bg-3': 'rgba(80,190,160,0.28)',
       '--section-chord-bg-4': 'rgba(210,150,80,0.32)',
       '--font-scale': '1',
+      '--note-col-width': '33',
     },
   },
   {
@@ -77,6 +78,7 @@ export const VISUAL_PROFILES = [
       '--section-chord-bg-3': 'rgba(80,190,160,0.10)',
       '--section-chord-bg-4': 'rgba(210,150,80,0.10)',
       '--font-scale': '1',
+      '--note-col-width': '28',
     },
   },
   {
@@ -116,6 +118,7 @@ export const VISUAL_PROFILES = [
       '--section-chord-bg-3': 'rgba(80,190,160,0.28)',
       '--section-chord-bg-4': 'rgba(210,150,80,0.32)',
       '--font-scale': '1.2',
+      '--note-col-width': '38',
     },
   },
   {
@@ -155,6 +158,7 @@ export const VISUAL_PROFILES = [
       '--section-chord-bg-3': 'rgba(80,190,160,0.10)',
       '--section-chord-bg-4': 'rgba(210,150,80,0.10)',
       '--font-scale': '1.2',
+      '--note-col-width': '36',
     },
   },
 ];
