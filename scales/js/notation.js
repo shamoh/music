@@ -269,10 +269,10 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
   const tonicName = scaleNotes[0]?.name;
   const tonicSet  = nameSetWithEnharmonics(tonicName ? [tonicName] : []);
   const containerWidth = containerEl.clientWidth || 400;
-  const minWidth = rangeNotes.length * 40 + 60;
+  const fontScale = profileFontScale();
+  const minWidth = Math.round(rangeNotes.length * 33 * fontScale) + 60;
   const width = Math.max(containerWidth, minWidth);
-
-  const ls = Math.min(12, Math.max(9, Math.floor(containerWidth / 42))) * profileFontScale();
+  const ls = Math.min(12, Math.max(9, Math.floor(containerWidth / 42))) * fontScale;
   const noteRadius = ls * 0.45;
   const staffTop = ls * 6;
   const totalHeight = staffTop + ls * 4 + ls * 5;
