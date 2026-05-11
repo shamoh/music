@@ -214,6 +214,7 @@ main {
 .scale-select-group {
   flex: 1;
   min-width: 140px;
+  flex-wrap: nowrap;
 }
 
 /* ─── Scale select ─── */
@@ -225,7 +226,8 @@ main {
   padding: 0.38rem 0.7rem;
   font-size: 0.95rem;
   cursor: pointer;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 
 .scale-select-group select:focus {
