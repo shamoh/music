@@ -8,7 +8,7 @@ import {
 } from '/scales/js/music.js';
 import { renderRangeStaff } from '/scales/js/notation.js';
 import { VISUAL_PROFILES, applyProfile, savedProfileId } from '/scales/js/themes.js';
-import { DEFAULT_SCALE_ID, APP_VERSION } from '/scales/js/defaults.js';
+import { DEFAULT_SCALE_ID, APP_VERSION, BUILD_DATE } from '/scales/js/defaults.js';
 
 const VALID_TYPES = ['natural', 'harmonic', 'melodic'];
 const TYPE_LABELS = { natural: 'Přirozená', harmonic: 'Harmonická', melodic: 'Melodická' };
@@ -288,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const footer = document.getElementById('app-footer');
-  if (footer) footer.textContent = `Scales v${APP_VERSION}`;
+  if (footer) footer.textContent = `Scales v${APP_VERSION} · ${BUILD_DATE}`;
 
   if (typeof ResizeObserver !== 'undefined') {
     const ro = new ResizeObserver(update);

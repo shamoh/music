@@ -45,17 +45,21 @@ scales/
 
 ## Version bump — REQUIRED on every change
 
-Two files must always be updated together:
+Three values must always be updated together:
 
 | File | Key | Current |
 | --- | --- | --- |
-| `scales/js/defaults.js` | `APP_VERSION` | `'1.0.1'` |
-| `scales/service-worker.js` | `CACHE_NAME` | `'scales-1.0.1'` |
+| `scales/js/defaults.js` | `APP_VERSION` | `'1.0.7'` |
+| `scales/js/defaults.js` | `BUILD_DATE` | `'2026-05-11 11:09'` |
+| `scales/service-worker.js` | `CACHE_NAME` | `'scales-1.0.7'` |
 
-`APP_VERSION` drives the footer display. `CACHE_NAME` forces the browser to drop the old PWA cache and re-fetch all assets. They must always match.
+`APP_VERSION` and `BUILD_DATE` drive the footer display (`Scales vX.Y.Z · YYYY-MM-DD HH:MM`).
+`CACHE_NAME` forces the browser to drop the old PWA cache and re-fetch all assets.
+`APP_VERSION` and `CACHE_NAME` must always match.
 
 ### Versioning rules
 
 - **Every change** → bump the patch digit automatically (`1.0.1` → `1.0.2`). No exceptions.
 - **Explicit request only** — when the user writes "zvedni verzi" → bump the minor digit and reset patch (`1.0.x` → `1.1.0`).
+- Always set `BUILD_DATE` to the current date and time (`YYYY-MM-DD HH:MM`) when bumping the version.
 - Never leave the version unchanged after making any code or content edit.

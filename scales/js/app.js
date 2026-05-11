@@ -8,7 +8,7 @@ import {
 } from './music.js';
 import { renderScaleStaff } from './notation.js';
 import { VISUAL_PROFILES, applyProfile, savedProfileId } from './themes.js';
-import { DEFAULT_SCALE_ID, APP_VERSION } from './defaults.js';
+import { DEFAULT_SCALE_ID, APP_VERSION, BUILD_DATE } from './defaults.js';
 
 const state = {
   scaleId: DEFAULT_SCALE_ID,
@@ -329,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
   registerSW();
 
   const footer = document.getElementById('app-footer');
-  if (footer) footer.textContent = `Scales v${APP_VERSION}`;
+  if (footer) footer.textContent = `Scales v${APP_VERSION} · ${BUILD_DATE}`;
 
   if (typeof ResizeObserver !== 'undefined') {
     const ro = new ResizeObserver(() => update());
