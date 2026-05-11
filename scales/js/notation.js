@@ -137,7 +137,7 @@ function drawKeySignature(svg, keySig, staffTop, ls, startX) {
   }
 }
 
-function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor', ledgerColor = null, labelColor = null, showLabel = false, lowercase = false, ledgerHalfW = nr * 2.5, inlineAcc = null, labelY = null } = {}) {
+function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor', ledgerColor = null, labelColor = null, labelBg = null, showLabel = false, lowercase = false, ledgerHalfW = nr * 2.5, inlineAcc = null, labelY = null } = {}) {
   const slot = noteToStaffSlot(note.name, note.octave);
   const y = slotToY(slot, staffTop, ls);
   const resolvedLedger = ledgerColor ?? color;
@@ -157,6 +157,18 @@ function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor'
 
   if (showLabel) {
     const ly = labelY !== null ? labelY : staffTop + ls * 4 + ls * 2.8;
+    if (labelBg) {
+      const pillW = ls * 2.4;
+      const pillH = ls * 1.5;
+      svg.appendChild(svgEl('rect', {
+        x: x - pillW / 2,
+        y: ly - ls * 1.2,
+        width: pillW,
+        height: pillH,
+        rx: pillH / 2,
+        fill: labelBg,
+      }));
+    }
     svg.appendChild(
       svgText(svgEl('text', {
         x,
@@ -229,20 +241,6 @@ export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig
 // Sec 4 (≥74):   D6  Dis6/Es6  E6/Fes6  Eis6/F6
 const RANGE_SECTION_MIDI_MAX = [47, 61, 73]; // section i = pitchMidi ≤ value[i]; section 3 = remainder
 
-const RANGE_SECTION_COLORS = [
-  'rgba(160, 120, 220, 0.15)',
-  'rgba(80,  120, 210, 0.12)',
-  'rgba(80,  190, 160, 0.12)',
-  'rgba(210, 150, 80,  0.15)',
-];
-
-// Slightly lighter variant of each section color — used for chord/tonic notes
-const RANGE_SECTION_COLORS_CHORD = [
-  'rgba(160, 120, 220, 0.32)',
-  'rgba(80,  120, 210, 0.28)',
-  'rgba(80,  190, 160, 0.28)',
-  'rgba(210, 150, 80,  0.32)',
-];
 
 function rangeSection(note) {
   const midi = note.name === 'Ces' ? (note.octave - 1) * 12 + 11
@@ -292,13 +290,16 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
   rangeNotes.forEach((note, i) => {
     const cx = notesStartX + (i + 1) * step;
     const isChordNote = tonicSet.has(note.name) || chordSet.has(note.name);
-    const colors = isChordNote ? RANGE_SECTION_COLORS_CHORD : RANGE_SECTION_COLORS;
+    const secIdx = rangeSection(note) + 1;
+    const secFill = isChordNote
+      ? `var(--section-chord-bg-${secIdx})`
+      : `var(--section-bg-${secIdx})`;
     svg.appendChild(svgEl('rect', {
       x: cx - step * 0.5 + noteGap,
       y: 0,
       width: step - noteGap * 2,
       height: totalHeight,
-      fill: colors[rangeSection(note)],
+      fill: secFill,
     }));
   });
 
@@ -324,6 +325,7 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
     const color       = `var(--note-${k})`;
     const ledgerColor = `var(--note-${k}-ledger)`;
     const labelColor  = `var(--note-${k}-label)`;
+    const labelBg     = `var(--note-${k}-label-bg, transparent)`;
     const inlineAcc = accidentalType(note.name);
     const enh = enharmonicEquivalent(note.name, note.octave);
     const displayName = (isMinor ? note.name.toLowerCase() : note.name) + note.octave;
@@ -341,6 +343,6 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
     }));
     svg.appendChild(g);
 
-    drawNoteScaled(g, x, note, staffTop, ls, noteRadius, { color, ledgerColor, labelColor, ledgerHalfW, showLabel: isTonic, labelY, inlineAcc, lowercase: isMinor });
+    drawNoteScaled(g, x, note, staffTop, ls, noteRadius, { color, ledgerColor, labelColor, labelBg, ledgerHalfW, showLabel: true, labelY, inlineAcc, lowercase: isMinor });
   });
 }

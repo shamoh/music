@@ -59,7 +59,7 @@ Three values must always be updated together:
 
 ### Versioning rules
 
-- **Every change** → bump the patch digit automatically (`1.0.1` → `1.0.2`). No exceptions.
+- **Every change** → bump the patch digit automatically (`1.0.9` → `1.0.10`, `1.0.10` → `1.0.11`). Each digit is an independent integer — no carries. No exceptions.
 - **Explicit request only** — when the user writes "zvedni verzi" → bump the minor digit and reset patch (`1.0.x` → `1.1.0`).
 - Always set `BUILD_DATE` to the current date and time (`YYYY-MM-DD HH:MM`) when bumping the version.
 - Never leave the version unchanged after making any code or content edit.
