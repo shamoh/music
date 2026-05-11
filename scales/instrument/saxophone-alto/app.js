@@ -11,7 +11,7 @@ import { VISUAL_PROFILES, applyProfile, savedProfileId } from '/scales/js/themes
 import { DEFAULT_SCALE_ID, APP_VERSION, BUILD_DATE } from '/scales/js/defaults.js';
 
 const VALID_TYPES = ['natural', 'harmonic', 'melodic'];
-const TYPE_LABELS = { natural: 'Přirozená', harmonic: 'Harmonická', melodic: 'Melodická' };
+const TYPE_LABELS = { natural: 'Aiolská', harmonic: 'Harmonická', melodic: 'Melodická' };
 const DEFAULT_HASH = '#C-dur';
 
 function $(id) { return document.getElementById(id); }

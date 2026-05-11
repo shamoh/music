@@ -23,6 +23,7 @@
 html { font-size: calc(16px * var(--font-scale)); }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
 
 body {
   background: var(--bg);
