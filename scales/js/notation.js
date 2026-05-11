@@ -137,9 +137,11 @@ function drawKeySignature(svg, keySig, staffTop, ls, startX) {
   }
 }
 
-function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor', showLabel = false, lowercase = false, ledgerHalfW = nr * 2.5, inlineAcc = null, labelY = null } = {}) {
+function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor', ledgerColor = null, labelColor = null, showLabel = false, lowercase = false, ledgerHalfW = nr * 2.5, inlineAcc = null, labelY = null } = {}) {
   const slot = noteToStaffSlot(note.name, note.octave);
   const y = slotToY(slot, staffTop, ls);
+  const resolvedLedger = ledgerColor ?? color;
+  const resolvedLabel  = labelColor  ?? color;
 
   svg.appendChild(svgEl('ellipse', {
     cx: x, cy: y,
@@ -149,7 +151,7 @@ function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor'
   }));
 
   // Ledger lines drawn after the note head so they appear on top of it
-  drawLedgerLinesScaled(svg, x, slot, staffTop, ls, nr, ledgerHalfW, color);
+  drawLedgerLinesScaled(svg, x, slot, staffTop, ls, nr, ledgerHalfW, resolvedLedger);
 
   if (inlineAcc) drawAccidentalScaled(svg, x, slot, inlineAcc, staffTop, ls, nr, color);
 
@@ -160,7 +162,7 @@ function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor'
         x,
         y: ly,
         'font-size': ls * 1.2,
-        fill: color,
+        fill: resolvedLabel,
         'text-anchor': 'middle',
         'font-family': 'sans-serif',
         'font-weight': 'bold',
@@ -209,10 +211,11 @@ export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig
 
   scaleNotes.forEach((note, i) => {
     const x = notesStartX + (i + 1) * step;
-    const color = note.name === tonicName    ? 'var(--note-tonic)'
-                : chordSet.has(note.name)    ? 'var(--note-chord)'
-                :                              'var(--note-scale)';
-    drawNoteScaled(svg, x, note, staffTop, ls, noteRadius, { color, showLabel: true, lowercase: isMinor, inlineAcc: inlineAccs[i], labelY });
+    const k = note.name === tonicName ? 'tonic' : chordSet.has(note.name) ? 'chord' : 'scale';
+    const color       = `var(--note-${k})`;
+    const ledgerColor = `var(--note-${k}-ledger)`;
+    const labelColor  = `var(--note-${k}-label)`;
+    drawNoteScaled(svg, x, note, staffTop, ls, noteRadius, { color, ledgerColor, labelColor, showLabel: true, lowercase: isMinor, inlineAcc: inlineAccs[i], labelY });
   });
 }
 
@@ -314,10 +317,13 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
   rangeNotes.forEach((note, i) => {
     const x = notesStartX + (i + 1) * step;
     const isTonic = tonicSet.has(note.name);
-    const color = isTonic                  ? 'var(--note-tonic)'
-                : chordSet.has(note.name)  ? 'var(--note-chord)'
-                : scaleSet.has(note.name)  ? 'var(--note-scale)'
-                :                            'var(--note-muted)';
+    const k = isTonic                 ? 'tonic'
+            : chordSet.has(note.name) ? 'chord'
+            : scaleSet.has(note.name) ? 'scale'
+            :                           'muted';
+    const color       = `var(--note-${k})`;
+    const ledgerColor = `var(--note-${k}-ledger)`;
+    const labelColor  = `var(--note-${k}-label)`;
     const inlineAcc = accidentalType(note.name);
     const enh = enharmonicEquivalent(note.name, note.octave);
     const displayName = (isMinor ? note.name.toLowerCase() : note.name) + note.octave;
@@ -335,6 +341,6 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
     }));
     svg.appendChild(g);
 
-    drawNoteScaled(g, x, note, staffTop, ls, noteRadius, { color, ledgerHalfW, showLabel: isTonic, labelY, inlineAcc, lowercase: isMinor });
+    drawNoteScaled(g, x, note, staffTop, ls, noteRadius, { color, ledgerColor, labelColor, ledgerHalfW, showLabel: isTonic, labelY, inlineAcc, lowercase: isMinor });
   });
 }
