@@ -215,12 +215,7 @@ main {
   min-width: 140px;
 }
 
-/* ─── Profile select ─── */
-.profile-select-group {
-  min-width: 90px;
-}
-
-.profile-select-group select,
+/* ─── Scale select ─── */
 .scale-select-group select {
   background: var(--bg-input);
   color: var(--text);
@@ -232,8 +227,31 @@ main {
   width: 100%;
 }
 
-.profile-select-group select:focus,
 .scale-select-group select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ─── Profile corner (fixed top-right) ─── */
+.profile-corner {
+  position: fixed;
+  top: 0.5rem;
+  right: 0.6rem;
+  z-index: 200;
+}
+
+.profile-corner select {
+  background: var(--bg-input);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.22rem 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  max-width: 9rem;
+}
+
+.profile-corner select:focus {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
