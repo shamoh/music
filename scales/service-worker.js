@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scales-1.0.18';
+const CACHE_NAME = 'scales-1.0.19';
 const ASSETS = [
   '/scales/',
   '/scales/index.html',
