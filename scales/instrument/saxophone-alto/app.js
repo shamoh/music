@@ -16,6 +16,13 @@ const DEFAULT_HASH = '#C-dur';
 
 function $(id) { return document.getElementById(id); }
 
+function savedLastScaleId() {
+  try { return localStorage.getItem('scales-last-scale') ?? null; } catch (_) { return null; }
+}
+function saveLastScaleId(id) {
+  try { localStorage.setItem('scales-last-scale', id); } catch (_) {}
+}
+
 // ─── State ────────────────────────────────────────────────────────────────────
 
 const state = {
@@ -267,6 +274,10 @@ function registerSW() {
 
 document.addEventListener('DOMContentLoaded', () => {
   applyProfile(savedProfileId());
+  if (!location.hash) {
+    const saved = savedLastScaleId();
+    if (saved) state.scaleId = saved;
+  }
   applyHashToState();
   initFilterChips();
   initProfileSelect();
@@ -278,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('scale-select').addEventListener('change', (e) => {
     state.scaleId     = e.target.value;
     state.variantType = 'natural';
+    saveLastScaleId(state.scaleId);
     update();
   });
 

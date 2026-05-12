@@ -142,7 +142,7 @@ function drawKeySignature(svg, keySig, staffTop, ls, startX) {
   }
 }
 
-function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor', ledgerColor = null, labelColor = null, labelBg = null, showLabel = false, lowercase = false, ledgerHalfW = nr * 2.5, inlineAcc = null, labelY = null } = {}) {
+function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor', ledgerColor = null, labelColor = null, labelBg = null, showLabel = false, lowercase = false, ledgerHalfW = nr * 2.5, inlineAcc = null, labelY = null, pillW = ls * 3.5 } = {}) {
   const slot = noteToStaffSlot(note.name, note.octave);
   const y = slotToY(slot, staffTop, ls);
   const resolvedLedger = ledgerColor ?? color;
@@ -163,14 +163,13 @@ function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor'
   if (showLabel) {
     const ly = labelY !== null ? labelY : staffTop + ls * 4 + ls * 2.8;
     if (labelBg) {
-      const pillW = ls * 2.4;
-      const pillH = ls * 1.5;
+      const pillH = ls * 2.0;
       svg.appendChild(svgEl('rect', {
         x: x - pillW / 2,
-        y: ly - ls * 1.2,
+        y: ly - pillH * 0.78,
         width: pillW,
         height: pillH,
-        rx: pillH / 2,
+        rx: Math.round(ls * 0.4),
         fill: labelBg,
       }));
     }
@@ -178,7 +177,7 @@ function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor'
       svgText(svgEl('text', {
         x,
         y: ly,
-        'font-size': ls * 1.2,
+        'font-size': ls * 1.6,
         fill: resolvedLabel,
         'text-anchor': 'middle',
         'font-family': 'sans-serif',
@@ -226,13 +225,15 @@ export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig
     slotToY(lowestSlot, staffTop, ls) + ls * 1.3,
   );
 
+  const pillW = Math.min(ls * 3.5, step * 0.9);
   scaleNotes.forEach((note, i) => {
     const x = notesStartX + (i + 1) * step;
     const k = note.name === tonicName ? 'tonic' : chordSet.has(note.name) ? 'chord' : 'scale';
     const color       = `var(--note-${k})`;
     const ledgerColor = `var(--note-${k}-ledger)`;
     const labelColor  = `var(--note-${k}-label)`;
-    drawNoteScaled(svg, x, note, staffTop, ls, noteRadius, { color, ledgerColor, labelColor, showLabel: true, lowercase: isMinor, inlineAcc: inlineAccs[i], labelY });
+    const labelBg     = `var(--note-${k}-label-bg, transparent)`;
+    drawNoteScaled(svg, x, note, staffTop, ls, noteRadius, { color, ledgerColor, labelColor, labelBg, pillW, showLabel: true, lowercase: isMinor, inlineAcc: inlineAccs[i], labelY });
   });
 }
 
@@ -280,8 +281,8 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
   const width = Math.max(containerWidth, minWidth);
   const ls = Math.min(12, Math.max(9, Math.floor(containerWidth / 42))) * fontScale;
   const noteRadius = ls * 0.45;
-  const staffTop = ls * 6;
-  const totalHeight = staffTop + ls * 4 + ls * 5;
+  const staffTop = ls * 5;
+  const totalHeight = staffTop + ls * 4 + ls * 6;
   const clefWidth = ls * 3.5;
   const keySigW = keySignatureWidth(keySig, ls);
   const notesStartX = clefWidth + keySigW;
@@ -295,11 +296,10 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
   const noteGap = Math.max(1.5, step * 0.06);
   rangeNotes.forEach((note, i) => {
     const cx = notesStartX + (i + 1) * step;
-    const isChordNote = tonicSet.has(note.name) || chordSet.has(note.name);
     const secIdx = rangeSection(note) + 1;
-    const secFill = isChordNote
-      ? `var(--section-chord-bg-${secIdx})`
-      : `var(--section-bg-${secIdx})`;
+    const secFill = chordSet.has(note.name)
+                  ? `var(--section-chord-bg-${secIdx})`
+                  : `var(--section-bg-${secIdx})`;
     svg.appendChild(svgEl('rect', {
       x: cx - step * 0.5 + noteGap,
       y: 0,
@@ -317,8 +317,8 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
 
   const lowestSlot = Math.min(...rangeNotes.map((n) => noteToStaffSlot(n.name, n.octave)));
   const labelY = Math.max(
-    staffTop + ls * 4 + ls * 3.5,
-    slotToY(lowestSlot, staffTop, ls) + ls * 2.2,
+    staffTop + ls * 4 + ls * 4.5,
+    slotToY(lowestSlot, staffTop, ls) + ls * 3.2,
   );
 
   rangeNotes.forEach((note, i) => {
@@ -349,6 +349,7 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
     }));
     svg.appendChild(g);
 
-    drawNoteScaled(g, x, note, staffTop, ls, noteRadius, { color, ledgerColor, labelColor, labelBg, ledgerHalfW, showLabel: true, labelY, inlineAcc, lowercase: isMinor });
+    const pillW = Math.min(ls * 3.5, step * 0.9);
+    drawNoteScaled(g, x, note, staffTop, ls, noteRadius, { color, ledgerColor, labelColor, labelBg, pillW, ledgerHalfW, showLabel: true, labelY, inlineAcc, lowercase: isMinor });
   });
 }

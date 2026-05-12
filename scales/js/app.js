@@ -19,6 +19,13 @@ const state = {
 
 function $(id) { return document.getElementById(id); }
 
+function savedLastScaleId() {
+  try { return localStorage.getItem('scales-last-scale') ?? null; } catch (_) { return null; }
+}
+function saveLastScaleId(id) {
+  try { localStorage.setItem('scales-last-scale', id); } catch (_) {}
+}
+
 // ─── Key signature labels and variant helpers ─────────────────────────────────
 
 const SHARP_NAMES = ['fis', 'cis', 'gis', 'dis', 'ais', 'eis', 'his'];
@@ -309,12 +316,17 @@ function initProfileSelect() {
 
 document.addEventListener('DOMContentLoaded', () => {
   applyProfile(savedProfileId());
+  if (!location.hash) {
+    const saved = savedLastScaleId();
+    if (saved) applyHash('#' + scaleIdToHash(saved));
+  }
   applyHash(location.hash);
   initFilterChips();
   initProfileSelect();
 
   $('scale-select').addEventListener('change', (e) => {
     state.scaleId = e.target.value;
+    saveLastScaleId(state.scaleId);
     update();
   });
 

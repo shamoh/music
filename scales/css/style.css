@@ -17,6 +17,12 @@
 
   /* Visual profile font scale — JS overrides this per profile */
   --font-scale: 1;
+
+  /* Note chip text color — overridden per profile (dark bg → white, light pastel bg → dark) */
+  --chip-text: #fff;
+
+  /* Tonic column highlight color in range staff */
+  --tonic-col-bg: rgba(70,160,90,0.20);
 }
 
 /* Scales all rem-based text sizes when profile changes --font-scale */
@@ -319,20 +325,20 @@ main {
   font-weight: 600;
   background: var(--note-scale);
   border: 1px solid var(--note-scale);
-  color: #fff;
+  color: var(--chip-text);
   transition: background 0.15s;
 }
 
 .note-chip.chord {
   background: var(--note-chord);
   border-color: var(--note-chord);
-  color: #fff;
+  color: var(--chip-text);
 }
 
 .note-chip.tonic {
   background: var(--note-tonic);
   border-color: var(--note-tonic);
-  color: #fff;
+  color: var(--chip-text);
 }
 
 /* ─── Staff containers ─── */
