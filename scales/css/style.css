@@ -349,6 +349,13 @@ main {
 
 .range-hint { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.6rem; }
 
+.range-dir-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent2);
+  margin-bottom: 0.3rem;
+}
+
 /* ─── Range staff note tooltip ─── */
 .note-tooltip {
   position: fixed;
@@ -368,8 +375,8 @@ main {
 /* ─── Minor range variants ─── */
 .range-variant {
   border-top: 1px solid var(--border);
-  padding-top: 0.6rem;
-  margin-top: 0.6rem;
+  padding-top: 1.1rem;
+  margin-top: 1.1rem;
 }
 
 .range-variant:first-child {

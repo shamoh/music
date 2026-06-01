@@ -262,6 +262,15 @@ function update() {
   const useFlats     = entry.accidental === 'flat';
 
   renderRangeStaff($('range-staff'), buildFullSaxRange(variantScale, useFlats), variantScale, chordNames, 0, isMinor);
+
+  const isMelodic = isMinor && state.variantType === 'melodic';
+  $('asc-label').hidden = !isMelodic;
+  $('desc-block').hidden = !isMelodic;
+
+  if (isMelodic) {
+    const descRange = buildFullSaxRange(naturalScale, useFlats).slice().reverse();
+    renderRangeStaff($('range-staff-desc'), descRange, naturalScale, chordNames, 0, isMinor);
+  }
 }
 
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
