@@ -2,10 +2,238 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="refresh" content="0; url=/scales/" />
-  <title>SaxScale</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="description" content="Kvintový kruh hudebních stupnic" />
+  <title>Scales</title>
+  <link rel="manifest" href="/scales/manifest.json" />
+  <link rel="apple-touch-icon" href="/scales/icons/icon.svg" />
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="/scales/css/style.css" />
+  <style>
+    .circle-wrap {
+      display: flex;
+      justify-content: center;
+    }
+    .circle-wrap svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .circle-hint {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 0.7rem;
+      line-height: 1.6;
+    }
+    .circle-hint span { opacity: 0.5; }
+    .scales-link {
+      display: block;
+      text-align: center;
+      font-size: 0.86rem;
+      color: var(--accent2);
+      text-decoration: none;
+      padding: 0.4rem 0 0.2rem;
+    }
+    .scales-link:hover { text-decoration: underline; }
+  </style>
+  <script>
+    try {
+      const vars = JSON.parse(localStorage.getItem('scales-profile-vars') || 'null');
+      if (vars) {
+        const r = document.documentElement;
+        for (const [k, v] of Object.entries(vars)) r.style.setProperty(k, v);
+      }
+    } catch (_) {}
+  </script>
 </head>
 <body>
-  <script>window.location.replace('/scales/');</script>
+  <header>
+    <h1>🎷 Scales</h1>
+    <p class="subtitle">Kvintový kruh hudebních stupnic</p>
+  </header>
+
+  <main>
+    <section class="scale-section">
+      <div class="circle-wrap" id="circle-wrap"></div>
+      <p class="circle-hint">
+        Kliknutím na stupnici přejdete na detail
+        <span>&nbsp;·&nbsp;</span>
+        Vnější ring: dur
+        <span>&nbsp;·&nbsp;</span>
+        Vnitřní: relativní moll
+      </p>
+      <a href="/scales/" class="scales-link">Procházet všechny stupnice →</a>
+    </section>
+  </main>
+
+  <footer class="app-footer" id="app-footer"></footer>
+  <div class="profile-corner">
+    <select id="profile-select" aria-label="Vizuální profil"></select>
+  </div>
+
+  <script type="module">
+    import { VISUAL_PROFILES, applyProfile, savedProfileId } from '/scales/js/themes.js';
+    import { APP_VERSION, BUILD_DATE } from '/scales/js/defaults.js';
+    import { initAnalytics } from '/scales/js/analytics.js';
+
+    /* ── 12 stupnic ve směru hod. ručiček od C ── */
+    const SCALES = [
+      { dur:'C',   moll:'a',   ks: 0 },
+      { dur:'G',   moll:'e',   ks: 1 },
+      { dur:'D',   moll:'h',   ks: 2 },
+      { dur:'A',   moll:'fis', ks: 3 },
+      { dur:'E',   moll:'cis', ks: 4 },
+      { dur:'H',   moll:'gis', ks: 5,  alt: { dur:'Ces', moll:'as',  ks:-7 } },
+      { dur:'Fis', moll:'dis', ks: 6,  alt: { dur:'Ges', moll:'es',  ks:-6 } },
+      { dur:'Cis', moll:'ais', ks: 7,  alt: { dur:'Des', moll:'b',   ks:-5 } },
+      { dur:'As',  moll:'f',   ks:-4 },
+      { dur:'Es',  moll:'c',   ks:-3 },
+      { dur:'B',   moll:'g',   ks:-2 },
+      { dur:'F',   moll:'d',   ks:-1 },
+    ];
+
+    const N = 12, STEP = 30, GAP = 1.0;
+    const toRad = d => d * Math.PI / 180;
+    const cpx   = (cx, r, d) => cx + r * Math.cos(toRad(d));
+    const cpy   = (cy, r, d) => cy + r * Math.sin(toRad(d));
+    const ff    = n => n.toFixed(3);
+
+    function arcPath(cx, cy, r1, r2, a1, a2) {
+      const lg = a2 - a1 > 180 ? 1 : 0;
+      return `M${ff(cpx(cx,r2,a1))},${ff(cpy(cy,r2,a1))}`
+           + `A${r2},${r2},0,${lg},1,${ff(cpx(cx,r2,a2))},${ff(cpy(cy,r2,a2))}`
+           + `L${ff(cpx(cx,r1,a2))},${ff(cpy(cy,r1,a2))}`
+           + `A${r1},${r1},0,${lg},0,${ff(cpx(cx,r1,a1))},${ff(cpy(cy,r1,a1))}Z`;
+    }
+
+    function segFill(ks) {
+      if (ks === 0) return '#e5e0d1';
+      const t = Math.abs(ks) / 7;
+      return ks > 0
+        ? `hsl(${(40 - t * 16) | 0},${(34 + t * 53) | 0}%,${(88 - t * 46) | 0}%)`
+        : `hsl(${(202 + t * 18) | 0},${(36 + t * 52) | 0}%,${(88 - t * 46) | 0}%)`;
+    }
+    function mergedFill(ks, altKs) {
+      return segFill(Math.abs(ks) <= Math.abs(altKs) ? ks : altKs);
+    }
+    function segInk(ks)  { return Math.abs(ks) >= 5 ? '#fff' : '#1a1a2e'; }
+    function accStr(ks, altKs) {
+      const s = k => k === 0 ? '○' : `${Math.abs(k)}${k > 0 ? '♯' : '♭'}`;
+      return altKs !== undefined ? `${s(ks)} / ${s(altKs)}` : s(ks);
+    }
+
+    const NS = 'http://www.w3.org/2000/svg';
+    function svgEl(tag, attrs, text) {
+      const e = document.createElementNS(NS, tag);
+      for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v);
+      if (text != null) e.textContent = text;
+      return e;
+    }
+
+    /* Place rotated text lines in a segment */
+    function drawLines(parent, x, y, rot, lines, ink) {
+      const g = svgEl('g', { transform: `rotate(${rot.toFixed(1)},${ff(x)},${ff(y)})` });
+      lines.forEach(({ text, fs, bold, href, dy = 0 }) => {
+        if (!text) return;
+        const t = svgEl('text', {
+          x: ff(x), y: ff(y + dy),
+          'font-size': fs,
+          fill: ink,
+          'font-weight': bold ? '700' : '400',
+          'font-family': 'system-ui, -apple-system, sans-serif',
+          'text-anchor': 'middle',
+          'dominant-baseline': 'central',
+        }, text);
+        if (href) { const a = svgEl('a', { href }); a.appendChild(t); g.appendChild(a); }
+        else g.appendChild(t);
+      });
+      parent.appendChild(g);
+    }
+
+    function renderCircle(container) {
+      const SZ = 560, cx = SZ / 2, cy = SZ / 2;
+      const svg = svgEl('svg', {
+        viewBox: `0 0 ${SZ} ${SZ}`,
+        role: 'img',
+        'aria-label': 'Kvintový kruh hudebních stupnic',
+      });
+
+      const OR1 = 204, OR2 = 268;  // outer ring (dur)
+      const MR1 = 144, MR2 = 204;  // middle ring (accidentals)
+      const IR1 =  80, IR2 = 144;  // inner ring (moll)
+
+      const NF = 12, TF = 7, SF = 10, AF = 9.5;  // font sizes
+
+      SCALES.forEach((s, i) => {
+        const mid = -90 + i * STEP;               // C axis → exact top (−90°)
+        const a1  = mid - STEP / 2 + GAP / 2;
+        const a2  = mid + STEP / 2 - GAP / 2;
+        const fill = s.alt ? mergedFill(s.ks, s.alt.ks) : segFill(s.ks);
+        const ink  = segInk(s.ks);
+
+        // Text rotation: tangential, always readable
+        let rot = mid + 90;
+        if (mid > 0 && mid < 180) rot += 180;
+
+        // Segments
+        svg.appendChild(svgEl('path', { d: arcPath(cx,cy,OR1,OR2,a1,a2), fill, stroke:'var(--bg)', 'stroke-width':'1.2' }));
+        svg.appendChild(svgEl('path', { d: arcPath(cx,cy,MR1,MR2,a1,a2), fill, 'fill-opacity':'0.65', stroke:'var(--bg)', 'stroke-width':'0.8' }));
+        svg.appendChild(svgEl('path', { d: arcPath(cx,cy,IR1,IR2,a1,a2), fill, 'fill-opacity':'0.5',  stroke:'var(--bg)', 'stroke-width':'0.8' }));
+
+        // Outer ring: dur
+        drawLines(svg, cpx(cx,(OR1+OR2)/2,mid), cpy(cy,(OR1+OR2)/2,mid), rot, s.alt ? [
+          { text: s.dur,            fs: NF, bold: true, href: `/scales/#${s.dur}-dur`,      dy: -8 },
+          { text: `/ ${s.alt.dur}`, fs: SF, bold: true, href: `/scales/#${s.alt.dur}-dur`, dy:  6 },
+          { text: 'dur',            fs: TF,              dy: 19 },
+        ] : [
+          { text: s.dur,            fs: NF, bold: true, href: `/scales/#${s.dur}-dur`,      dy: -5 },
+          { text: 'dur',            fs: TF,              dy:  8 },
+        ], ink);
+
+        // Middle ring: accidentals
+        drawLines(svg, cpx(cx,(MR1+MR2)/2,mid), cpy(cy,(MR1+MR2)/2,mid), rot, [
+          { text: accStr(s.ks, s.alt?.ks), fs: AF },
+        ], ink);
+
+        // Inner ring: moll
+        drawLines(svg, cpx(cx,(IR1+IR2)/2,mid), cpy(cy,(IR1+IR2)/2,mid), rot, s.alt ? [
+          { text: s.moll,             fs: NF, bold: true, href: `/scales/#${s.moll}-moll`,     dy: -8 },
+          { text: `/ ${s.alt.moll}`,  fs: SF, bold: true, href: `/scales/#${s.alt.moll}-moll`, dy:  6 },
+          { text: 'moll',             fs: TF,              dy: 19 },
+        ] : [
+          { text: s.moll,             fs: NF, bold: true, href: `/scales/#${s.moll}-moll`,     dy: -5 },
+          { text: 'moll',             fs: TF,              dy:  8 },
+        ], ink);
+      });
+
+      // Center hole
+      svg.appendChild(svgEl('circle', { cx, cy, r: IR1, fill: 'var(--bg)' }));
+      container.appendChild(svg);
+    }
+
+    function initProfileSelect() {
+      const sel = document.getElementById('profile-select');
+      const current = savedProfileId();
+      VISUAL_PROFILES.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        if (p.id === current) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', e => applyProfile(e.target.value));
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      applyProfile(savedProfileId());
+      initAnalytics();
+      initProfileSelect();
+      renderCircle(document.getElementById('circle-wrap'));
+      const footer = document.getElementById('app-footer');
+      if (footer) footer.textContent = `Scales v${APP_VERSION} · ${BUILD_DATE}`;
+    });
+  </script>
 </body>
 </html>

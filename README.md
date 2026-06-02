@@ -17,10 +17,25 @@ A progressive web app (PWA) for learning musical scales on the Alto Saxophone.
 ### Run locally
 
 ```bash
+python3 server.py        # recommended — disables HTML caching
+python3 server.py 9000   # optional: specify a different port
+```
+
+Then open `http://localhost:8080` (or the port you chose) in any browser.
+
+`server.py` is gitignored (local dev only). It is identical to the built-in
+server except it sends `Cache-Control: no-store` for HTML responses, which
+prevents the browser from serving stale redirects or old page versions after
+`index.html` changes.
+
+If you don't have `server.py`, the built-in fallback works too:
+
+```bash
 python3 -m http.server 8080
 ```
 
-Then open `http://localhost:8080` in Chrome.
+If the browser shows an unexpected redirect after switching branches or editing
+`index.html`, do a hard reload: **Cmd+Shift+R** (Mac) or **Ctrl+Shift+R** (Win/Linux).
 
 > Note: the app must be served over HTTP (not `file://`) for the Service Worker and PWA install prompt to work.
 
@@ -35,7 +50,8 @@ Tests use the Node.js built-in test runner (Node 18+), no dependencies needed.
 ### Project structure
 
 ```
-index.html                              redirect to /scales/
+index.html                              home page — circle of fifths
+favicon.ico                             browser / bookmark icon
 scales/
   index.html                            main page — scale filter + staff
   manifest.json                         PWA manifest
@@ -46,6 +62,7 @@ scales/
   js/app.js                             main page UI logic, event handling
   js/themes.js                          visual profiles (colors, font scale)
   js/defaults.js                        APP_VERSION, default scale and profile IDs
+  js/analytics.js                       Google Analytics 4 (cookieless, no banner needed)
   instrument/saxophone-alto/
     index.html                          range staff page
     app.js                              URL routing, range rendering
@@ -76,8 +93,8 @@ The selected profile is persisted in `localStorage` under the key `sax-scales-pr
 | --- | --- | --- | --- |
 | `dark` | Tmavý | dark background (`#1a1a2e`) | 1× (default) |
 | `light` | Světlý | light background (`#f4f4f8`) | 1× |
-| `dark-large` | Tmavý · větší | dark background | 1.2× |
-| `light-large` | Světlý · větší | light background | 1.2× |
+| `dark-large` | Tmavý AA | dark background | 1.1× |
+| `light-large` | Světlý AA | light background | 1.1× |
 
 #### CSS variables in each profile
 
@@ -95,7 +112,7 @@ The selected profile is persisted in `localStorage` under the key `sax-scales-pr
 | `--note-chord` | other chord notes |
 | `--note-scale` | remaining scale notes |
 | `--note-muted` | out-of-scale notes in the range staff |
-| `--font-scale` | multiplier for all rem-based text and SVG staff sizes (`1` or `1.2`) |
+| `--font-scale` | multiplier for all rem-based text and SVG staff sizes (`1` or `1.1`) |
 
 #### Adding a new profile
 
@@ -118,7 +135,7 @@ Add an entry to the `VISUAL_PROFILES` array in `scales/js/themes.js`:
     '--note-chord': '#…',
     '--note-scale': '#…',
     '--note-muted': '#…',
-    '--font-scale': '1',  // or '1.2' for larger text
+    '--font-scale': '1',  // or '1.1' for larger text (AA profiles)
   },
 },
 ```
