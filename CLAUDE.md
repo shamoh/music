@@ -63,3 +63,19 @@ Three values must always be updated together:
 - **Explicit request only** — when the user writes "zvedni verzi" → bump the minor digit and reset patch (`1.0.x` → `1.1.0`).
 - Always set `BUILD_DATE` to the current date and time (`YYYY-MM-DD HH:MM`) when bumping the version.
 - Never leave the version unchanged after making any code or content edit.
+
+### history.html — update on every version bump
+
+With every version bump, add or update an entry in `/history.html`:
+
+- If the change is **user-facing** (new feature, visual change, fix the user would notice) → add a new `<div class="history-entry">` at the top of the `<section>`, with the new version number, date, and a brief Czech description (1–2 sentences, no technical detail).
+- If the change is **purely technical** (refactor, dependency bump, internal fix invisible to users) → skip the history entry.
+- When in doubt, add the entry — it can always be removed or merged later.
+
+Entry template:
+```html
+<div class="history-entry">
+  <p class="history-version">X.Y.Z · YYYY-MM-DD</p>
+  <p class="history-desc">Stručný popis změny pro uživatele.</p>
+</div>
+```

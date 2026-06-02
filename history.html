@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="description" content="Historie verzí — Scales" />
+  <title>Scales — Historie verzí</title>
+  <link rel="manifest" href="/scales/manifest.json" />
+  <link rel="apple-touch-icon" href="/scales/icons/icon.svg" />
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="/scales/css/style.css" />
+  <style>
+    .history-main {
+      width: 100%;
+      max-width: 760px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      flex: 1;
+    }
+    .history-entry {
+      border-top: 1px solid var(--border);
+      padding-top: 0.9rem;
+      margin-top: 0.1rem;
+    }
+    .history-entry:first-child {
+      border-top: none;
+      padding-top: 0;
+    }
+    .history-version {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--accent2);
+      margin-bottom: 0.25rem;
+    }
+    .history-desc {
+      font-size: 0.88rem;
+      color: var(--text);
+      line-height: 1.55;
+    }
+  </style>
+  <script>
+    try {
+      const vars = JSON.parse(localStorage.getItem('scales-profile-vars') || 'null');
+      if (vars) {
+        const r = document.documentElement;
+        for (const [k, v] of Object.entries(vars)) r.style.setProperty(k, v);
+      }
+    } catch (_) {}
+  </script>
+</head>
+<body>
+  <header>
+    <h1><a href="/">🎷 Scales</a></h1>
+    <p class="subtitle">Historie verzí</p>
+  </header>
+
+  <main class="history-main">
+    <section class="scale-section">
+
+      <div class="history-entry">
+        <p class="history-version">1.0.37 · 2026-06-02</p>
+        <p class="history-desc">Úvodní stránka (<code>/</code>) zobrazuje kvintový kruh — přehled všech dur a moll stupnic se vztahem k předznamenání. Kliknutím na stupnici přejdete na detail. Titulek 🎷&nbsp;Scales na každé stránce odkazuje zpět na kruh.</p>
+      </div>
+
+      <div class="history-entry">
+        <p class="history-version">1.0.32 · 2026-06-02</p>
+        <p class="history-desc">Opravena ikona aplikace — při instalaci na telefon nebo přidání do záložek se nyní zobrazuje správná ikona (nota) místo černého čtverce.</p>
+      </div>
+
+      <div class="history-entry">
+        <p class="history-version">1.0.30 · 2026-06-01</p>
+        <p class="history-desc">Stránka rozsahu Alt Saxofonu: u melodické moll přibyla sestupná varianta (aiolská). Zobrazuje se jako druhý notový řádek přímo pod vzestupnou variantou.</p>
+      </div>
+
+      <div class="history-entry">
+        <p class="history-version">1.0.29 · 2026-05-12</p>
+        <p class="history-desc">Drobné vizuální úpravy stránky rozsahu Alt Saxofonu — lepší rozestupy not a popisků.</p>
+      </div>
+
+      <div class="history-entry">
+        <p class="history-version">1.0.20 · 2026-05-11</p>
+        <p class="history-desc">Přidán výběr vizuálního profilu (světlý / tmavý, normální / větší text) — ikona vpravo nahoře. Varianta mollové stupnice „Přirozená" přejmenována na správnější „Aiolská".</p>
+      </div>
+
+      <div class="history-entry">
+        <p class="history-version">1.0.10 · 2026-05-11</p>
+        <p class="history-desc">Nová stránka Rozsah Alt Saxofonu — zobrazuje celý rozsah nástroje s barevně odlišenými notami vybrané stupnice. Klepnutím na notu zobrazíte její název. Přístupná tlačítkem Rozsah u každé stupnice.</p>
+      </div>
+
+      <div class="history-entry">
+        <p class="history-version">1.0.6 · 2026-05-10</p>
+        <p class="history-desc">Vizuální ladění — barvy not, proporce notové osnovy, responzivní layout na mobilu i desktopu.</p>
+      </div>
+
+      <div class="history-entry">
+        <p class="history-version">1.0.1 · 2026-05-08</p>
+        <p class="history-desc">První verze: přehled durových a mollových stupnic v české notaci (C D E F G A H), notová osnova s houslovým klíčem, předznamenání, zvýraznění tónů akordu. Mollové stupnice ve třech variantách: aiolská, harmonická, melodická.</p>
+      </div>
+
+    </section>
+  </main>
+
+  <footer class="app-footer" id="app-footer"></footer>
+
+  <script type="module">
+    import { APP_VERSION, BUILD_DATE } from '/scales/js/defaults.js';
+    const footer = document.getElementById('app-footer');
+    if (footer) footer.textContent = `Scales v${APP_VERSION} · ${BUILD_DATE}`;
+  </script>
+</body>
+</html>

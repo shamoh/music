@@ -344,7 +344,10 @@ document.addEventListener('DOMContentLoaded', () => {
   registerSW();
 
   const footer = document.getElementById('app-footer');
-  if (footer) footer.textContent = `Scales v${APP_VERSION} · ${BUILD_DATE}`;
+  if (footer) {
+    const a = Object.assign(document.createElement('a'), { href: '/history.html', textContent: `Scales v${APP_VERSION} · ${BUILD_DATE}` });
+    footer.appendChild(a);
+  }
 
   if (typeof ResizeObserver !== 'undefined') {
     const ro = new ResizeObserver(() => update());
