@@ -9,6 +9,7 @@ import {
 import { renderRangeStaff } from '/scales/js/notation.js';
 import { VISUAL_PROFILES, applyProfile, savedProfileId } from '/scales/js/themes.js';
 import { DEFAULT_SCALE_ID, APP_VERSION, BUILD_DATE } from '/scales/js/defaults.js';
+import { initAnalytics, trackScaleView } from '/scales/js/analytics.js';
 
 const VALID_TYPES = ['natural', 'harmonic', 'melodic'];
 const TYPE_LABELS = { natural: 'Aiolská', harmonic: 'Harmonická', melodic: 'Melodická' };
@@ -262,6 +263,7 @@ function update() {
   const useFlats     = entry.accidental === 'flat';
 
   renderRangeStaff($('range-staff'), buildFullSaxRange(variantScale, useFlats), variantScale, chordNames, 0, isMinor);
+  trackScaleView(entry.id, state.variantType);
 
   const isMelodic = isMinor && state.variantType === 'melodic';
   $('asc-label').hidden = !isMelodic;
@@ -282,6 +284,7 @@ function registerSW() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  initAnalytics();
   applyProfile(savedProfileId());
   if (!location.hash) {
     const saved = savedLastScaleId();

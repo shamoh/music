@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scales-1.0.32';
+const CACHE_NAME = 'scales-1.0.33';
 const ASSETS = [
   '/scales/',
   '/scales/index.html',
@@ -9,6 +9,7 @@ const ASSETS = [
   '/scales/js/app.js',
   '/scales/js/themes.js',
   '/scales/js/defaults.js',
+  '/scales/js/analytics.js',
   '/scales/icons/icon.svg',
   '/scales/icons/icon-192.png',
   '/scales/icons/icon-512.png',

@@ -9,6 +9,7 @@ import {
 import { renderScaleStaff } from './notation.js';
 import { VISUAL_PROFILES, applyProfile, savedProfileId } from './themes.js';
 import { DEFAULT_SCALE_ID, APP_VERSION, BUILD_DATE } from './defaults.js';
+import { initAnalytics, trackScaleView } from './analytics.js';
 
 const state = {
   scaleId: DEFAULT_SCALE_ID,
@@ -201,6 +202,7 @@ function update() {
   const entry = SCALE_CATALOG.find((s) => s.id === state.scaleId);
   if (!entry) return;
   pushHash();
+  trackScaleView(state.scaleId);
 
   if (entry.type === 'major') {
     $('major-view').hidden = false;
@@ -315,6 +317,7 @@ function initProfileSelect() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  initAnalytics();
   applyProfile(savedProfileId());
   if (!location.hash) {
     const saved = savedLastScaleId();
