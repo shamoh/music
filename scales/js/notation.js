@@ -222,7 +222,7 @@ export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig
   const lowestSlot = Math.min(...scaleNotes.map((n) => noteToStaffSlot(n.name, n.octave)));
   const labelY = Math.max(
     staffTop + ls * 4 + ls * 2.8,
-    slotToY(lowestSlot, staffTop, ls) + ls * 1.3,
+    slotToY(lowestSlot, staffTop, ls) + ls * 2.8,
   );
 
   const pillW = Math.min(ls * 3.5, step * 0.9);
