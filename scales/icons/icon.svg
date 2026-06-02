@@ -1,4 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#1a1a2e"/>
-  <text x="256" y="380" font-size="340" text-anchor="middle">🎷</text>
+  <rect width="512" height="512" rx="80" fill="#1a1a2e"/>
+  <ellipse cx="245" cy="345" rx="78" ry="54"
+           transform="rotate(-22 245 345)" fill="white"/>
+  <rect x="312" y="100" width="28" height="254" rx="14" fill="white"/>
 </svg>
