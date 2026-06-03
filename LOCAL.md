@@ -6,7 +6,7 @@
 cat > server.py << 'EOF'
 #!/usr/bin/env python3
 """
-Local dev server — serves files from the current directory on port 8080.
+Local dev server — serves files from the docs/ directory on port 8080.
 
 Difference from `python3 -m http.server 8080`:
   HTML files and directory responses get `Cache-Control: no-store` so the
@@ -19,10 +19,12 @@ Usage:
 """
 
 import http.server
+import os
 import socketserver
 import sys
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
+SERVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'docs')
 
 NO_CACHE_TYPES = ('text/html', 'application/xhtml+xml')
 
@@ -39,9 +41,10 @@ class DevHandler(http.server.SimpleHTTPRequestHandler):
         print(f"  {self.address_string()}  {fmt % args}")
 
 
-with socketserver.TCPServer(('', PORT), DevHandler) as httpd:
+handler = lambda *args, **kwargs: DevHandler(*args, directory=SERVE_DIR, **kwargs)
+with socketserver.TCPServer(('', PORT), handler) as httpd:
     httpd.allow_reuse_address = True
-    print(f"Serving at  http://localhost:{PORT}")
+    print(f"Serving at  http://localhost:{PORT}  (from docs/)")
     print(f"Press Ctrl+C to stop.\n")
     try:
         httpd.serve_forever()

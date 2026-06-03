@@ -6,10 +6,10 @@
   <meta name="theme-color" content="#1a1a2e" />
   <meta name="description" content="Historie verzí — Scales" />
   <title>Scales — Historie verzí</title>
-  <link rel="manifest" href="/scales/manifest.json" />
-  <link rel="apple-touch-icon" href="/scales/icons/icon.svg" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/icon.svg" />
   <link rel="icon" href="/favicon.ico" />
-  <link rel="stylesheet" href="/scales/css/style.css" />
+  <link rel="stylesheet" href="/css/style.css" />
   <style>
     .history-main {
       width: 100%;
@@ -61,6 +61,11 @@
     <section class="scale-section">
 
       <div class="history-entry">
+        <p class="history-version">1.0.39 · 2026-06-03</p>
+        <p class="history-desc">Opraveno chování PWA na Androidu — stránky Kvintový kruh a Historie verzí se nyní otevírají v nainstalované aplikaci místo ve vestavěném prohlížeči. Manifest a service worker přesunuty do rootu, scope PWA rozšířeno na celou aplikaci.</p>
+      </div>
+
+      <div class="history-entry">
         <p class="history-version">1.0.37 · 2026-06-02</p>
         <p class="history-desc">Úvodní stránka (<code>/</code>) zobrazuje kvintový kruh — přehled všech dur a moll stupnic se vztahem k předznamenání. Kliknutím na stupnici přejdete na detail. Titulek 🎷&nbsp;Scales na každé stránce odkazuje zpět na kruh.</p>
       </div>
@@ -106,7 +111,7 @@
   <footer class="app-footer" id="app-footer"></footer>
 
   <script type="module">
-    import { APP_VERSION, BUILD_DATE } from '/scales/js/defaults.js';
+    import { APP_VERSION, BUILD_DATE } from '/js/defaults.js';
     const footer = document.getElementById('app-footer');
     if (footer) footer.textContent = `Scales v${APP_VERSION} · ${BUILD_DATE}`;
   </script>

@@ -5,11 +5,11 @@ import {
   buildAltSaxRange,
   filteredScales,
   accidentalType,
-} from '/scales/js/music.js';
-import { renderRangeStaff } from '/scales/js/notation.js';
-import { VISUAL_PROFILES, applyProfile, savedProfileId } from '/scales/js/themes.js';
-import { DEFAULT_SCALE_ID, APP_VERSION, BUILD_DATE } from '/scales/js/defaults.js';
-import { initAnalytics, trackScaleView } from '/scales/js/analytics.js';
+} from '/js/music.js';
+import { renderRangeStaff } from '/js/notation.js';
+import { VISUAL_PROFILES, applyProfile, savedProfileId } from '/js/themes.js';
+import { DEFAULT_SCALE_ID, APP_VERSION, BUILD_DATE } from '/js/defaults.js';
+import { initAnalytics, trackScaleView } from '/js/analytics.js';
 
 const VALID_TYPES = ['natural', 'harmonic', 'melodic'];
 const TYPE_LABELS = { natural: 'Aiolská', harmonic: 'Harmonická', melodic: 'Melodická' };
@@ -279,7 +279,7 @@ function update() {
 
 function registerSW() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/scales/service-worker.js').catch(() => {});
+    navigator.serviceWorker.register('/service-worker.js').catch(() => {});
   }
 }
 

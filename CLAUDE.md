@@ -1,6 +1,6 @@
 # Scales — CLAUDE.md
 
-Read this file at the start of every session. The working plan is in [docs/PLAN.md](docs/PLAN.md).
+Read this file at the start of every session. The working plan is in [PLAN.md](PLAN.md).
 
 ## Project
 
@@ -9,7 +9,7 @@ Czech notation (C D E F G A H), custom SVG staff notation, installable offline (
 
 ## Key context
 
-- **Scope grows over time** — always consider extensibility when making changes; record future ideas in `docs/PLAN.md`
+- **Scope grows over time** — always consider extensibility when making changes; record future ideas in `PLAN.md`
 - **Alto Saxophone transposition** — notes displayed are written pitch (what the player reads), not concert pitch
 - **Minor scales** — always show all 3 variants together (natural, harmonic, melodic) on one page
 - **Czech note names**: C Cis Des D Dis Es E F Fis Ges G Gis As A Ais B H (B = Bb, H = B♮)
@@ -19,7 +19,7 @@ Czech notation (C D E F G A H), custom SVG staff notation, installable offline (
 ## Running the app
 
 ```bash
-python3 -m http.server 8080   # then open http://localhost:8080
+python3 server.py   # serves from docs/, then open http://localhost:8080
 ```
 
 ## Tests
@@ -31,16 +31,26 @@ node --test tests/music.test.js
 ## Architecture overview
 
 ```
-scales/
-  index.html                        main page — scale staff only
-  instrument/saxophone-alto/        range staff page with URL routing (#a-moll?type=harmonic)
-  js/music.js                       SCALE_CATALOG + music theory (pure functions, no DOM)
-  js/notation.js                    SVG staff rendering
-  js/app.js                         main page UI state, filter logic, rendering
-  js/themes.js                      visual profiles (colors, font scale)
-  js/defaults.js                    APP_VERSION, DEFAULT_SCALE_ID, DEFAULT_PROFILE_ID
-  css/style.css                     responsive styles (mobile portrait/landscape, desktop)
+docs/                               GitHub Pages publishing root
+  index.html                        circle of fifths page
+  history.html                      version history
+  favicon.ico
+  manifest.json                     PWA manifest (scope: /)
   service-worker.js                 cache-first PWA offline support
+  css/style.css                     responsive styles (mobile portrait/landscape, desktop)
+  icons/                            PWA icons (svg, 192, 512)
+  js/
+    music.js                        SCALE_CATALOG + music theory (pure functions, no DOM)
+    notation.js                     SVG staff rendering
+    app.js                          scales page UI state, filter logic, rendering
+    themes.js                       visual profiles (colors, font scale)
+    defaults.js                     APP_VERSION, DEFAULT_SCALE_ID, DEFAULT_PROFILE_ID
+    analytics.js                    Google Analytics integration
+  scales/
+    index.html                      main page — scale staff
+    instrument/saxophone-alto/      range staff page with URL routing (#a-moll?type=harmonic)
+tests/
+  music.test.js                     unit tests for music theory functions
 ```
 
 ## Version bump — REQUIRED on every change
@@ -49,9 +59,9 @@ Three values must always be updated together:
 
 | File | Key | Current |
 | --- | --- | --- |
-| `scales/js/defaults.js` | `APP_VERSION` | `'1.0.7'` |
-| `scales/js/defaults.js` | `BUILD_DATE` | `'2026-05-11 11:09'` |
-| `scales/service-worker.js` | `CACHE_NAME` | `'scales-1.0.7'` |
+| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.39'` |
+| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-06-03 12:09'` |
+| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.39'` |
 
 `APP_VERSION` and `BUILD_DATE` drive the footer display (`Scales vX.Y.Z · YYYY-MM-DD HH:MM`).
 `CACHE_NAME` forces the browser to drop the old PWA cache and re-fetch all assets.
@@ -66,7 +76,7 @@ Three values must always be updated together:
 
 ### history.html — update on every version bump
 
-With every version bump, add or update an entry in `/history.html`:
+With every version bump, add or update an entry in `docs/history.html`:
 
 - If the change is **user-facing** (new feature, visual change, fix the user would notice) → add a new `<div class="history-entry">` at the top of the `<section>`, with the new version number, date, and a brief Czech description (1–2 sentences, no technical detail).
 - If the change is **purely technical** (refactor, dependency bump, internal fix invisible to users) → skip the history entry.

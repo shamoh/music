@@ -296,7 +296,7 @@ function pushHash() {
 
 function registerSW() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/scales/service-worker.js').catch(() => {});
+    navigator.serviceWorker.register('/service-worker.js').catch(() => {});
   }
 }
 
