@@ -59,9 +59,9 @@ Three values must always be updated together:
 
 | File | Key | Current |
 | --- | --- | --- |
-| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.42'` |
-| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-06-09 16:00'` |
-| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.42'` |
+| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.43'` |
+| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-06-09 20:24'` |
+| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.43'` |
 
 `APP_VERSION` and `BUILD_DATE` drive the footer display (`Scales vX.Y.Z · YYYY-MM-DD HH:MM`).
 `CACHE_NAME` forces the browser to drop the old PWA cache and re-fetch all assets.

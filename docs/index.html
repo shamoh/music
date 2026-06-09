@@ -19,6 +19,24 @@
       width: 100%;
       height: auto;
       display: block;
+      -webkit-touch-callout: none;
+      user-select: none;
+    }
+    .circle-tip {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      background: var(--bg-card, #252234);
+      color: var(--text, #d4d0e8);
+      border: 1px solid var(--border, #3a3650);
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-line;
+      pointer-events: none;
+      max-width: 220px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
     }
     .circle-hint {
       font-size: 0.76rem;
@@ -104,6 +122,7 @@
     import { VISUAL_PROFILES, applyProfile, savedProfileId } from '/js/themes.js';
     import { APP_VERSION, BUILD_DATE } from '/js/defaults.js';
     import { initAnalytics } from '/js/analytics.js';
+    import { SCALE_CATALOG } from '/js/music.js';
 
     /* ── 12 stupnic ve směru hod. ručiček od C ── */
     const SCALES = [
@@ -121,7 +140,7 @@
       { dur:'F',   moll:'d',   ks:-1 },
     ];
 
-    const N = 12, STEP = 30, GAP = 1.0;
+    const N = 12, STEP = 30, GAP = 1.5;
     const toRad = d => d * Math.PI / 180;
     const cpx   = (cx, r, d) => cx + r * Math.cos(toRad(d));
     const cpy   = (cy, r, d) => cy + r * Math.sin(toRad(d));
@@ -136,19 +155,31 @@
     }
 
     function segFill(ks) {
-      if (ks === 0) return '#e5e0d1';
+      if (ks === 0) return 'hsl(158, 20%, 87%)';
       const t = Math.abs(ks) / 7;
       return ks > 0
         ? `hsl(${(40 - t * 16) | 0},${(34 + t * 53) | 0}%,${(88 - t * 46) | 0}%)`
         : `hsl(${(202 + t * 18) | 0},${(36 + t * 52) | 0}%,${(88 - t * 46) | 0}%)`;
     }
-    function mergedFill(ks, altKs) {
-      return segFill(Math.abs(ks) <= Math.abs(altKs) ? ks : altKs);
+    function segInk(ks)  { return Math.abs(ks) >= 4 ? '#fff' : '#1a1a2e'; }
+    function accStr(ks)  { return ks === 0 ? '○' : `${Math.abs(ks)}${ks > 0 ? '♯' : '♭'}`; }
+    function segRot(angle) {
+      let r = angle + 90;
+      if (angle > 0 && angle < 180) r += 180;
+      return r;
     }
-    function segInk(ks)  { return Math.abs(ks) >= 5 ? '#fff' : '#1a1a2e'; }
-    function accStr(ks, altKs) {
-      const s = k => k === 0 ? '○' : `${Math.abs(k)}${k > 0 ? '♯' : '♭'}`;
-      return altKs !== undefined ? `${s(ks)} / ${s(altKs)}` : s(ks);
+    const SHARPS = ['Fis','Cis','Gis','Dis','Ais','Eis','His'];
+    const FLATS  = ['B','Es','As','Des','Ges','Ces','Fes'];
+    function accTooltip(ks) {
+      if (ks === 0) return '○ bez předznamenání';
+      const list = ks > 0 ? SHARPS.slice(0, ks) : FLATS.slice(0, -ks);
+      return list.join(' · ');
+    }
+    function scaleTitle(name, type, ks) {
+      const typeEn = type === 'dur' ? 'major' : 'minor';
+      const entry  = SCALE_CATALOG.find(e => e.id === `${name}-${typeEn}`);
+      const notes  = entry ? entry.notes.join(' ') : '';
+      return notes ? `${name} ${type}\n${notes}` : `${name} ${type}`;
     }
 
     const NS = 'http://www.w3.org/2000/svg';
@@ -191,52 +222,163 @@
       const MR1 = 144, MR2 = 204;  // middle ring (accidentals)
       const IR1 =  80, IR2 = 144;  // inner ring (moll)
 
-      const NF = 12, TF = 7, SF = 10, AF = 9.5;  // font sizes
+      const NF = 13, TF = 8, SF = 11, AF = 10.5;  // font sizes
+
+      const SPLIT_GAP = 0.28;
 
       SCALES.forEach((s, i) => {
-        const mid = -90 + i * STEP;               // C axis → exact top (−90°)
+        const mid = -90 + i * STEP;
         const a1  = mid - STEP / 2 + GAP / 2;
         const a2  = mid + STEP / 2 - GAP / 2;
-        const fill = s.alt ? mergedFill(s.ks, s.alt.ks) : segFill(s.ks);
-        const ink  = segInk(s.ks);
 
-        // Text rotation: tangential, always readable
-        let rot = mid + 90;
-        if (mid > 0 && mid < 180) rot += 180;
+        if (s.alt) {
+          const sharpA2   = mid - SPLIT_GAP / 2;
+          const flatA1    = mid + SPLIT_GAP / 2;
+          const sharpMid  = (a1 + sharpA2) / 2;
+          const flatMid   = (flatA1 + a2)  / 2;
+          const sharpFill = segFill(s.ks);
+          const flatFill  = segFill(s.alt.ks);
+          const sharpInk  = segInk(s.ks);
+          const flatInk   = segInk(s.alt.ks);
+          const sharpRot  = segRot(sharpMid);
+          const flatRot   = segRot(flatMid);
 
-        // Segments
-        svg.appendChild(svgEl('path', { d: arcPath(cx,cy,OR1,OR2,a1,a2), fill, stroke:'var(--bg)', 'stroke-width':'1.2' }));
-        svg.appendChild(svgEl('path', { d: arcPath(cx,cy,MR1,MR2,a1,a2), fill, 'fill-opacity':'0.65', stroke:'var(--bg)', 'stroke-width':'0.8' }));
-        svg.appendChild(svgEl('path', { d: arcPath(cx,cy,IR1,IR2,a1,a2), fill, 'fill-opacity':'0.5',  stroke:'var(--bg)', 'stroke-width':'0.8' }));
+          // Outer ring — dur
+          const sOL = svgEl('a', { href:`/scales/#${s.dur}-dur`,     style:'cursor:pointer' });
+          sOL.appendChild(svgEl('path', { d: arcPath(cx,cy,OR1,OR2,a1,sharpA2), fill:sharpFill, 'fill-opacity':'0.82', stroke:'var(--bg)', 'stroke-width':'1.2' }));
+          sOL.appendChild(svgEl('title', {}, scaleTitle(s.dur, 'dur', s.ks)));
+          svg.appendChild(sOL);
+          const fOL = svgEl('a', { href:`/scales/#${s.alt.dur}-dur`, style:'cursor:pointer' });
+          fOL.appendChild(svgEl('path', { d: arcPath(cx,cy,OR1,OR2,flatA1,a2),  fill:flatFill,  'fill-opacity':'0.82', stroke:'var(--bg)', 'stroke-width':'1.2' }));
+          fOL.appendChild(svgEl('title', {}, scaleTitle(s.alt.dur, 'dur', s.alt.ks)));
+          svg.appendChild(fOL);
 
-        // Outer ring: dur
-        drawLines(svg, cpx(cx,(OR1+OR2)/2,mid), cpy(cy,(OR1+OR2)/2,mid), rot, s.alt ? [
-          { text: s.dur,            fs: NF, bold: true, href: `/scales/#${s.dur}-dur`,      dy: -8 },
-          { text: `/ ${s.alt.dur}`, fs: SF, bold: true, href: `/scales/#${s.alt.dur}-dur`, dy:  6 },
-          { text: 'dur',            fs: TF,              dy: 19 },
-        ] : [
-          { text: s.dur,            fs: NF, bold: true, href: `/scales/#${s.dur}-dur`,      dy: -5 },
-          { text: 'dur',            fs: TF,              dy:  8 },
-        ], ink);
+          // Middle ring — accidentals
+          const mrS = svgEl('path', { d: arcPath(cx,cy,MR1,MR2,a1,sharpA2), fill:sharpFill, 'fill-opacity':'0.70', stroke:'var(--bg)', 'stroke-width':'0.8' });
+          mrS.appendChild(svgEl('title', {}, accTooltip(s.ks)));
+          svg.appendChild(mrS);
+          const mrF = svgEl('path', { d: arcPath(cx,cy,MR1,MR2,flatA1,a2),  fill:flatFill,  'fill-opacity':'0.70', stroke:'var(--bg)', 'stroke-width':'0.8' });
+          mrF.appendChild(svgEl('title', {}, accTooltip(s.alt.ks)));
+          svg.appendChild(mrF);
 
-        // Middle ring: accidentals
-        drawLines(svg, cpx(cx,(MR1+MR2)/2,mid), cpy(cy,(MR1+MR2)/2,mid), rot, [
-          { text: accStr(s.ks, s.alt?.ks), fs: AF },
-        ], ink);
+          // Inner ring — moll
+          const sIL = svgEl('a', { href:`/scales/#${s.moll}-moll`,     style:'cursor:pointer' });
+          sIL.appendChild(svgEl('path', { d: arcPath(cx,cy,IR1,IR2,a1,sharpA2), fill:sharpFill, 'fill-opacity':'1.0', stroke:'var(--bg)', 'stroke-width':'0.8' }));
+          sIL.appendChild(svgEl('title', {}, scaleTitle(s.moll, 'moll', s.ks)));
+          svg.appendChild(sIL);
+          const fIL = svgEl('a', { href:`/scales/#${s.alt.moll}-moll`, style:'cursor:pointer' });
+          fIL.appendChild(svgEl('path', { d: arcPath(cx,cy,IR1,IR2,flatA1,a2),  fill:flatFill,  'fill-opacity':'1.0', stroke:'var(--bg)', 'stroke-width':'0.8' }));
+          fIL.appendChild(svgEl('title', {}, scaleTitle(s.alt.moll, 'moll', s.alt.ks)));
+          svg.appendChild(fIL);
 
-        // Inner ring: moll
-        drawLines(svg, cpx(cx,(IR1+IR2)/2,mid), cpy(cy,(IR1+IR2)/2,mid), rot, s.alt ? [
-          { text: s.moll,             fs: NF, bold: true, href: `/scales/#${s.moll}-moll`,     dy: -8 },
-          { text: `/ ${s.alt.moll}`,  fs: SF, bold: true, href: `/scales/#${s.alt.moll}-moll`, dy:  6 },
-          { text: 'moll',             fs: TF,              dy: 19 },
-        ] : [
-          { text: s.moll,             fs: NF, bold: true, href: `/scales/#${s.moll}-moll`,     dy: -5 },
-          { text: 'moll',             fs: TF,              dy:  8 },
-        ], ink);
+          // Labels — sharp half
+          drawLines(svg, cpx(cx,(OR1+OR2)/2,sharpMid), cpy(cy,(OR1+OR2)/2,sharpMid), sharpRot, [
+            { text: s.dur,  fs: NF, bold: true, href:`/scales/#${s.dur}-dur`,  dy: -5 },
+            { text: 'dur',  fs: TF, dy: 8 },
+          ], sharpInk);
+          drawLines(svg, cpx(cx,(MR1+MR2)/2,sharpMid), cpy(cy,(MR1+MR2)/2,sharpMid), sharpRot, [
+            { text: `${s.ks}♯`, fs: AF },
+          ], sharpInk);
+          drawLines(svg, cpx(cx,(IR1+IR2)/2,sharpMid), cpy(cy,(IR1+IR2)/2,sharpMid), sharpRot, [
+            { text: s.moll, fs: SF, bold: true, href:`/scales/#${s.moll}-moll`, dy: -4 },
+            { text: 'moll', fs: TF, dy: 7 },
+          ], sharpInk);
+
+          // Labels — flat half
+          drawLines(svg, cpx(cx,(OR1+OR2)/2,flatMid), cpy(cy,(OR1+OR2)/2,flatMid), flatRot, [
+            { text: s.alt.dur,  fs: NF, bold: true, href:`/scales/#${s.alt.dur}-dur`,  dy: -5 },
+            { text: 'dur',      fs: TF, dy: 8 },
+          ], flatInk);
+          drawLines(svg, cpx(cx,(MR1+MR2)/2,flatMid), cpy(cy,(MR1+MR2)/2,flatMid), flatRot, [
+            { text: `${Math.abs(s.alt.ks)}♭`, fs: AF },
+          ], flatInk);
+          drawLines(svg, cpx(cx,(IR1+IR2)/2,flatMid), cpy(cy,(IR1+IR2)/2,flatMid), flatRot, [
+            { text: s.alt.moll, fs: SF, bold: true, href:`/scales/#${s.alt.moll}-moll`, dy: -4 },
+            { text: 'moll', fs: TF, dy: 7 },
+          ], flatInk);
+
+        } else {
+          const fill = segFill(s.ks);
+          const ink  = segInk(s.ks);
+          const rot  = segRot(mid);
+
+          // Outer ring — dur, clickable
+          const outerLink = svgEl('a', { href:`/scales/#${s.dur}-dur`, style:'cursor:pointer' });
+          outerLink.appendChild(svgEl('path', { d: arcPath(cx,cy,OR1,OR2,a1,a2), fill, 'fill-opacity':'0.82', stroke:'var(--bg)', 'stroke-width':'1.2' }));
+          outerLink.appendChild(svgEl('title', {}, scaleTitle(s.dur, 'dur', s.ks)));
+          svg.appendChild(outerLink);
+
+          // Middle ring — accidentals
+          const mr = svgEl('path', { d: arcPath(cx,cy,MR1,MR2,a1,a2), fill, 'fill-opacity':'0.70', stroke:'var(--bg)', 'stroke-width':'0.8' });
+          mr.appendChild(svgEl('title', {}, accTooltip(s.ks)));
+          svg.appendChild(mr);
+
+          // Inner ring — moll, clickable
+          const innerLink = svgEl('a', { href:`/scales/#${s.moll}-moll`, style:'cursor:pointer' });
+          innerLink.appendChild(svgEl('path', { d: arcPath(cx,cy,IR1,IR2,a1,a2), fill, 'fill-opacity':'1.0', stroke:'var(--bg)', 'stroke-width':'0.8' }));
+          innerLink.appendChild(svgEl('title', {}, scaleTitle(s.moll, 'moll', s.ks)));
+          svg.appendChild(innerLink);
+
+          // Labels
+          drawLines(svg, cpx(cx,(OR1+OR2)/2,mid), cpy(cy,(OR1+OR2)/2,mid), rot, [
+            { text: s.dur,  fs: NF, bold: true, href:`/scales/#${s.dur}-dur`,  dy: -5 },
+            { text: 'dur',  fs: TF, dy: 8 },
+          ], ink);
+          drawLines(svg, cpx(cx,(MR1+MR2)/2,mid), cpy(cy,(MR1+MR2)/2,mid), rot, [
+            { text: accStr(s.ks), fs: AF },
+          ], ink);
+          drawLines(svg, cpx(cx,(IR1+IR2)/2,mid), cpy(cy,(IR1+IR2)/2,mid), rot, [
+            { text: s.moll, fs: NF, bold: true, href:`/scales/#${s.moll}-moll`, dy: -5 },
+            { text: 'moll', fs: TF, dy: 8 },
+          ], ink);
+        }
       });
 
       // Center hole
       svg.appendChild(svgEl('circle', { cx, cy, r: IR1, fill: 'var(--bg)' }));
+
+      // Mobile long-press tooltip
+      let _pressTimer = null, _longPressActive = false;
+      function _getTitleText(el) {
+        let node = el;
+        while (node && node !== svg) {
+          const t = Array.from(node.children || []).find(c => c.tagName.toLowerCase() === 'title');
+          if (t) return t.textContent;
+          node = node.parentElement;
+        }
+        return null;
+      }
+      function _showTip(text, x, y) {
+        let tip = document.getElementById('_ctip');
+        if (!tip) {
+          tip = Object.assign(document.createElement('div'), { id: '_ctip' });
+          tip.className = 'circle-tip';
+          document.body.appendChild(tip);
+        }
+        tip.textContent = text;
+        const W = window.innerWidth;
+        tip.style.left = `${Math.min(x + 14, W - 234)}px`;
+        tip.style.top  = `${Math.max(y - 84, 8)}px`;
+        tip.style.display = 'block';
+        clearTimeout(tip._t);
+        tip._t = setTimeout(() => { tip.style.display = 'none'; }, 5000);
+      }
+      svg.addEventListener('touchstart', e => {
+        const touch = e.touches[0];
+        const cx = touch.clientX, cy = touch.clientY;
+        _longPressActive = false;
+        clearTimeout(_pressTimer);
+        _pressTimer = setTimeout(() => {
+          const text = _getTitleText(document.elementFromPoint(cx, cy));
+          if (text) { _longPressActive = true; _showTip(text, cx, cy); }
+        }, 600);
+      }, { passive: true });
+      svg.addEventListener('touchmove', () => clearTimeout(_pressTimer), { passive: true });
+      svg.addEventListener('touchend',  () => clearTimeout(_pressTimer), { passive: true });
+      svg.addEventListener('click', e => {
+        if (_longPressActive) { e.preventDefault(); _longPressActive = false; }
+      });
+
       container.appendChild(svg);
     }
 
