@@ -55,6 +55,47 @@
       padding: 0.4rem 0 0.2rem;
     }
     .scales-link:hover { text-decoration: underline; }
+
+    .keysig-section {
+      width: 100%;
+      padding: 0 0 0.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    .keysig-title {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+    .keysig-wrap {
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .keysig-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    .keysig-table td {
+      padding: 0.22rem 0.45rem;
+      vertical-align: middle;
+    }
+    .keysig-td-dur  { text-align: right; font-weight: 600; white-space: nowrap; }
+    .keysig-td-acc  { text-align: center; }
+    .keysig-td-moll { text-align: left;  font-weight: 600; white-space: nowrap; }
+    .ks-count { font-size: 0.88em; font-weight: 700; display: block; }
+    .ks-notes { font-size: 0.70em; display: block; opacity: 0.85; line-height: 1.4; }
+    .keysig-table a { text-decoration: none; }
+    .keysig-table a:hover { text-decoration: underline; }
+    @media (max-width: 520px) {
+      .keysig-section { grid-template-columns: 1fr; }
+    }
   </style>
   <script>
     try {
@@ -114,6 +155,17 @@
         Vnitřní: relativní moll
       </p>
       <a href="/scales/" class="scales-link">Procházet všechny stupnice →</a>
+    </section>
+
+    <section class="keysig-section">
+      <div class="keysig-block">
+        <p class="keysig-title">Křížky ♯</p>
+        <div class="keysig-wrap" id="keysig-sharps"></div>
+      </div>
+      <div class="keysig-block">
+        <p class="keysig-title">Béčka ♭</p>
+        <div class="keysig-wrap" id="keysig-flats"></div>
+      </div>
     </section>
   </main>
 
@@ -382,6 +434,96 @@
       container.appendChild(svg);
     }
 
+    function renderKeySigTables() {
+      const sharpRows = [];
+      const flatRows  = [];
+
+      for (let ks = 0; ks <= 7; ks++) {
+        let found = null;
+        for (const s of SCALES) {
+          if (s.ks === ks) { found = { dur: s.dur, moll: s.moll }; break; }
+          if (s.alt && s.alt.ks === ks) { found = { dur: s.alt.dur, moll: s.alt.moll }; break; }
+        }
+        if (found) sharpRows.push({
+          ks,
+          dur: found.dur,
+          moll: found.moll,
+          accStr: ks === 0 ? '○' : `${ks}♯`,
+          noteList: ks === 0 ? '' : SHARPS.slice(0, ks).join(' · '),
+        });
+      }
+
+      for (let ks = 0; ks >= -7; ks--) {
+        let found = null;
+        for (const s of SCALES) {
+          if (s.ks === ks) { found = { dur: s.dur, moll: s.moll }; break; }
+          if (s.alt && s.alt.ks === ks) { found = { dur: s.alt.dur, moll: s.alt.moll }; break; }
+        }
+        const n = Math.abs(ks);
+        if (found) flatRows.push({
+          ks,
+          dur: found.dur,
+          moll: found.moll,
+          accStr: ks === 0 ? '○' : `${n}♭`,
+          noteList: ks === 0 ? '' : FLATS.slice(0, n).join(' · '),
+        });
+      }
+
+      function buildTable(rows, containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const table = document.createElement('table');
+        table.className = 'keysig-table';
+        const tbody = document.createElement('tbody');
+        rows.forEach(({ ks, dur, moll, accStr, noteList }) => {
+          const tr = document.createElement('tr');
+          const fill = segFill(ks);
+          const ink  = segInk(ks);
+          tr.style.background = fill;
+          tr.style.color = ink;
+
+          const tdDur = document.createElement('td');
+          tdDur.className = 'keysig-td-dur';
+          const aDur = document.createElement('a');
+          aDur.href = `/scales/#${dur}-dur`;
+          aDur.style.color = ink;
+          aDur.textContent = `${dur} dur`;
+          tdDur.appendChild(aDur);
+
+          const tdAcc = document.createElement('td');
+          tdAcc.className = 'keysig-td-acc';
+          const spanCount = document.createElement('span');
+          spanCount.className = 'ks-count';
+          spanCount.textContent = accStr;
+          tdAcc.appendChild(spanCount);
+          if (noteList) {
+            const spanNotes = document.createElement('span');
+            spanNotes.className = 'ks-notes';
+            spanNotes.textContent = noteList;
+            tdAcc.appendChild(spanNotes);
+          }
+
+          const tdMoll = document.createElement('td');
+          tdMoll.className = 'keysig-td-moll';
+          const aMoll = document.createElement('a');
+          aMoll.href = `/scales/#${moll}-moll`;
+          aMoll.style.color = ink;
+          aMoll.textContent = `${moll} moll`;
+          tdMoll.appendChild(aMoll);
+
+          tr.appendChild(tdDur);
+          tr.appendChild(tdAcc);
+          tr.appendChild(tdMoll);
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        container.appendChild(table);
+      }
+
+      buildTable(sharpRows, 'keysig-sharps');
+      buildTable(flatRows,  'keysig-flats');
+    }
+
     function initProfileSelect() {
       const sel = document.getElementById('profile-select');
       const current = savedProfileId();
@@ -400,6 +542,7 @@
       initAnalytics();
       initProfileSelect();
       renderCircle(document.getElementById('circle-wrap'));
+      renderKeySigTables();
       const footer = document.getElementById('app-footer');
       if (footer) {
         const a = Object.assign(document.createElement('a'), { href: '/history.html', textContent: `Scales v${APP_VERSION} · ${BUILD_DATE}` });
