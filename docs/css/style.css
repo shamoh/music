@@ -23,6 +23,13 @@
 
   /* Tonic column highlight color in range staff */
   --tonic-col-bg: rgba(70,160,90,0.20);
+
+  /* Logo variables (default dark values) */
+  --logo-clef:   #b09878;
+  --logo-staff:  #7878a0;
+  --logo-tonic:  #a8b4e0;
+  --logo-chord:  #e0a8b4;
+  --logo-accent: #88a888;
 }
 
 /* Scales all rem-based text sizes when profile changes --font-scale */
@@ -44,16 +51,74 @@ body {
 /* ─── Header ─── */
 header {
   width: 100%;
-  padding: 1rem 1.2rem 0.6rem;
-  text-align: center;
+  padding: 0.5rem 1rem 0.5rem 1.2rem;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+header h1 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  overflow: hidden;
+  min-width: 0;
+  font-size: 1rem;
+  font-weight: normal;
+  letter-spacing: normal;
+}
+
+.logo {
+  height: 34px;
+  width: auto;
+  display: block;
   flex-shrink: 0;
 }
 
-header h1 { font-size: 1.7rem; letter-spacing: 0.03em; }
-header h1 a { color: inherit; text-decoration: none; }
-header h1 a:hover { opacity: 0.75; }
-.subtitle { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.2rem; }
+/* ─── Breadcrumb navigation ─── */
+.bc-logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+  flex-shrink: 0;
+}
+.bc-logo:hover { opacity: 0.75; }
+
+.bc-link {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex-shrink: 2;
+}
+.bc-link:hover { color: var(--accent); text-decoration: underline; }
+
+.bc-sep {
+  color: var(--text-muted);
+  opacity: 0.4;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  user-select: none;
+}
+
+.bc-current {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex-shrink: 1;
+}
 
 /* ─── Title row: heading + range link side by side ─── */
 .title-row {
@@ -85,27 +150,13 @@ header h1 a:hover { opacity: 0.75; }
   border-color: var(--accent);
 }
 
-/* ─── Saxophone-alto page header ─── */
-.sax-page-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.8rem 1.2rem;
-}
-
+/* ─── Saxophone-alto page back-link ─── */
 .back-link {
   text-decoration: none;
   color: var(--accent);
   font-size: 0.85rem;
-  align-self: flex-start;
 }
 .back-link:hover { text-decoration: underline; }
-
-.sax-page-header h1 {
-  font-size: 1.3rem;
-  letter-spacing: 0.02em;
-}
 
 /* ─── Type sub-nav (minor variants on saxophone-alto page) ─── */
 .type-nav {
@@ -243,26 +294,19 @@ main {
   outline-offset: 2px;
 }
 
-/* ─── Profile corner (fixed top-right) ─── */
-.profile-corner {
-  position: fixed;
-  top: 0.5rem;
-  right: 0.6rem;
-  z-index: 200;
-}
-
-.profile-corner select {
+/* ─── Profile selector (inline in header) ─── */
+.profile-select {
   background: var(--bg-input);
   color: var(--text-muted);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 0.22rem 0.5rem;
+  padding: 0.22rem 0.4rem;
   font-size: 0.75rem;
   cursor: pointer;
   max-width: 9rem;
+  flex-shrink: 0;
 }
-
-.profile-corner select:focus {
+.profile-select:focus {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -278,6 +322,15 @@ main {
 
 .scale-section h2,
 .range-section h2 { font-size: 1.2rem; }
+
+.circle-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 0.6rem;
+  letter-spacing: 0.02em;
+}
 
 .chord-label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.8rem; }
 
@@ -325,22 +378,22 @@ main {
   border-radius: 6px;
   font-size: 0.95rem;
   font-weight: 600;
-  background: var(--note-scale);
-  border: 1px solid var(--note-scale);
-  color: var(--chip-text);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
   transition: background 0.15s;
 }
 
 .note-chip.chord {
-  background: var(--note-chord);
-  border-color: var(--note-chord);
-  color: var(--chip-text);
+  background: var(--note-chord-label-bg);
+  border-color: var(--note-chord-label-bg);
+  color: var(--note-chord-label);
 }
 
 .note-chip.tonic {
-  background: var(--note-tonic);
-  border-color: var(--note-tonic);
-  color: var(--chip-text);
+  background: var(--note-tonic-label-bg);
+  border-color: var(--note-tonic-label-bg);
+  color: var(--note-tonic-label);
 }
 
 /* ─── Staff containers ─── */
@@ -397,21 +450,17 @@ main {
 /* ─── Desktop: wider max-width (≥ 900 px) ─── */
 @media (min-width: 900px) {
   main { max-width: 900px; }
-  header h1 { font-size: 2rem; }
+  .bc-current { font-size: 1.4rem; }
+  .bc-link { font-size: 1.0rem; }
 }
 
 /* ─── Landscape mobile: compact header + tighter layout ─── */
 @media (orientation: landscape) and (max-height: 560px) {
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    padding: 0.3rem 1rem;
-  }
-
-  header h1 { font-size: 1.2rem; }
-  .subtitle { display: none; }
+  header { padding: 0.25rem 0.8rem; }
+  .logo { height: 26px; }
+  .bc-current { font-size: 0.95rem; }
+  .bc-link { font-size: 0.78rem; }
+  .profile-select { font-size: 0.7rem; padding: 0.15rem 0.3rem; }
 
   main { gap: 0.7rem; padding: 0.6rem 1rem; }
 
@@ -443,7 +492,8 @@ main {
 
 /* ─── Small portrait phones (< 380 px) ─── */
 @media (max-width: 380px) {
-  header h1  { font-size: 1.35rem; }
+  .logo { height: 30px; }
+  .bc-current { font-size: 1.1rem; }
   .note-chip { font-size: 0.8rem; min-width: 2rem; padding: 0.25rem 0.4rem; }
   .scale-section h2 { font-size: 1rem; }
   .filter-chip { font-size: 0.75rem; padding: 0.22rem 0.55rem; }

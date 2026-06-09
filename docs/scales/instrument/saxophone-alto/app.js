@@ -253,7 +253,6 @@ function update() {
 
   pushHash(entry, state.variantType);
   $('range-title').textContent = `${entry.root} ${entry.type === 'major' ? 'dur' : 'moll'}`;
-  $('back-link').href = '/scales/#' + scaleIdToCode(entry.id);
   updateTypeNav(entry, state.variantType);
 
   const naturalScale = generateScale(entry.id, 4, 'natural');

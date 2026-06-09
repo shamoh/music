@@ -50,12 +50,43 @@
 </head>
 <body>
   <header>
-    <h1>🎷 Scales</h1>
-    <p class="subtitle">Kvintový kruh hudebních stupnic</p>
+    <h1>
+      <a href="/" class="bc-logo">
+        <svg class="logo" viewBox="0 0 85 50" aria-hidden="true">
+          <!-- Staff Lines -->
+          <path d="M 12 14 Q 45 9, 80 14" stroke="var(--logo-staff, #7878a0)" stroke-width="0.8" fill="none" opacity="0.4" />
+          <path d="M 12 19 Q 45 14, 80 19" stroke="var(--logo-staff, #7878a0)" stroke-width="0.8" fill="none" opacity="0.4" />
+          <path d="M 12 24 Q 45 19, 80 24" stroke="var(--logo-staff, #7878a0)" stroke-width="0.8" fill="none" opacity="0.4" />
+          <path d="M 12 29 Q 45 24, 80 29" stroke="var(--logo-staff, #7878a0)" stroke-width="0.8" fill="none" opacity="0.4" />
+          <path d="M 12 34 Q 45 29, 80 34" stroke="var(--logo-staff, #7878a0)" stroke-width="0.8" fill="none" opacity="0.4" />
+
+          <!-- Artistic Treble Clef -->
+          <path d="M 16.5 43.5 L 19.5 4 C 19.5 1, 22.5 0, 24 3 C 25.5 6, 24.5 11, 18.5 17 C 12.5 23, 10 29.5, 13 34.5 C 16 39.5, 23 39.5, 25.5 33.5 C 27.5 28, 22.5 22.5, 18.5 26.5 C 16.5 28.5, 17 31.5, 20 31" stroke="var(--logo-clef, #b09878)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="16.5" cy="43.5" r="2.2" fill="var(--logo-clef, #b09878)" />
+
+          <!-- Notes 1 & 2 (beamed eighths) -->
+          <ellipse cx="34" cy="30" rx="4.5" ry="3" transform="rotate(-20 34 30)" fill="var(--logo-tonic, #a8b4e0)" />
+          <line x1="38" y1="30" x2="38" y2="13" stroke="var(--logo-tonic, #a8b4e0)" stroke-width="1.5" stroke-linecap="round" />
+          
+          <ellipse cx="50" cy="24" rx="4.5" ry="3" transform="rotate(-20 50 24)" fill="var(--logo-chord, #e0a8b4)" />
+          <line x1="54" y1="24" x2="54" y2="7" stroke="var(--logo-chord, #e0a8b4)" stroke-width="1.5" stroke-linecap="round" />
+          
+          <polygon points="38,13 54,7 54,10 38,16" fill="var(--logo-chord, #e0a8b4)" />
+
+          <!-- Note 3 (quarter note, stem down) -->
+          <ellipse cx="66" cy="18" rx="4.5" ry="3" transform="rotate(-20 66 18)" fill="var(--logo-accent, #88a888)" />
+          <line x1="62" y1="18" x2="62" y2="33" stroke="var(--logo-accent, #88a888)" stroke-width="1.5" stroke-linecap="round" />
+
+        </svg>
+      </a>
+      <span class="bc-current">Hudební nauka</span>
+    </h1>
+    <select id="profile-select" class="profile-select" aria-label="Vizuální profil"></select>
   </header>
 
   <main>
     <section class="scale-section">
+      <h2 class="circle-title">Kvintový kruh hudebních stupnic</h2>
       <div class="circle-wrap" id="circle-wrap"></div>
       <p class="circle-hint">
         Kliknutím na stupnici přejdete na detail
@@ -69,10 +100,6 @@
   </main>
 
   <footer class="app-footer" id="app-footer"></footer>
-  <div class="profile-corner">
-    <select id="profile-select" aria-label="Vizuální profil"></select>
-  </div>
-
   <script type="module">
     import { VISUAL_PROFILES, applyProfile, savedProfileId } from '/js/themes.js';
     import { APP_VERSION, BUILD_DATE } from '/js/defaults.js';

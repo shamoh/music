@@ -53,12 +53,49 @@
 </head>
 <body>
   <header>
-    <h1><a href="/">🎷 Scales</a></h1>
-    <p class="subtitle">Historie verzí</p>
+    <h1>
+      <a href="/" class="bc-logo">
+        <svg class="logo" viewBox="0 0 85 50" aria-hidden="true">
+          <!-- Staff Lines -->
+          <path d="M 12 14 Q 45 9, 80 14" stroke="var(--logo-staff, #7878a0)" stroke-width="0.8" fill="none" opacity="0.4" />
+          <path d="M 12 19 Q 45 14, 80 19" stroke="var(--logo-staff, #7878a0)" stroke-width="0.8" fill="none" opacity="0.4" />
+          <path d="M 12 24 Q 45 19, 80 24" stroke="var(--logo-staff, #7878a0)" stroke-width="0.8" fill="none" opacity="0.4" />
+          <path d="M 12 29 Q 45 24, 80 29" stroke="var(--logo-staff, #7878a0)" stroke-width="0.8" fill="none" opacity="0.4" />
+          <path d="M 12 34 Q 45 29, 80 34" stroke="var(--logo-staff, #7878a0)" stroke-width="0.8" fill="none" opacity="0.4" />
+
+          <!-- Artistic Treble Clef -->
+          <path d="M 16.5 43.5 L 19.5 4 C 19.5 1, 22.5 0, 24 3 C 25.5 6, 24.5 11, 18.5 17 C 12.5 23, 10 29.5, 13 34.5 C 16 39.5, 23 39.5, 25.5 33.5 C 27.5 28, 22.5 22.5, 18.5 26.5 C 16.5 28.5, 17 31.5, 20 31" stroke="var(--logo-clef, #b09878)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="16.5" cy="43.5" r="2.2" fill="var(--logo-clef, #b09878)" />
+
+          <!-- Notes 1 & 2 (beamed eighths) -->
+          <ellipse cx="34" cy="30" rx="4.5" ry="3" transform="rotate(-20 34 30)" fill="var(--logo-tonic, #a8b4e0)" />
+          <line x1="38" y1="30" x2="38" y2="13" stroke="var(--logo-tonic, #a8b4e0)" stroke-width="1.5" stroke-linecap="round" />
+          
+          <ellipse cx="50" cy="24" rx="4.5" ry="3" transform="rotate(-20 50 24)" fill="var(--logo-chord, #e0a8b4)" />
+          <line x1="54" y1="24" x2="54" y2="7" stroke="var(--logo-chord, #e0a8b4)" stroke-width="1.5" stroke-linecap="round" />
+          
+          <polygon points="38,13 54,7 54,10 38,16" fill="var(--logo-chord, #e0a8b4)" />
+
+          <!-- Note 3 (quarter note, stem down) -->
+          <ellipse cx="66" cy="18" rx="4.5" ry="3" transform="rotate(-20 66 18)" fill="var(--logo-accent, #88a888)" />
+          <line x1="62" y1="18" x2="62" y2="33" stroke="var(--logo-accent, #88a888)" stroke-width="1.5" stroke-linecap="round" />
+
+        </svg>
+      </a>
+      <a href="/" class="bc-link">Hudební nauka</a>
+      <span class="bc-sep" aria-hidden="true">›</span>
+      <span class="bc-current">Historie verzí</span>
+    </h1>
+    <select id="profile-select" class="profile-select" aria-label="Vizuální profil"></select>
   </header>
 
   <main class="history-main">
     <section class="scale-section">
+
+      <div class="history-entry">
+        <p class="history-version">1.0.41 · 2026-06-09</p>
+        <p class="history-desc">Přepracováno záhlaví všech stránek: nové vektorové logo aplikace (notová osnova s houslovým klíčem), breadcrumb navigace zobrazující aktuální polohu v hierarchii (Hudební nauka › Stupnice › Rozsah – Alt Saxofon 🎷) s klikatelnou navigací, přepínač profilu přesunut přímo do záhlaví (dostupný i na stránce Historie verzí). Text „Kvintový kruh hudebních stupnic" přesunut do boxu s kruhem. Tónika stupnice označena vinově červenou barvou.</p>
+      </div>
 
       <div class="history-entry">
         <p class="history-version">1.0.39 · 2026-06-03</p>
@@ -112,8 +149,26 @@
 
   <script type="module">
     import { APP_VERSION, BUILD_DATE } from '/js/defaults.js';
+    import { VISUAL_PROFILES, applyProfile, savedProfileId } from '/js/themes.js';
+
+    applyProfile(savedProfileId());
+
+    const sel = document.getElementById('profile-select');
+    const currentId = savedProfileId();
+    VISUAL_PROFILES.forEach((p) => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      if (p.id === currentId) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', (e) => applyProfile(e.target.value));
+
     const footer = document.getElementById('app-footer');
-    if (footer) footer.textContent = `Scales v${APP_VERSION} · ${BUILD_DATE}`;
+    if (footer) {
+      const a = Object.assign(document.createElement('a'), { href: '/history.html', textContent: `Scales v${APP_VERSION} · ${BUILD_DATE}` });
+      footer.appendChild(a);
+    }
   </script>
 </body>
 </html>

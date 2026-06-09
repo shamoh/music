@@ -59,9 +59,9 @@ Three values must always be updated together:
 
 | File | Key | Current |
 | --- | --- | --- |
-| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.40'` |
-| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-06-03 12:47'` |
-| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.40'` |
+| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.41'` |
+| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-06-09 15:22'` |
+| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.41'` |
 
 `APP_VERSION` and `BUILD_DATE` drive the footer display (`Scales vX.Y.Z · YYYY-MM-DD HH:MM`).
 `CACHE_NAME` forces the browser to drop the old PWA cache and re-fetch all assets.
@@ -69,18 +69,17 @@ Three values must always be updated together:
 
 ### Versioning rules
 
-- **Every change** → bump the patch digit automatically (`1.0.9` → `1.0.10`, `1.0.10` → `1.0.11`). Each digit is an independent integer — no carries. No exceptions.
+- **Every change** → always update `BUILD_DATE` to the current date and time (`YYYY-MM-DD HH:MM`). Run `date` via Bash — never estimate.
+- **`APP_VERSION` increments ONCE per git commit** — not per individual change during a conversation. At the start of a new working session (first change after a commit), bump the patch digit (`1.0.40` → `1.0.41`). Keep that version for all further local changes until the next commit. Each digit is an independent integer — no carries (`1.0.9` → `1.0.10`, never `1.1.0`).
+- **`CACHE_NAME` always matches `APP_VERSION`** — update together when `APP_VERSION` changes.
 - **Explicit request only** — when the user writes "zvedni verzi" → bump the minor digit and reset patch (`1.0.x` → `1.1.0`).
-- Always set `BUILD_DATE` to the current date and time (`YYYY-MM-DD HH:MM`) when bumping the version.
-- Never leave the version unchanged after making any code or content edit.
 
-### history.html — update on every version bump
+### history.html — one entry per git commit
 
-With every version bump, add or update an entry in `docs/history.html`:
-
-- If the change is **user-facing** (new feature, visual change, fix the user would notice) → add a new `<div class="history-entry">` at the top of the `<section>`, with the new version number, date, and a brief Czech description (1–2 sentences, no technical detail).
-- If the change is **purely technical** (refactor, dependency bump, internal fix invisible to users) → skip the history entry.
-- When in doubt, add the entry — it can always be removed or merged later.
+- Maintain a **single entry** for the current (uncommitted) `APP_VERSION` at the top of the `<section>`.
+- As local changes accumulate during a session, **update (merge) that entry** — do not add new entries for each incremental change.
+- The entry should reflect what changed **from the user's perspective** since the last git commit. Changes that were made and then reverted leave no trace.
+- If the change is **purely technical** (refactor, cleanup, internal fix invisible to users) → skip the history entry entirely.
 
 Entry template:
 ```html
