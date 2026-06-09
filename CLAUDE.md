@@ -59,9 +59,9 @@ Three values must always be updated together:
 
 | File | Key | Current |
 | --- | --- | --- |
-| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.41'` |
-| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-06-09 15:22'` |
-| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.41'` |
+| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.42'` |
+| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-06-09 16:00'` |
+| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.42'` |
 
 `APP_VERSION` and `BUILD_DATE` drive the footer display (`Scales vX.Y.Z · YYYY-MM-DD HH:MM`).
 `CACHE_NAME` forces the browser to drop the old PWA cache and re-fetch all assets.
@@ -70,16 +70,16 @@ Three values must always be updated together:
 ### Versioning rules
 
 - **Every change** → always update `BUILD_DATE` to the current date and time (`YYYY-MM-DD HH:MM`). Run `date` via Bash — never estimate.
-- **`APP_VERSION` increments ONCE per git commit** — not per individual change during a conversation. At the start of a new working session (first change after a commit), bump the patch digit (`1.0.40` → `1.0.41`). Keep that version for all further local changes until the next commit. Each digit is an independent integer — no carries (`1.0.9` → `1.0.10`, never `1.1.0`).
+- **`APP_VERSION` increments ONCE per conversation** — bump the patch digit on the **first change of a new conversation** (`1.0.41` → `1.0.42`). Keep that version for all further changes within the same conversation. Each digit is an independent integer — no carries (`1.0.9` → `1.0.10`, never `1.1.0`). To determine the right next version: check `git show HEAD:docs/js/defaults.js` for the last committed version, then look at the current `APP_VERSION` — the next version is `current + 1`.
 - **`CACHE_NAME` always matches `APP_VERSION`** — update together when `APP_VERSION` changes.
 - **Explicit request only** — when the user writes "zvedni verzi" → bump the minor digit and reset patch (`1.0.x` → `1.1.0`).
 
-### history.html — one entry per git commit
+### history.html — one entry per conversation
 
-- Maintain a **single entry** for the current (uncommitted) `APP_VERSION` at the top of the `<section>`.
-- As local changes accumulate during a session, **update (merge) that entry** — do not add new entries for each incremental change.
-- The entry should reflect what changed **from the user's perspective** since the last git commit. Changes that were made and then reverted leave no trace.
-- If the change is **purely technical** (refactor, cleanup, internal fix invisible to users) → skip the history entry entirely.
+- Maintain a **single entry** for the current `APP_VERSION` at the top of the `<section>`.
+- As changes accumulate within a conversation, **update (merge) that entry** — do not add new entries for each incremental change.
+- The entry should reflect what changed **from the user's perspective**. Changes that were made and then reverted within the same conversation leave no trace.
+- If all changes are **purely technical** (refactor, cleanup, internal fix invisible to users) → skip the history entry entirely.
 
 Entry template:
 ```html

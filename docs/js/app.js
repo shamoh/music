@@ -83,8 +83,8 @@ function variantChangeText(entry, variant) {
   return changes.join(', ');
 }
 
-// Rebuild h3 content (preserves variant-hint span if hintText given)
-function setVariantHeader(sectionId, baseTitle, variantNotes, hintText) {
+// Rebuild h3 content: "baseTitle (keySig) [hint] [· changes]"
+function setVariantHeader(sectionId, baseTitle, variantNotes, hintText, changesText) {
   const h3 = $(sectionId).querySelector('h3');
   clearEl(h3);
   h3.appendChild(document.createTextNode(baseTitle + scaleAccidentalLabel(variantNotes)));
@@ -94,18 +94,12 @@ function setVariantHeader(sectionId, baseTitle, variantNotes, hintText) {
     span.textContent = ' ' + hintText;
     h3.appendChild(span);
   }
-}
-
-// Update (or lazily create) the .variant-changes paragraph below h3
-function setVariantChanges(sectionId, changeText) {
-  const section = $(sectionId);
-  let el = section.querySelector('.variant-changes');
-  if (!el) {
-    el = document.createElement('p');
-    el.className = 'variant-changes';
-    section.querySelector('h3').insertAdjacentElement('afterend', el);
+  if (changesText) {
+    const span = document.createElement('span');
+    span.className = 'variant-changes-inline';
+    span.textContent = ' · ' + changesText;
+    h3.appendChild(span);
   }
-  el.textContent = changeText;
 }
 
 // ─── Filter chips ────────────────────────────────────────────────────────────
@@ -235,10 +229,15 @@ function renderMinorView(entry) {
   const chord = getChordNotes(naturalScale);
   const chordNames = chord.map((n) => n.name);
 
-  $('minor-title').textContent = `${entry.root} moll${keySigLabel(entry.keySig)}`;
   $('minor-chord').textContent = `Akord: ${chordNames.join(' – ')}`;
+  setVariantHeader('minor-natural', `Aiolská ${entry.root} moll`, entry.notes, null);
+  renderVariant('minor-natural', entry.id, 'natural', chordNames, entry.keySig, true, octave);
 
-  renderVariant('minor-natural',  entry.id, 'natural',  chordNames, entry.keySig, true, octave);
+  setVariantHeader('minor-harmonic', `Harmonická ${entry.root} moll`, entry.harmonicNotes, null, variantChangeText(entry, 'harmonic'));
+  renderVariant('minor-harmonic', entry.id, 'harmonic', chordNames, entry.keySig, true, octave);
+
+  setVariantHeader('minor-melodic', `Melodická ${entry.root} moll`, entry.melodicNotes, '(vzestupná)', variantChangeText(entry, 'melodic'));
+  renderVariant('minor-melodic', entry.id, 'melodic', chordNames, entry.keySig, true, octave);
 
   const code = scaleIdToHash(entry.id);
   const basePath = '/scales/instrument/saxophone-alto/#';
@@ -246,14 +245,6 @@ function renderMinorView(entry) {
     const t = a.dataset.rangeType;
     a.href = basePath + code + (t !== 'natural' ? '?type=' + t : '');
   });
-
-  setVariantHeader('minor-harmonic', 'Harmonická moll', entry.harmonicNotes, null);
-  setVariantChanges('minor-harmonic', variantChangeText(entry, 'harmonic'));
-  renderVariant('minor-harmonic', entry.id, 'harmonic', chordNames, entry.keySig, true, octave);
-
-  setVariantHeader('minor-melodic', 'Melodická moll', entry.melodicNotes, '(vzestupná)');
-  setVariantChanges('minor-melodic', variantChangeText(entry, 'melodic'));
-  renderVariant('minor-melodic', entry.id, 'melodic', chordNames, entry.keySig, true, octave);
 }
 
 function renderVariant(sectionId, scaleId, variant, chordNames, keySig = 0, isMinor = false, octave = 4) {

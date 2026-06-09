@@ -83,22 +83,25 @@
     <!-- Major view (single scale) -->
     <section class="scale-section" id="major-view" hidden>
       <div class="title-row">
-        <h2 id="major-title"></h2>
+        <div class="title-info">
+          <h2 id="major-title"></h2>
+          <span id="major-chord" class="chord-inline"></span>
+        </div>
         <a id="major-range-link" class="range-link" href="/scales/instrument/saxophone-alto/" aria-label="Rozsah Alt Saxofonu">🎷 Rozsah</a>
       </div>
-      <p id="major-chord" class="chord-label"></p>
       <div id="major-note-row" class="note-row" role="list" aria-label="Noty stupnice"></div>
       <div id="major-staff" class="staff-container" aria-live="polite"></div>
     </section>
 
     <!-- Minor view (3 variants) -->
     <section class="scale-section" id="minor-view" hidden>
-      <h2 id="minor-title"></h2>
-      <p id="minor-chord" class="chord-label"></p>
 
       <div class="minor-variant" id="minor-natural">
         <div class="title-row">
-          <h3>Aiolská moll</h3>
+          <div class="title-info">
+            <h3></h3>
+            <span id="minor-chord" class="chord-inline"></span>
+          </div>
           <a class="range-link" data-range-type="natural" href="/scales/instrument/saxophone-alto/" aria-label="Rozsah Alt Saxofonu">🎷 Rozsah</a>
         </div>
         <div class="note-row" role="list"></div>
@@ -107,7 +110,7 @@
 
       <div class="minor-variant" id="minor-harmonic">
         <div class="title-row">
-          <h3>Harmonická moll</h3>
+          <h3></h3>
           <a class="range-link" data-range-type="harmonic" href="/scales/instrument/saxophone-alto/" aria-label="Rozsah Alt Saxofonu">🎷 Rozsah</a>
         </div>
         <div class="note-row" role="list"></div>
@@ -116,7 +119,7 @@
 
       <div class="minor-variant" id="minor-melodic">
         <div class="title-row">
-          <h3>Melodická moll <span class="variant-hint">(vzestupná)</span></h3>
+          <h3></h3>
           <a class="range-link" data-range-type="melodic" href="/scales/instrument/saxophone-alto/" aria-label="Rozsah Alt Saxofonu">🎷 Rozsah</a>
         </div>
         <div class="note-row" role="list"></div>

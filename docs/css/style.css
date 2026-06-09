@@ -332,7 +332,21 @@ main {
   letter-spacing: 0.02em;
 }
 
-.chord-label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.8rem; }
+.title-info {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.chord-inline {
+  font-size: 0.82rem;
+  font-weight: normal;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
 
 /* ─── Minor variant sub-sections ─── */
 .minor-variant {
@@ -344,12 +358,23 @@ main {
 .minor-variant:first-of-type { border-top: none; padding-top: 0; margin-top: 0.5rem; }
 
 .minor-variant h3 {
-  font-size: 0.95rem;
+  font-size: 1.2rem;
   font-weight: 600;
-  color: var(--accent2);
+  color: var(--text);
+}
+
+.minor-variant .title-row > h3 {
+  flex: 1;
+  min-width: 0;
 }
 
 .variant-hint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.variant-changes-inline {
   font-size: 0.75rem;
   font-weight: 400;
   color: var(--text-muted);
@@ -402,7 +427,7 @@ main {
   overflow-x: auto;
 }
 
-.range-hint { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.6rem; }
+.range-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 1rem; margin-bottom: 0.6rem; }
 
 .range-dir-label {
   font-size: 0.85rem;
