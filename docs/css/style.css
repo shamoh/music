@@ -120,6 +120,17 @@ header h1 {
   flex-shrink: 1;
 }
 
+.nav-current {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
 /* ─── Title row: heading + range link side by side ─── */
 .title-row {
   display: flex;

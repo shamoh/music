@@ -252,6 +252,8 @@ function update() {
   if (!entry) return;
 
   pushHash(entry, state.variantType);
+  const navScalesLink = document.getElementById('nav-scales-link');
+  if (navScalesLink) navScalesLink.href = '/scales/#' + scaleIdToCode(entry.id);
   $('range-title').textContent = `${entry.root} ${entry.type === 'major' ? 'dur' : 'moll'}`;
   updateTypeNav(entry, state.variantType);
 

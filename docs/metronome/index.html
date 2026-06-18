@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="description" content="Metronom — Scales" />
+  <title>Metronom — Scales</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/icon.svg" />
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .metro-play {
+      display: block;
+      width: 100%;
+      padding: 1rem;
+      font-size: 1.3rem;
+      font-weight: 700;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-bottom: 1.2rem;
+    }
+    .metro-play:hover { filter: brightness(1.1); }
+    .metro-play.is-playing { background: var(--accent2, #f5a623); }
+
+    .metro-beats {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.7rem;
+      min-height: 38px;
+      flex-wrap: wrap;
+      margin-bottom: 1.4rem;
+    }
+
+    .beat-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.15s, transform 0.15s;
+      flex-shrink: 0;
+    }
+    .beat-dot.is-accent {
+      width: 28px;
+      height: 28px;
+      background: var(--bg-input);
+      border: 2px solid var(--text-muted);
+    }
+    .beat-dot.is-active {
+      background: var(--accent) !important;
+      border-color: var(--accent) !important;
+      transform: scale(1.3);
+      transition: none;
+    }
+
+    .metro-pattern-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem 1.5rem;
+    }
+    @media (min-width: 580px) {
+      .metro-pattern-row { grid-template-columns: 1fr 1fr; }
+    }
+
+    .metro-section-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .metro-patterns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .metro-speed { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
+    .metro-bpm-display {
+      font-size: 1.8rem;
+      font-weight: 700;
+      min-width: 3.2rem;
+      text-align: center;
+      color: var(--text);
+      flex-shrink: 0;
+    }
+
+    .metro-bpm-btn {
+      width: 2.2rem;
+      height: 2.2rem;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--bg-input);
+      color: var(--text);
+      font-size: 1.2rem;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.12s, border-color 0.12s;
+      flex-shrink: 0;
+    }
+    .metro-bpm-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .metro-bpm-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .metro-bpm-slider { flex: 1; min-width: 80px; accent-color: var(--accent); }
+
+    .metro-custom {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+
+    .metro-custom-row {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+    }
+    .metro-custom-row .metro-section-label { margin-bottom: 0; white-space: nowrap; }
+
+    .metro-accents { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+    .beat-accent-btn {
+      width: 2.4rem;
+      height: 2.4rem;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--bg-input);
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .beat-accent-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .beat-accent-btn:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+    .beat-accent-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  </style>
+  <script>
+    try {
+      const vars = JSON.parse(localStorage.getItem('scales-profile-vars') || 'null');
+      if (vars) {
+        const r = document.documentElement;
+        for (const [k, v] of Object.entries(vars)) r.style.setProperty(k, v);
+      }
+    } catch (_) {}
+  </script>
+</head>
+<body>
+  <header>
+    <h1>
+      <a href="/" class="bc-logo">
+        <svg class="logo" viewBox="0 0 85 50" aria-hidden="true">
+          <!-- Staff Lines -->
+          <path d="M 12 14 Q 45 9, 80 14" stroke="var(--logo-staff, #7878a0)" stroke-width="0.8" fill="none" opacity="0.4" />
+          <path d="M 12 19 Q 45 14, 80 19" stroke="var(--logo-staff, #7878a0)" stroke-width="0.8" fill="none" opacity="0.4" />
+          <path d="M 12 24 Q 45 19, 80 24" stroke="var(--logo-staff, #7878a0)" stroke-width="0.8" fill="none" opacity="0.4" />
+          <path d="M 12 29 Q 45 24, 80 29" stroke="var(--logo-staff, #7878a0)" stroke-width="0.8" fill="none" opacity="0.4" />
+          <path d="M 12 34 Q 45 29, 80 34" stroke="var(--logo-staff, #7878a0)" stroke-width="0.8" fill="none" opacity="0.4" />
+          <!-- Artistic Treble Clef -->
+          <path d="M 16.5 43.5 L 19.5 4 C 19.5 1, 22.5 0, 24 3 C 25.5 6, 24.5 11, 18.5 17 C 12.5 23, 10 29.5, 13 34.5 C 16 39.5, 23 39.5, 25.5 33.5 C 27.5 28, 22.5 22.5, 18.5 26.5 C 16.5 28.5, 17 31.5, 20 31" stroke="var(--logo-clef, #b09878)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="16.5" cy="43.5" r="2.2" fill="var(--logo-clef, #b09878)" />
+          <!-- Notes 1 & 2 (beamed eighths) -->
+          <ellipse cx="34" cy="30" rx="4.5" ry="3" transform="rotate(-20 34 30)" fill="var(--logo-tonic, #a8b4e0)" />
+          <line x1="38" y1="30" x2="38" y2="13" stroke="var(--logo-tonic, #a8b4e0)" stroke-width="1.5" stroke-linecap="round" />
+          <ellipse cx="50" cy="24" rx="4.5" ry="3" transform="rotate(-20 50 24)" fill="var(--logo-chord, #e0a8b4)" />
+          <line x1="54" y1="24" x2="54" y2="7" stroke="var(--logo-chord, #e0a8b4)" stroke-width="1.5" stroke-linecap="round" />
+          <polygon points="38,13 54,7 54,10 38,16" fill="var(--logo-chord, #e0a8b4)" />
+          <!-- Note 3 (quarter note, stem down) -->
+          <ellipse cx="66" cy="18" rx="4.5" ry="3" transform="rotate(-20 66 18)" fill="var(--logo-accent, #88a888)" />
+          <line x1="62" y1="18" x2="62" y2="33" stroke="var(--logo-accent, #88a888)" stroke-width="1.5" stroke-linecap="round" />
+        </svg>
+      </a>
+      <a href="/" class="bc-link">Hudební nauka</a>
+      <span class="bc-sep" aria-hidden="true">|</span>
+      <a href="/scales/" class="bc-link">Stupnice</a>
+      <span class="bc-sep" aria-hidden="true">|</span>
+      <span class="nav-current">Metronom</span>
+    </h1>
+    <select id="profile-select" class="profile-select" aria-label="Vizuální profil"></select>
+  </header>
+
+  <main>
+    <section class="scale-section">
+
+      <button id="metro-play" class="metro-play" aria-label="Spustit nebo zastavit metronom">Spustit</button>
+
+      <div id="metro-beats" class="metro-beats" role="status" aria-label="Vizualizace rytmu"></div>
+
+      <div class="metro-pattern-row">
+        <div>
+          <p class="metro-section-label">Vzor</p>
+          <div id="metro-patterns" class="metro-patterns"></div>
+        </div>
+        <div>
+          <p class="metro-section-label">Rychlost (BPM)</p>
+          <div class="metro-speed">
+            <button id="metro-bpm-minus" class="metro-bpm-btn" aria-label="Zpomalit o 1 BPM">−</button>
+            <span id="metro-bpm-display" class="metro-bpm-display" aria-live="polite">100</span>
+            <button id="metro-bpm-plus" class="metro-bpm-btn" aria-label="Zrychlit o 1 BPM">+</button>
+            <input type="range" id="metro-bpm-slider" class="metro-bpm-slider" min="40" max="240" value="100" aria-label="Tempo v BPM" />
+            <button id="metro-tap" class="filter-chip" aria-label="Tap Tempo">Tap</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="metro-custom" class="metro-custom" hidden>
+        <div class="metro-custom-row">
+          <label class="metro-section-label" for="metro-custom-beats">
+            Počet dob: <strong id="metro-custom-beats-display">4</strong>
+          </label>
+          <input type="range" id="metro-custom-beats" class="metro-bpm-slider" min="2" max="8" value="4" aria-label="Počet dob v taktu" />
+        </div>
+        <p class="metro-section-label">Přízvučné doby:</p>
+        <div id="metro-accent-buttons" class="metro-accents" role="group" aria-label="Výběr přízvučných dob"></div>
+      </div>
+
+    </section>
+  </main>
+
+  <footer class="app-footer" id="app-footer"></footer>
+  <script type="module" src="/js/metronome.js"></script>
+</body>
+</html>

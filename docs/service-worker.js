@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scales-1.0.45';
+const CACHE_NAME = 'scales-1.0.46';
 const ASSETS = [
   '/',
   '/index.html',
@@ -11,6 +11,7 @@ const ASSETS = [
   '/js/themes.js',
   '/js/defaults.js',
   '/js/analytics.js',
+  '/js/metronome.js',
   '/icons/icon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -19,6 +20,8 @@ const ASSETS = [
   '/scales/instrument/saxophone-alto/',
   '/scales/instrument/saxophone-alto/index.html',
   '/scales/instrument/saxophone-alto/app.js',
+  '/metronome/',
+  '/metronome/index.html',
 ];
 
 self.addEventListener('install', (event) => {
