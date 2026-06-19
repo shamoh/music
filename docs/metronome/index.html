@@ -149,6 +149,94 @@
     .beat-accent-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
     .beat-accent-btn:hover:not(.active) { border-color: var(--accent); color: var(--text); }
     .beat-accent-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .metro-save-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+    .metro-name-input {
+      flex: 1;
+      padding: 0.45rem 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-input);
+      color: var(--text);
+      font-size: 0.95rem;
+      min-width: 0;
+    }
+    .metro-name-input::placeholder { color: var(--text-muted); }
+    .metro-name-input:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .metro-library-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.8rem;
+    }
+    .metro-library-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .metro-library-filter {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .metro-filter-bpm {
+      width: 5rem;
+      padding: 0.3rem 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-input);
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    .metro-filter-bpm:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .metro-saved-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .metro-saved-table th {
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 0.3rem 0.5rem 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .metro-saved-row {
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    .metro-saved-row:last-child { border-bottom: none; }
+    .metro-saved-row:hover, .metro-saved-row:focus-visible { background: var(--bg-input); outline: none; }
+    .metro-saved-row td { padding: 0.5rem 0.5rem; color: var(--text); }
+    .metro-delete-btn {
+      padding: 0.25rem 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+      white-space: nowrap;
+    }
+    .metro-delete-btn:hover { background: #c0392b; border-color: #c0392b; color: #fff; }
+    .metro-saved-empty { color: var(--text-muted); font-size: 0.9rem; padding: 0.4rem 0; }
   </style>
   <script>
     try {
@@ -229,7 +317,26 @@
         <div id="metro-accent-buttons" class="metro-accents" role="group" aria-label="Výběr přízvučných dob"></div>
       </div>
 
+      <div class="metro-save-row">
+        <input type="text" id="metro-rhythm-name" class="metro-name-input" placeholder="Název rytmu…" aria-label="Název rytmu pro uložení" maxlength="60" />
+        <button id="metro-save-rhythm" class="filter-chip">Uložit</button>
+      </div>
+
     </section>
+
+    <section class="scale-section">
+      <div class="metro-library-header">
+        <h2 class="metro-library-title">Uložené rytmy</h2>
+        <div class="metro-library-filter">
+          <span class="metro-section-label">BPM</span>
+          <input type="number" id="metro-filter-min" class="metro-filter-bpm" min="40" max="240" aria-label="Minimum BPM" />
+          <span class="metro-section-label">–</span>
+          <input type="number" id="metro-filter-max" class="metro-filter-bpm" min="40" max="240" aria-label="Maximum BPM" />
+        </div>
+      </div>
+      <div id="metro-saved-list"></div>
+    </section>
+
   </main>
 
   <footer class="app-footer" id="app-footer"></footer>

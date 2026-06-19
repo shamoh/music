@@ -26,10 +26,29 @@ export function validateBeatCount(n) {
 }
 
 export function isAccentedBeat(beatIndex, pattern) {
-  if (!pattern || !Array.isArray(pattern.accents) || pattern.accents.length === 0) {
+  if (!pattern || !Array.isArray(pattern.accents)) {
     return beatIndex === 0;
   }
   return pattern.accents.includes(beatIndex);
+}
+
+export function savedRhythmPatternLabel(saved) {
+  if (saved.patternId === 'custom') {
+    const n = saved.customBeats ?? 4;
+    const acc = (saved.customAccents ?? []).map(i => i + 1);
+    return acc.length ? `Vlastní ${n} [${acc.join(' ')}]` : `Vlastní ${n}`;
+  }
+  return saved.patternId;
+}
+
+export function upsertSavedRhythm(list, rhythm) {
+  const idx = list.findIndex(r => r.name === rhythm.name);
+  const next = idx >= 0 ? list.map((r, i) => (i === idx ? rhythm : r)) : [...list, rhythm];
+  return next.sort((a, b) => a.name.localeCompare(b.name, 'cs'));
+}
+
+export function deleteSavedRhythm(list, name) {
+  return list.filter(r => r.name !== name);
 }
 
 // ── Browser-only: audio engine + UI ──────────────────────────────────────────
@@ -64,6 +83,18 @@ if (typeof document !== 'undefined') {
     localStorage.setItem('metronome-pattern-id', state.patternId);
     localStorage.setItem('metronome-custom-beats', state.customBeats);
     localStorage.setItem('metronome-custom-accents', JSON.stringify(state.customAccents));
+  }
+
+  function loadSavedRhythms() {
+    try {
+      return JSON.parse(localStorage.getItem('metronome-saved-rhythms') ?? '[]');
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function persistSavedRhythms(list) {
+    localStorage.setItem('metronome-saved-rhythms', JSON.stringify(list));
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -255,6 +286,131 @@ if (typeof document !== 'undefined') {
     renderBeatDots();
   }
 
+  // ── UI: saved rhythms ──────────────────────────────────────────────────────
+
+  function renderSavedRhythms() {
+    const container = document.getElementById('metro-saved-list');
+    if (!container) return;
+
+    const minVal = document.getElementById('metro-filter-min')?.value;
+    const maxVal = document.getElementById('metro-filter-max')?.value;
+    const minBpm = minVal !== '' && minVal != null ? parseInt(minVal) : -Infinity;
+    const maxBpm = maxVal !== '' && maxVal != null ? parseInt(maxVal) : Infinity;
+
+    const list = loadSavedRhythms();
+    const filtered = list.filter(r => r.bpm >= minBpm && r.bpm <= maxBpm);
+
+    container.replaceChildren();
+
+    if (filtered.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'metro-saved-empty';
+      empty.textContent = list.length === 0
+        ? 'Žádné uložené rytmy.'
+        : 'Žádné rytmy v zadaném rozsahu BPM.';
+      container.appendChild(empty);
+      return;
+    }
+
+    const table = document.createElement('table');
+    table.className = 'metro-saved-table';
+
+    const thead = table.createTHead();
+    const hRow = thead.insertRow();
+    ['Název', 'Vzor', 'BPM', ''].forEach(text => {
+      const th = document.createElement('th');
+      th.textContent = text;
+      hRow.appendChild(th);
+    });
+
+    const tbody = table.createTBody();
+    for (const saved of filtered) {
+      const tr = tbody.insertRow();
+      tr.className = 'metro-saved-row';
+      tr.setAttribute('tabindex', '0');
+      tr.setAttribute('title', `Načíst: ${saved.name}`);
+      tr.addEventListener('click', e => {
+        if (!e.target.classList.contains('metro-delete-btn')) onLoadSavedRhythm(saved);
+      });
+      tr.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onLoadSavedRhythm(saved); }
+      });
+
+      [saved.name, savedRhythmPatternLabel(saved), saved.bpm].forEach(text => {
+        tr.insertCell().textContent = String(text);
+      });
+
+      const deleteTd = tr.insertCell();
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'metro-delete-btn';
+      deleteBtn.textContent = 'Smazat';
+      deleteBtn.setAttribute('aria-label', `Smazat rytmus ${saved.name}`);
+      deleteBtn.addEventListener('click', e => { e.stopPropagation(); onDeleteSavedRhythm(saved.name); });
+      deleteTd.appendChild(deleteBtn);
+    }
+
+    container.appendChild(table);
+  }
+
+  function onSaveRhythm() {
+    const nameInput = document.getElementById('metro-rhythm-name');
+    const name = nameInput?.value.trim();
+    if (!name) { nameInput?.focus(); return; }
+
+    const rhythm = {
+      name,
+      patternId: state.patternId,
+      bpm: state.bpm,
+      customBeats: state.patternId === 'custom' ? state.customBeats : null,
+      customAccents: state.patternId === 'custom' ? state.customAccents : null,
+    };
+
+    persistSavedRhythms(upsertSavedRhythm(loadSavedRhythms(), rhythm));
+    updateFilterRange();
+    renderSavedRhythms();
+  }
+
+  function onLoadSavedRhythm(saved) {
+    state.patternId = saved.patternId;
+    state.bpm = saved.bpm;
+    if (saved.patternId === 'custom') {
+      state.customBeats = saved.customBeats ?? state.customBeats;
+      state.customAccents = saved.customAccents ?? state.customAccents;
+    }
+    saveState();
+
+    const nameInput = document.getElementById('metro-rhythm-name');
+    if (nameInput) nameInput.value = saved.name;
+
+    renderPatternChips();
+    renderBeatDots();
+    updateBpmDisplay();
+    updateCustomSection();
+    restartIfPlaying();
+  }
+
+  function onDeleteSavedRhythm(name) {
+    if (!confirm(`Smazat rytmus „${name}"?`)) return;
+    persistSavedRhythms(deleteSavedRhythm(loadSavedRhythms(), name));
+    updateFilterRange();
+    renderSavedRhythms();
+  }
+
+  function updateFilterRange() {
+    const list = loadSavedRhythms();
+    const minInput = document.getElementById('metro-filter-min');
+    const maxInput = document.getElementById('metro-filter-max');
+    if (!minInput || !maxInput) return;
+    if (list.length === 0) {
+      minInput.value = 40;
+      maxInput.value = 240;
+    } else {
+      const bpms = list.map(r => r.bpm);
+      minInput.value = Math.min(...bpms);
+      maxInput.value = Math.max(...bpms);
+    }
+  }
+
   // ── Tap tempo ──────────────────────────────────────────────────────────────
 
   function onTap() {
@@ -304,13 +460,14 @@ if (typeof document !== 'undefined') {
     updateBpmDisplay();
     updateCustomSection();
     updatePlayButton();
+    updateFilterRange();
+    renderSavedRhythms();
 
     const customBeatsSlider = document.getElementById('metro-custom-beats');
     if (customBeatsSlider) {
       customBeatsSlider.addEventListener('input', () => {
         state.customBeats = validateBeatCount(customBeatsSlider.value);
         state.customAccents = state.customAccents.filter(i => i < state.customBeats);
-        if (state.customAccents.length === 0) state.customAccents = [0];
         saveState();
         renderAccentButtons();
         renderBeatDots();
@@ -328,6 +485,12 @@ if (typeof document !== 'undefined') {
       ?.addEventListener('click', () => { if (isPlaying) stopMetronome(); else startMetronome(); });
     document.getElementById('metro-tap')
       ?.addEventListener('click', onTap);
+    document.getElementById('metro-save-rhythm')
+      ?.addEventListener('click', onSaveRhythm);
+    document.getElementById('metro-filter-min')
+      ?.addEventListener('input', renderSavedRhythms);
+    document.getElementById('metro-filter-max')
+      ?.addEventListener('input', renderSavedRhythms);
   }
 
   document.addEventListener('DOMContentLoaded', initMetronome);
