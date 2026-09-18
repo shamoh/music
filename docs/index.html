@@ -205,12 +205,12 @@
 
     <section class="keysig-section">
       <div class="keysig-block">
-        <p class="keysig-title">Béčka ♭</p>
-        <div class="keysig-wrap" id="keysig-flats"></div>
-      </div>
-      <div class="keysig-block">
         <p class="keysig-title">Křížky ♯</p>
         <div class="keysig-wrap" id="keysig-sharps"></div>
+      </div>
+      <div class="keysig-block">
+        <p class="keysig-title">Béčka ♭</p>
+        <div class="keysig-wrap" id="keysig-flats"></div>
       </div>
     </section>
 
@@ -279,7 +279,8 @@
     function accGlyph(ks) { return ks === 0 ? '' : ks > 0 ? ' ♯' : ' ♭'; }
     function segRot(angle) {
       let r = angle + 90;
-      if (angle > 0 && angle < 180) r += 180;
+      const norm = ((angle % 360) + 360) % 360;
+      if (norm > 0 && norm < 180) r += 180;
       return r;
     }
     const SHARPS = ['Fis','Cis','Gis','Dis','Ais','Eis','His'];
@@ -370,15 +371,15 @@
       }
 
       SCALES.forEach((s, i) => {
-        const mid = -90 + i * STEP;
+        const mid = -90 - i * STEP;
         const a1  = mid - STEP / 2 + GAP / 2;
         const a2  = mid + STEP / 2 - GAP / 2;
 
         if (s.alt) {
-          const flatA2    = mid - SPLIT_GAP / 2;
-          const sharpA1   = mid + SPLIT_GAP / 2;
-          const flatMid   = (a1 + flatA2) / 2;
-          const sharpMid  = (sharpA1 + a2)  / 2;
+          const sharpA2   = mid - SPLIT_GAP / 2;
+          const flatA1    = mid + SPLIT_GAP / 2;
+          const sharpMid  = (a1 + sharpA2) / 2;
+          const flatMid   = (flatA1 + a2)  / 2;
           const sharpFill = segFill(s.ks);
           const flatFill  = segFill(s.alt.ks);
           const sharpInk  = segInk(s.ks);
@@ -388,32 +389,32 @@
 
           // Outer ring — dur
           const sOL = svgEl('a', { href:`/scales/#${s.dur}-dur`,     style:'cursor:pointer' });
-          sOL.appendChild(svgEl('path', { d: arcPath(cx,cy,OR1,OR2,sharpA1,a2), fill:sharpFill, 'fill-opacity':'0.82', stroke:'var(--bg)', 'stroke-width':'1.2' }));
+          sOL.appendChild(svgEl('path', { d: arcPath(cx,cy,OR1,OR2,a1,sharpA2), fill:sharpFill, 'fill-opacity':'0.82', stroke:'var(--bg)', 'stroke-width':'1.2' }));
           sOL.appendChild(svgEl('title', {}, scaleTitle(s.dur, 'dur', s.ks)));
           bindPreview(sOL, s.dur, 'dur', s.ks);
           svg.appendChild(sOL);
           const fOL = svgEl('a', { href:`/scales/#${s.alt.dur}-dur`, style:'cursor:pointer' });
-          fOL.appendChild(svgEl('path', { d: arcPath(cx,cy,OR1,OR2,a1,flatA2),  fill:flatFill,  'fill-opacity':'0.82', stroke:'var(--bg)', 'stroke-width':'1.2' }));
+          fOL.appendChild(svgEl('path', { d: arcPath(cx,cy,OR1,OR2,flatA1,a2),  fill:flatFill,  'fill-opacity':'0.82', stroke:'var(--bg)', 'stroke-width':'1.2' }));
           fOL.appendChild(svgEl('title', {}, scaleTitle(s.alt.dur, 'dur', s.alt.ks)));
           bindPreview(fOL, s.alt.dur, 'dur', s.alt.ks);
           svg.appendChild(fOL);
 
           // Middle ring — accidentals
-          const mrS = svgEl('path', { d: arcPath(cx,cy,MR1,MR2,sharpA1,a2), fill:sharpFill, 'fill-opacity':'0.70', stroke:'var(--bg)', 'stroke-width':'0.8' });
+          const mrS = svgEl('path', { d: arcPath(cx,cy,MR1,MR2,a1,sharpA2), fill:sharpFill, 'fill-opacity':'0.70', stroke:'var(--bg)', 'stroke-width':'0.8' });
           mrS.appendChild(svgEl('title', {}, accTooltip(s.ks)));
           svg.appendChild(mrS);
-          const mrF = svgEl('path', { d: arcPath(cx,cy,MR1,MR2,a1,flatA2),  fill:flatFill,  'fill-opacity':'0.70', stroke:'var(--bg)', 'stroke-width':'0.8' });
+          const mrF = svgEl('path', { d: arcPath(cx,cy,MR1,MR2,flatA1,a2),  fill:flatFill,  'fill-opacity':'0.70', stroke:'var(--bg)', 'stroke-width':'0.8' });
           mrF.appendChild(svgEl('title', {}, accTooltip(s.alt.ks)));
           svg.appendChild(mrF);
 
           // Inner ring — moll
           const sIL = svgEl('a', { href:`/scales/#${s.moll}-moll`,     style:'cursor:pointer' });
-          sIL.appendChild(svgEl('path', { d: arcPath(cx,cy,IR1,IR2,sharpA1,a2), fill:sharpFill, 'fill-opacity':'1.0', stroke:'var(--bg)', 'stroke-width':'0.8' }));
+          sIL.appendChild(svgEl('path', { d: arcPath(cx,cy,IR1,IR2,a1,sharpA2), fill:sharpFill, 'fill-opacity':'1.0', stroke:'var(--bg)', 'stroke-width':'0.8' }));
           sIL.appendChild(svgEl('title', {}, scaleTitle(s.moll, 'moll', s.ks)));
           bindPreview(sIL, s.moll, 'moll', s.ks);
           svg.appendChild(sIL);
           const fIL = svgEl('a', { href:`/scales/#${s.alt.moll}-moll`, style:'cursor:pointer' });
-          fIL.appendChild(svgEl('path', { d: arcPath(cx,cy,IR1,IR2,a1,flatA2),  fill:flatFill,  'fill-opacity':'1.0', stroke:'var(--bg)', 'stroke-width':'0.8' }));
+          fIL.appendChild(svgEl('path', { d: arcPath(cx,cy,IR1,IR2,flatA1,a2),  fill:flatFill,  'fill-opacity':'1.0', stroke:'var(--bg)', 'stroke-width':'0.8' }));
           fIL.appendChild(svgEl('title', {}, scaleTitle(s.alt.moll, 'moll', s.alt.ks)));
           bindPreview(fIL, s.alt.moll, 'moll', s.alt.ks);
           svg.appendChild(fIL);
