@@ -289,10 +289,22 @@
       const list = ks > 0 ? SHARPS.slice(0, ks) : FLATS.slice(0, -ks);
       return list.join(' · ');
     }
-    function scaleTitle(name, type, ks) {
+    function scaleNotes(name, type) {
       const typeEn = type === 'dur' ? 'major' : 'minor';
       const entry  = SCALE_CATALOG.find(e => e.id === `${name}-${typeEn}`);
-      const notes  = entry ? entry.notes.join(' ') : '';
+      return entry ? entry.notes.join(' ') : '';
+    }
+    /* Same as scaleNotes but without the trailing octave repeat of the tonic */
+    function scaleNotesShort(name, type) {
+      const typeEn = type === 'dur' ? 'major' : 'minor';
+      const entry  = SCALE_CATALOG.find(e => e.id === `${name}-${typeEn}`);
+      if (!entry) return '';
+      const notes = entry.notes;
+      const trimmed = notes.length > 1 && notes[0] === notes[notes.length - 1] ? notes.slice(0, -1) : notes;
+      return trimmed.join(' ');
+    }
+    function scaleTitle(name, type, ks) {
+      const notes = scaleNotes(name, type);
       return notes ? `${name} ${type}\n${notes}` : `${name} ${type}`;
     }
 
@@ -318,7 +330,7 @@
           'text-anchor': 'middle',
           'dominant-baseline': 'central',
         }, text);
-        if (href) { const a = svgEl('a', { href }); a.appendChild(t); g.appendChild(a); }
+        if (href) { const a = svgEl('a', { href, style: 'pointer-events:none' }); a.appendChild(t); g.appendChild(a); }
         else g.appendChild(t);
       });
       parent.appendChild(g);
@@ -339,6 +351,23 @@
       const NF = 13, TF = 8, SF = 11, AF = 10.5;  // font sizes
 
       const SPLIT_GAP = 0.07;
+
+      const centerGroup = svgEl('g', { 'pointer-events': 'none' });
+      function clearPreview() {
+        while (centerGroup.firstChild) centerGroup.removeChild(centerGroup.firstChild);
+      }
+      function showPreview(name, type, ks) {
+        clearPreview();
+        drawLines(centerGroup, cx, cy, 0, [
+          { text: `${name} ${type}`, fs: 14, bold: true, dy: -30 },
+          { text: scaleNotesShort(name, type), fs: 12, dy: 2 },
+          { text: ks === 0 ? '' : accStr(ks), fs: 12, dy: 30 },
+        ], 'var(--text)');
+      }
+      function bindPreview(el, name, type, ks) {
+        el.addEventListener('mouseenter', () => showPreview(name, type, ks));
+        el.addEventListener('mouseleave', clearPreview);
+      }
 
       SCALES.forEach((s, i) => {
         const mid = -90 + i * STEP;
@@ -361,10 +390,12 @@
           const sOL = svgEl('a', { href:`/scales/#${s.dur}-dur`,     style:'cursor:pointer' });
           sOL.appendChild(svgEl('path', { d: arcPath(cx,cy,OR1,OR2,sharpA1,a2), fill:sharpFill, 'fill-opacity':'0.82', stroke:'var(--bg)', 'stroke-width':'1.2' }));
           sOL.appendChild(svgEl('title', {}, scaleTitle(s.dur, 'dur', s.ks)));
+          bindPreview(sOL, s.dur, 'dur', s.ks);
           svg.appendChild(sOL);
           const fOL = svgEl('a', { href:`/scales/#${s.alt.dur}-dur`, style:'cursor:pointer' });
           fOL.appendChild(svgEl('path', { d: arcPath(cx,cy,OR1,OR2,a1,flatA2),  fill:flatFill,  'fill-opacity':'0.82', stroke:'var(--bg)', 'stroke-width':'1.2' }));
           fOL.appendChild(svgEl('title', {}, scaleTitle(s.alt.dur, 'dur', s.alt.ks)));
+          bindPreview(fOL, s.alt.dur, 'dur', s.alt.ks);
           svg.appendChild(fOL);
 
           // Middle ring — accidentals
@@ -379,10 +410,12 @@
           const sIL = svgEl('a', { href:`/scales/#${s.moll}-moll`,     style:'cursor:pointer' });
           sIL.appendChild(svgEl('path', { d: arcPath(cx,cy,IR1,IR2,sharpA1,a2), fill:sharpFill, 'fill-opacity':'1.0', stroke:'var(--bg)', 'stroke-width':'0.8' }));
           sIL.appendChild(svgEl('title', {}, scaleTitle(s.moll, 'moll', s.ks)));
+          bindPreview(sIL, s.moll, 'moll', s.ks);
           svg.appendChild(sIL);
           const fIL = svgEl('a', { href:`/scales/#${s.alt.moll}-moll`, style:'cursor:pointer' });
           fIL.appendChild(svgEl('path', { d: arcPath(cx,cy,IR1,IR2,a1,flatA2),  fill:flatFill,  'fill-opacity':'1.0', stroke:'var(--bg)', 'stroke-width':'0.8' }));
           fIL.appendChild(svgEl('title', {}, scaleTitle(s.alt.moll, 'moll', s.alt.ks)));
+          bindPreview(fIL, s.alt.moll, 'moll', s.alt.ks);
           svg.appendChild(fIL);
 
           // Labels — sharp half
@@ -420,6 +453,7 @@
           const outerLink = svgEl('a', { href:`/scales/#${s.dur}-dur`, style:'cursor:pointer' });
           outerLink.appendChild(svgEl('path', { d: arcPath(cx,cy,OR1,OR2,a1,a2), fill, 'fill-opacity':'0.82', stroke:'var(--bg)', 'stroke-width':'1.2' }));
           outerLink.appendChild(svgEl('title', {}, scaleTitle(s.dur, 'dur', s.ks)));
+          bindPreview(outerLink, s.dur, 'dur', s.ks);
           svg.appendChild(outerLink);
 
           // Middle ring — accidentals
@@ -431,6 +465,7 @@
           const innerLink = svgEl('a', { href:`/scales/#${s.moll}-moll`, style:'cursor:pointer' });
           innerLink.appendChild(svgEl('path', { d: arcPath(cx,cy,IR1,IR2,a1,a2), fill, 'fill-opacity':'1.0', stroke:'var(--bg)', 'stroke-width':'0.8' }));
           innerLink.appendChild(svgEl('title', {}, scaleTitle(s.moll, 'moll', s.ks)));
+          bindPreview(innerLink, s.moll, 'moll', s.ks);
           svg.appendChild(innerLink);
 
           // Labels
@@ -450,6 +485,7 @@
 
       // Center hole
       svg.appendChild(svgEl('circle', { cx, cy, r: IR1, fill: 'var(--bg)' }));
+      svg.appendChild(centerGroup);
 
       // Mobile long-press tooltip
       let _pressTimer = null, _longPressActive = false;
