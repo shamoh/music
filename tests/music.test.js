@@ -192,6 +192,27 @@ describe('generateScale — octave assignment', () => {
   });
 });
 
+describe('generateScale — whole-tone', () => {
+  it('C whole-tone: C D E Fis Gis Ais C', () => {
+    const scale = generateScale('C-whole-tone', 4);
+    assert.deepEqual(scale.map((n) => n.name), ['C','D','E','Fis','Gis','Ais','C']);
+    assert.equal(scale[0].octave, 4);
+    assert.equal(scale[6].octave, 5); // octave repeat of the root
+  });
+
+  it('Des whole-tone: Des Es F G A H Des', () => {
+    const scale = generateScale('Des-whole-tone', 4);
+    assert.deepEqual(scale.map((n) => n.name), ['Des','Es','F','G','A','H','Des']);
+    assert.equal(scale[0].octave, 4);
+    assert.equal(scale[6].octave, 5);
+  });
+
+  it('variant param is ignored (no harmonic/melodic variants)', () => {
+    const scale = generateScale('C-whole-tone', 4, 'harmonic');
+    assert.deepEqual(scale.map((n) => n.name), ['C','D','E','Fis','Gis','Ais','C']);
+  });
+});
+
 describe('getChordNotes', () => {
   it('C major chord is C E G', () => {
     const scale = generateScale('C-major', 4);
@@ -201,6 +222,11 @@ describe('getChordNotes', () => {
   it('a minor chord is A C E', () => {
     const scale = generateScale('a-minor', 4);
     assert.deepEqual(getChordNotes(scale).map((n) => n.name), ['A','C','E']);
+  });
+
+  it('C whole-tone chord is the augmented triad C E Gis', () => {
+    const scale = generateScale('C-whole-tone', 4);
+    assert.deepEqual(getChordNotes(scale).map((n) => n.name), ['C','E','Gis']);
   });
 });
 
@@ -256,10 +282,23 @@ describe('noteNameToSemitone', () => {
 });
 
 describe('filteredScales', () => {
-  it('all types + all acc returns all 30 scales', () => {
+  it('major + minor returns all 30 dur/moll scales', () => {
     const result = filteredScales(new Set(['major','minor']), new Set(['sharp','flat']));
-    assert.equal(result.length, SCALE_CATALOG.length);
     assert.equal(result.length, 30);
+  });
+
+  it('whole-tone returns both whole-tone scales regardless of acc filter', () => {
+    const result = filteredScales(new Set(['whole-tone']), new Set());
+    assert.equal(result.length, 2);
+    const ids = result.map((s) => s.id);
+    assert.ok(ids.includes('C-whole-tone'));
+    assert.ok(ids.includes('Des-whole-tone'));
+  });
+
+  it('major + minor + whole-tone returns the full catalog', () => {
+    const result = filteredScales(new Set(['major','minor','whole-tone']), new Set(['sharp','flat']));
+    assert.equal(result.length, SCALE_CATALOG.length);
+    assert.equal(result.length, 32);
   });
 
   it('major only returns 15 scales', () => {
@@ -392,6 +431,16 @@ describe('computeInlineAccidentals', () => {
     assert.equal(r[5], 'natural');
     assert.equal(r[6], 'natural');
   });
+
+  it('C whole-tone: only Fis, Gis, Ais get an inline sharp', () => {
+    const r = computeInlineAccidentals(['C','D','E','Fis','Gis','Ais','C'], 0);
+    assert.deepEqual(r, [null, null, null, 'sharp', 'sharp', 'sharp', null]);
+  });
+
+  it('Des whole-tone: only Des, Es get an inline flat', () => {
+    const r = computeInlineAccidentals(['Des','Es','F','G','A','H','Des'], 0);
+    assert.deepEqual(r, ['flat', 'flat', null, null, null, null, null]);
+  });
 });
 
 describe('enharmonicEquivalent', () => {
@@ -474,6 +523,18 @@ describe('buildScaleRange', () => {
     const scale = generateScale('fis-minor', 4, 'harmonic');
     const range = buildScaleRange(scale);
     assert.ok(range.some((n) => n.name === 'Eis'));
+  });
+
+  it('C whole-tone: only the 6 scale names, all within alto sax range', () => {
+    const scale = generateScale('C-whole-tone', 4);
+    const range = buildScaleRange(scale);
+    const lowMidi  = ALTO_SAX_LOW.octave  * 12 + ALTO_SAX_LOW.semitone;
+    const highMidi = ALTO_SAX_HIGH.octave * 12 + ALTO_SAX_HIGH.semitone;
+    assert.ok(range.every((n) => ['C','D','E','Fis','Gis','Ais'].includes(n.name)));
+    range.forEach((n) => {
+      const midi = n.octave * 12 + n.semitone;
+      assert.ok(midi >= lowMidi && midi <= highMidi);
+    });
   });
 });
 

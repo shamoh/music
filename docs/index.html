@@ -96,6 +96,33 @@
     @media (max-width: 520px) {
       .keysig-section { grid-template-columns: 1fr; }
     }
+
+    .wholetone-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+    }
+    .wholetone-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.9rem 1rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      text-decoration: none;
+      color: var(--text);
+      transition: border-color 0.15s ease, transform 0.15s ease;
+    }
+    .wholetone-card:hover {
+      border-color: var(--accent2);
+      transform: translateY(-2px);
+    }
+    .wholetone-card-title { font-weight: 700; font-size: 1rem; }
+    .wholetone-card-notes { font-size: 0.82rem; color: var(--text-muted); letter-spacing: 0.02em; }
+    @media (max-width: 520px) {
+      .wholetone-grid { grid-template-columns: 1fr; }
+    }
   </style>
   <script>
     try {
@@ -170,6 +197,21 @@
         <p class="keysig-title">Béčka ♭</p>
         <div class="keysig-wrap" id="keysig-flats"></div>
       </div>
+    </section>
+
+    <section class="scale-section">
+      <h2 class="circle-title">Celotónové stupnice</h2>
+      <div class="wholetone-grid">
+        <a class="wholetone-card" href="/scales/instrument/saxophone-alto/#C-whole-tone">
+          <span class="wholetone-card-title">Celotónová C</span>
+          <span class="wholetone-card-notes">c · d · e · fis · gis · ais</span>
+        </a>
+        <a class="wholetone-card" href="/scales/instrument/saxophone-alto/#Des-whole-tone">
+          <span class="wholetone-card-title">Celotónová Des</span>
+          <span class="wholetone-card-notes">des · es · f · g · a · h</span>
+        </a>
+      </div>
+      <p class="circle-hint">Šest tónů vzdálených vždy o celý tón · klepnutím zobrazíte rozsah na saxofonu</p>
     </section>
   </main>
 

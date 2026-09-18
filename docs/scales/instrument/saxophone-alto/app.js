@@ -15,6 +15,11 @@ const VALID_TYPES = ['natural', 'harmonic', 'melodic'];
 const TYPE_LABELS = { natural: 'Aiolská', harmonic: 'Harmonická', melodic: 'Melodická' };
 const DEFAULT_HASH = '#C-dur';
 
+// Scale-type label shown in the title and the combo box.
+const SCALE_TYPE_LABEL = { major: 'dur', minor: 'moll', 'whole-tone': 'celotónová' };
+const SCALE_TYPE_GROUP_LABEL = { major: 'Dur', minor: 'Moll', 'whole-tone': 'Celotónové' };
+const SCALE_TYPE_ORDER = ['major', 'minor', 'whole-tone'];
+
 function $(id) { return document.getElementById(id); }
 
 function savedLastScaleId() {
@@ -29,18 +34,27 @@ function saveLastScaleId(id) {
 const state = {
   scaleId:     DEFAULT_SCALE_ID,
   variantType: 'natural',
-  filterType:  new Set(['major', 'minor']),
+  filterType:  new Set(['major', 'minor', 'whole-tone']),
   filterAcc:   new Set(['sharp', 'flat']),
 };
 
 // ─── URL helpers ──────────────────────────────────────────────────────────────
 
+// Whole-tone ids already end in the English '-whole-tone' suffix, so no
+// translation is needed for that type — only dur/moll get a Czech code.
+const ID_CODE_SUFFIXES = [
+  ['-major', '-dur'],
+  ['-minor', '-moll'],
+];
+
 function scaleIdToCode(id) {
-  return id.replace('-major', '-dur').replace('-minor', '-moll');
+  const found = ID_CODE_SUFFIXES.find(([suf]) => id.endsWith(suf));
+  return found ? id.slice(0, -found[0].length) + found[1] : id;
 }
 
 function codeToScaleId(code) {
-  return code.replace('-dur', '-major').replace('-moll', '-minor');
+  const found = ID_CODE_SUFFIXES.find(([, cd]) => code.endsWith(cd));
+  return found ? code.slice(0, -found[1].length) + found[0] : code;
 }
 
 function makeHash(entry, type) {
@@ -120,10 +134,9 @@ function repopulateSelect() {
   const sel = $('scale-select');
   while (sel.firstChild) sel.removeChild(sel.firstChild);
   const scales = filteredScales(state.filterType, state.filterAcc);
-  const bothTypes = state.filterType.has('major') && state.filterType.has('minor');
-  if (bothTypes) {
-    appendGroup(sel, 'Dur',  scales.filter((s) => s.type === 'major'));
-    appendGroup(sel, 'Moll', scales.filter((s) => s.type === 'minor'));
+  const presentTypes = SCALE_TYPE_ORDER.filter((t) => scales.some((s) => s.type === t));
+  if (presentTypes.length > 1) {
+    presentTypes.forEach((t) => appendGroup(sel, SCALE_TYPE_GROUP_LABEL[t], scales.filter((s) => s.type === t)));
   } else {
     scales.forEach((s) => sel.appendChild(makeOption(s)));
   }
@@ -141,7 +154,7 @@ function appendGroup(sel, label, scales) {
 function makeOption(s) {
   const opt = document.createElement('option');
   opt.value = s.id;
-  opt.textContent = `${s.root} ${s.type === 'major' ? 'dur' : 'moll'}${keySigLabel(s.keySig)}`;
+  opt.textContent = `${s.root} ${SCALE_TYPE_LABEL[s.type]}${keySigLabel(s.keySig)}`;
   return opt;
 }
 
@@ -254,14 +267,17 @@ function update() {
   pushHash(entry, state.variantType);
   const navScalesLink = document.getElementById('nav-scales-link');
   if (navScalesLink) navScalesLink.href = '/scales/#' + scaleIdToCode(entry.id);
-  $('range-title').textContent = `${entry.root} ${entry.type === 'major' ? 'dur' : 'moll'}`;
+  $('range-title').textContent = `${entry.root} ${SCALE_TYPE_LABEL[entry.type]}`;
   updateTypeNav(entry, state.variantType);
 
   const naturalScale = generateScale(entry.id, 4, 'natural');
   const chordNames   = getChordNotes(naturalScale).map((n) => n.name);
   const isMinor      = entry.type === 'minor';
   const variantScale = isMinor ? generateScale(entry.id, 4, state.variantType) : naturalScale;
-  const useFlats     = entry.accidental === 'flat';
+  // Whole-tone scales are classified as 'natural' (they sit outside the sharp/flat
+  // filter), so infer the fill-note spelling from the scale's own accidentals instead.
+  const useFlats = entry.accidental === 'flat'
+    || entry.notes.some((n) => accidentalType(n) === 'flat');
 
   renderRangeStaff($('range-staff'), buildFullSaxRange(variantScale, useFlats), variantScale, chordNames, 0, isMinor);
   trackScaleView(entry.id, state.variantType);

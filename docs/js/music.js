@@ -161,6 +161,16 @@ export const SCALE_CATALOG = [
     notes:         ['As','B','Ces','Des','Es','Fes','Ges','As'],
     harmonicNotes: ['As','B','Ces','Des','Es','Fes','G','As'],
     melodicNotes:  ['As','B','Ces','Des','Es','F','G','As'] },
+
+  // ── Whole-tone / Celotónová ──────────────────────────────────────────────
+  //
+  // Only 2 distinct whole-tone scales exist (every root maps to one of them).
+  // accidental is always 'natural' — they sit outside the sharp/flat key-sig
+  // classification and should always be shown regardless of that UI filter.
+  { id: 'C-whole-tone',   root: 'C',   semitone: 0, type: 'whole-tone', accidental: 'natural', keySig: 0,
+    notes: ['C','D','E','Fis','Gis','Ais','C'] },
+  { id: 'Des-whole-tone', root: 'Des', semitone: 1, type: 'whole-tone', accidental: 'natural', keySig: 0,
+    notes: ['Des','Es','F','G','A','H','Des'] },
 ];
 
 // ─── Scale generation ────────────────────────────────────────────────────────
