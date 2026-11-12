@@ -43,12 +43,17 @@ docs/                               GitHub Pages publishing root
     music.js                        SCALE_CATALOG + music theory (pure functions, no DOM)
     notation.js                     SVG staff rendering
     app.js                          scales page UI state, filter logic, rendering
-    themes.js                       visual profiles (colors, font scale)
+    themes.js                       visual profiles Kompaktní / Větší (auto: Kompaktní on phones, Větší on larger screens)
     defaults.js                     APP_VERSION, DEFAULT_SCALE_ID, DEFAULT_PROFILE_ID
     analytics.js                    Google Analytics integration
   scales/
     index.html                      main page — scale staff
     instrument/saxophone-alto/      range staff page with URL routing (#a-moll?type=harmonic)
+  fonts/
+    ScalesMusic.woff                Bravura subset (clef, note head, accidentals) — rebuild via tools/
+    Bravura-OFL.txt                 SIL OFL license, must stay next to the font
+tools/
+  subset-music-font.py              builds ScalesMusic.woff; add new SMuFL glyphs here AND in notation.js
 tests/
   music.test.js                     unit tests for music theory functions
 ```
@@ -59,9 +64,9 @@ Three values must always be updated together:
 
 | File | Key | Current |
 | --- | --- | --- |
-| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.43'` |
-| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-06-09 20:24'` |
-| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.43'` |
+| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.50'` |
+| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-11-12 01:38'` |
+| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.50'` |
 
 `APP_VERSION` and `BUILD_DATE` drive the footer display (`Scales vX.Y.Z · YYYY-MM-DD HH:MM`).
 `CACHE_NAME` forces the browser to drop the old PWA cache and re-fetch all assets.

@@ -133,6 +133,12 @@
     @media (max-width: 520px) {
       .wholetone-grid { grid-template-columns: 1fr; }
     }
+    .majorfrom-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+      gap: 0.6rem;
+    }
+    .majorfrom-grid .wholetone-card { padding: 0.6rem 0.4rem; }
   </style>
   <script>
     try {
@@ -215,6 +221,17 @@
     </section>
 
     <section class="scale-section">
+      <h2 class="circle-title">Nástroje</h2>
+      <div class="wholetone-grid">
+        <a class="wholetone-card" href="/scales/instrument/saxophone-alto/">
+          <span class="wholetone-card-title">🎷 Alt saxofon</span>
+          <span class="wholetone-card-notes">celý rozsah · B3 – F6</span>
+        </a>
+      </div>
+      <p class="circle-hint">Všechny tóny v rozsahu nástroje · klepnutím na notu zobrazíte její názvy</p>
+    </section>
+
+    <section class="scale-section">
       <h2 class="circle-title">Celotónové stupnice</h2>
       <div class="wholetone-grid">
         <a class="wholetone-card" href="/scales/instrument/saxophone-alto/#C-whole-tone">
@@ -228,14 +245,20 @@
       </div>
       <p class="circle-hint">Šest tónů vzdálených vždy o celý tón · klepnutím zobrazíte rozsah na saxofonu</p>
     </section>
+
+    <section class="scale-section">
+      <h2 class="circle-title">Dur od každého půltónu</h2>
+      <div class="majorfrom-grid" id="majorfrom-grid"></div>
+      <p class="circle-hint">Durové stupnice od nejnižšího tónu saxofonu (B3) po A4 · klepnutím zobrazíte rozsah na saxofonu</p>
+    </section>
   </main>
 
   <footer class="app-footer" id="app-footer"></footer>
   <script type="module">
-    import { VISUAL_PROFILES, applyProfile, savedProfileId } from '/js/themes.js';
+    import { applyProfile, savedProfileId, initProfileSelect } from '/js/themes.js';
     import { APP_VERSION, BUILD_DATE } from '/js/defaults.js';
     import { initAnalytics } from '/js/analytics.js';
-    import { SCALE_CATALOG } from '/js/music.js';
+    import { SCALE_CATALOG, scalePair, dedupePairs } from '/js/music.js';
 
     /* ── 12 stupnic ve směru hod. ručiček od C ── */
     const SCALES = [
@@ -623,25 +646,33 @@
       buildTable(flatRows,  'keysig-flats');
     }
 
-    function initProfileSelect() {
-      const sel = document.getElementById('profile-select');
-      const current = savedProfileId();
-      VISUAL_PROFILES.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.textContent = p.name;
-        if (p.id === current) opt.selected = true;
-        sel.appendChild(opt);
+    // Cards for 'major-from' scales (major scale from a specific start pitch).
+    // Enharmonic pairs (Ais/B, H/Ces, ...) share one card linking to one page
+    // that shows both spellings.
+    function renderMajorFromCards() {
+      const grid = document.getElementById('majorfrom-grid');
+      if (!grid) return;
+      const scales = dedupePairs(SCALE_CATALOG.filter(e => e.type === 'major-from'));
+      scales.forEach(e => {
+        const a = Object.assign(document.createElement('a'), {
+          className: 'wholetone-card',
+          href: `/scales/instrument/saxophone-alto/#${e.id.replace('-major-from', '-dur-od-tonu')}`,
+        });
+        a.appendChild(Object.assign(document.createElement('span'), {
+          className: 'wholetone-card-title',
+          textContent: scalePair(e).map(p => `${p.root} dur`).join(' / '),
+        }));
+        grid.appendChild(a);
       });
-      sel.addEventListener('change', e => applyProfile(e.target.value));
     }
 
     document.addEventListener('DOMContentLoaded', () => {
       applyProfile(savedProfileId());
       initAnalytics();
-      initProfileSelect();
+      initProfileSelect(document.getElementById('profile-select'));
       renderCircle(document.getElementById('circle-wrap'));
       renderKeySigTables();
+      renderMajorFromCards();
       const legendSharp = document.getElementById('legend-sharp');
       const legendFlat  = document.getElementById('legend-flat');
       if (legendSharp) legendSharp.style.background = segFill(5);

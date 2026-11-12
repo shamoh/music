@@ -61,6 +61,7 @@
         <button class="filter-chip active" data-filter-type="major" aria-pressed="true">Dur</button>
         <button class="filter-chip active" data-filter-type="minor" aria-pressed="true">Moll</button>
         <button class="filter-chip active" data-filter-type="whole-tone" aria-pressed="true">Celotónová</button>
+        <button class="filter-chip active" data-filter-type="major-from" aria-pressed="true">Dur od tónu</button>
       </div>
 
       <div class="filter-group">
@@ -78,18 +79,31 @@
 
     <section class="range-section">
       <div class="title-row">
-        <h2 id="range-title"></h2>
+        <div id="scale-heading" class="scale-heading">
+          <span id="scale-nav-prev" class="scale-nav-item scale-nav-prev"></span>
+          <span class="scale-nav-sep scale-nav-sep-first" aria-hidden="true"></span>
+          <h2 id="range-title" class="scale-nav-current"></h2>
+          <span class="scale-nav-sep" aria-hidden="true"></span>
+          <span id="scale-nav-next" class="scale-nav-item scale-nav-next"></span>
+        </div>
         <nav id="type-nav" class="type-nav" hidden></nav>
       </div>
+      <p id="range-subtitle" class="range-subtitle"></p>
       <p id="asc-label" class="range-dir-label" hidden>↑ vzestupná</p>
       <div id="range-staff" class="staff-container" aria-live="polite"></div>
+      <div id="start-scales" class="start-scales" aria-live="polite" hidden></div>
+
+      <div id="twin-block" class="range-variant" hidden>
+        <p id="twin-subtitle" class="range-subtitle"></p>
+        <div id="range-staff-twin" class="staff-container" aria-live="polite"></div>
+      </div>
 
       <div id="desc-block" class="range-variant" hidden>
         <h3>↓ sestupná <span class="variant-hint">(aiolská)</span></h3>
         <div id="range-staff-desc" class="staff-container" aria-live="polite"></div>
       </div>
 
-      <p class="range-hint">Noty stupnice zvýrazněny barevně, ostatní šedě. Klepnutím zobrazíte název.</p>
+      <p id="range-hint" class="range-hint"></p>
     </section>
   </main>
 

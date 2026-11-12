@@ -12,10 +12,28 @@ import {
   computeInlineAccidentals,
   scaleStartOctave,
   enharmonicEquivalent,
+  enharmonicSpellings,
+  notePitchMidi,
+  scaleFocusRange,
+  adjacentScales,
+  scalePair,
+  dedupePairs,
+  shortNoteName,
+  noteTooltipLines,
+  splitOctaveNumbers,
+  noteLabelParts,
+  keySignatureLabel,
+  scaleAccidentalsLabel,
+  scaleNotesText,
+  scalesStartingAt,
+  shortScaleName,
   SCALE_CATALOG,
   ALTO_SAX_LOW,
   ALTO_SAX_HIGH,
 } from '../docs/js/music.js';
+import { whenMusicFontReady, SMUFL } from '../docs/js/notation.js';
+import { readFileSync } from 'node:fs';
+import { VISUAL_PROFILES, autoProfileId, resolveProfileId, migrateProfileChoice, AUTO_PROFILE_ID } from '../docs/js/themes.js';
 
 describe('generateScale — major', () => {
   it('C major returns correct 8 note names', () => {
@@ -295,10 +313,20 @@ describe('filteredScales', () => {
     assert.ok(ids.includes('Des-whole-tone'));
   });
 
-  it('major + minor + whole-tone returns the full catalog', () => {
-    const result = filteredScales(new Set(['major','minor','whole-tone']), new Set(['sharp','flat']));
+  it('major + minor + whole-tone + major-from returns the full catalog', () => {
+    const result = filteredScales(new Set(['major','minor','whole-tone','major-from']), new Set(['sharp','flat']));
     assert.equal(result.length, SCALE_CATALOG.length);
-    assert.equal(result.length, 32);
+    assert.equal(result.length, 50);
+  });
+
+  it('major-from returns all 18 scales with both acc filters', () => {
+    const result = filteredScales(new Set(['major-from']), new Set(['sharp','flat']));
+    assert.equal(result.length, 18);
+  });
+
+  it('major-from respects the acc filter (flat → B, Ces, C, Des, Es, F, Ges, As)', () => {
+    const result = filteredScales(new Set(['major-from']), new Set(['flat']));
+    assert.deepEqual(result.map((s) => s.root).sort(), ['As','B','C','Ces','Des','Es','F','Ges']);
   });
 
   it('major only returns 15 scales', () => {
@@ -559,4 +587,428 @@ describe('scaleStartOctave', () => {
   it('e minor → octave 4',   () => assert.equal(scaleStartOctave('e-minor'), 4));
   it('d minor → octave 4',   () => assert.equal(scaleStartOctave('d-minor'), 4));
   it('Ces major → octave 4', () => assert.equal(scaleStartOctave('Ces-major'), 4));
+});
+
+describe('major-from catalog entries', () => {
+  const entries = SCALE_CATALOG.filter((s) => s.type === 'major-from');
+
+  it('has 18 entries Ais3/B3 … A4 including both spellings of every black key and H/Ces', () => {
+    assert.deepEqual(entries.map((e) => `${e.root}${e.startOctave}`), [
+      'Ais3', 'B3', 'H3', 'Ces4', 'C4', 'Cis4', 'Des4', 'D4', 'Dis4', 'Es4', 'E4', 'F4',
+      'Fis4', 'Ges4', 'G4', 'Gis4', 'As4', 'A4',
+    ]);
+  });
+
+  it('ids carry no start octave and are unique', () => {
+    assert.equal(entries[1].id, 'B-major-from');
+    assert.equal(new Set(entries.map((e) => e.id)).size, entries.length);
+  });
+
+  it('start pitches rise by semitone from the alto sax low note to A4', () => {
+    const pitches = entries.map((e) => scaleFocusRange(e).lowMidi);
+    assert.deepEqual(pitches, [46, 46, 47, 47, 48, 49, 49, 50, 51, 51, 52, 53, 54, 54, 55, 56, 56, 57]);
+    assert.equal(pitches[0], ALTO_SAX_LOW.octave * 12 + ALTO_SAX_LOW.semitone);
+  });
+
+  it('copies notes and key data from the base major scale', () => {
+    for (const e of entries.filter((x) => x.baseId)) {
+      const base = SCALE_CATALOG.find((s) => s.id === e.baseId);
+      assert.ok(base, e.baseId);
+      assert.equal(base.type, 'major');
+      assert.deepEqual(e.notes, base.notes);
+      assert.equal(e.keySig, base.keySig);
+      assert.equal(e.accidental, base.accidental);
+      assert.equal(e.root, base.root);
+    }
+  });
+
+  it('theoretical keys Ais, Dis, Gis have no base entry and use double sharps', () => {
+    const byRoot = Object.fromEntries(entries.map((e) => [e.root, e]));
+    assert.deepEqual(byRoot.Gis.notes, ['Gis','Ais','His','Cis','Dis','Eis','Fisis','Gis']);
+    assert.deepEqual(byRoot.Dis.notes, ['Dis','Eis','Fisis','Gis','Ais','His','Cisis','Dis']);
+    assert.deepEqual(byRoot.Ais.notes, ['Ais','His','Cisis','Dis','Eis','Fisis','Gisis','Ais']);
+    for (const root of ['Gis', 'Dis', 'Ais']) {
+      assert.equal(byRoot[root].baseId, undefined);
+      assert.equal(byRoot[root].accidental, 'sharp');
+    }
+    assert.deepEqual([byRoot.Gis.keySig, byRoot.Dis.keySig, byRoot.Ais.keySig], [8, 9, 10]);
+    assert.equal(SCALE_CATALOG.find((s) => s.id === 'Dis-major'), undefined);
+  });
+
+  it('every major-from scale follows the major pattern 2-2-1-2-2-2-1', () => {
+    for (const e of entries) {
+      const scale = generateScale(e.id, scaleStartOctave(e.id));
+      const pitches = scale.map((n) => notePitchMidi(n.name, n.octave));
+      const steps = pitches.slice(1).map((p, i) => p - pitches[i]);
+      assert.deepEqual(steps, [2, 2, 1, 2, 2, 2, 1], e.id);
+    }
+  });
+
+  it('enharmonic pairs start on the same pitch (Ais/B, Dis/Es, Gis/As)', () => {
+    const lowMidi = (id) => scaleFocusRange(SCALE_CATALOG.find((s) => s.id === id)).lowMidi;
+    assert.equal(lowMidi('Ais-major-from'), lowMidi('B-major-from'));
+    assert.equal(lowMidi('Dis-major-from'), lowMidi('Es-major-from'));
+    assert.equal(lowMidi('Gis-major-from'), lowMidi('As-major-from'));
+  });
+
+  it('scaleStartOctave returns the fixed start octave', () => {
+    assert.equal(scaleStartOctave('B-major-from'), 3);
+    assert.equal(scaleStartOctave('A-major-from'), 4);
+  });
+
+  it('generateScale B-major-from: B3 … B4', () => {
+    const scale = generateScale('B-major-from', scaleStartOctave('B-major-from'));
+    assert.deepEqual(scale.map((n) => n.name + n.octave), ['B3','C4','D4','Es4','F4','G4','A4','B4']);
+  });
+
+  it('generateScale Ces-major-from starts at the pitch of H3', () => {
+    const scale = generateScale('Ces-major-from', scaleStartOctave('Ces-major-from'));
+    assert.equal(notePitchMidi(scale[0].name, scale[0].octave), 47);
+    assert.equal(notePitchMidi(scale[7].name, scale[7].octave), 59);
+  });
+});
+
+describe('scaleFocusRange', () => {
+  it('B3 → one octave 46..58', () => {
+    const entry = SCALE_CATALOG.find((s) => s.id === 'B-major-from');
+    assert.deepEqual(scaleFocusRange(entry), { lowMidi: 46, highMidi: 58 });
+  });
+
+  it('Ces4 → 47..59 (Ces4 sounds as H3)', () => {
+    const entry = SCALE_CATALOG.find((s) => s.id === 'Ces-major-from');
+    assert.deepEqual(scaleFocusRange(entry), { lowMidi: 47, highMidi: 59 });
+  });
+
+  it('regular scales have no focus range', () => {
+    assert.equal(scaleFocusRange(SCALE_CATALOG.find((s) => s.id === 'B-major')), null);
+    assert.equal(scaleFocusRange(undefined), null);
+  });
+});
+
+describe('notePitchMidi', () => {
+  it('regular note', () => assert.equal(notePitchMidi('Fis', 4), 54));
+  it('Ces4 = H3',     () => assert.equal(notePitchMidi('Ces', 4), notePitchMidi('H', 3)));
+  it('His3 = C4',     () => assert.equal(notePitchMidi('His', 3), notePitchMidi('C', 4)));
+  it('Fes4 = E4',     () => assert.equal(notePitchMidi('Fes', 4), notePitchMidi('E', 4)));
+});
+
+describe('enharmonicSpellings', () => {
+  const fmt = (list) => list.map((n) => n.name + n.octave);
+
+  it('E4 → E4, Fes4',     () => assert.deepEqual(fmt(enharmonicSpellings('E', 4)), ['E4','Fes4']));
+  it('F4 → F4, Eis4',     () => assert.deepEqual(fmt(enharmonicSpellings('F', 4)), ['F4','Eis4']));
+  it('C5 → C5, His4',     () => assert.deepEqual(fmt(enharmonicSpellings('C', 5)), ['C5','His4']));
+  it('H3 → H3, Ces4',     () => assert.deepEqual(fmt(enharmonicSpellings('H', 3)), ['H3','Ces4']));
+  it('G4 → G4, Fisis4',   () => assert.deepEqual(fmt(enharmonicSpellings('G', 4)), ['G4','Fisis4']));
+  it('D4 → D4, Cisis4',   () => assert.deepEqual(fmt(enharmonicSpellings('D', 4)), ['D4','Cisis4']));
+  it('A4 → A4, Gisis4',   () => assert.deepEqual(fmt(enharmonicSpellings('A', 4)), ['A4','Gisis4']));
+  it('Fis5 → Fis5, Ges5', () => assert.deepEqual(fmt(enharmonicSpellings('Fis', 5)), ['Fis5','Ges5']));
+  it('given name comes first (Ges5 → Ges5, Fis5)', () => {
+    assert.deepEqual(fmt(enharmonicSpellings('Ges', 5)), ['Ges5','Fis5']);
+  });
+  it('Fisis4 → Fisis4, G4', () => assert.deepEqual(fmt(enharmonicSpellings('Fisis', 4)), ['Fisis4','G4']));
+  it('Ces4 → Ces4, H3',     () => assert.deepEqual(fmt(enharmonicSpellings('Ces', 4)), ['Ces4','H3']));
+});
+
+describe('shortNoteName', () => {
+  it('sharp',        () => assert.equal(shortNoteName('Fis'), 'F♯'));
+  it('flat',         () => assert.equal(shortNoteName('Es'), 'E♭'));
+  it('B → H♭',       () => assert.equal(shortNoteName('B'), 'H♭'));
+  it('double-sharp', () => assert.equal(shortNoteName('Fisis'), 'F×'));
+  it('natural',      () => assert.equal(shortNoteName('C'), 'C'));
+});
+
+describe('noteTooltipLines', () => {
+  it('accidental notes get "short – long" lines', () => {
+    assert.deepEqual(noteTooltipLines('Fis', 5), ['F♯5 – Fis5', 'G♭5 – Ges5']);
+  });
+
+  it('natural note shows only its long name', () => {
+    assert.deepEqual(noteTooltipLines('E', 4), ['E4', 'F♭4 – Fes4']);
+  });
+
+  it('lowercase for minor scales', () => {
+    assert.deepEqual(noteTooltipLines('Fis', 5, true), ['f♯5 – fis5', 'g♭5 – ges5']);
+  });
+});
+
+describe('filteredScales — major-from order', () => {
+  it('sorted by start pitch (B3 first, A4 last), not by key signature', () => {
+    const result = filteredScales(new Set(['major-from']), new Set(['sharp','flat']));
+    assert.equal(result[0].id, 'Ais-major-from');
+    assert.equal(result[result.length - 1].id, 'A-major-from');
+    const pitches = result.map((e) => scaleFocusRange(e).lowMidi);
+    assert.deepEqual(pitches, [...pitches].sort((a, b) => a - b));
+  });
+});
+
+describe('adjacentScales', () => {
+  const all = filteredScales(new Set(['major','minor','whole-tone','major-from']), new Set(['sharp','flat']));
+
+  it('major: neighbours by key signature (G dur → D dur / C dur)', () => {
+    const { prev, next } = adjacentScales(all, 'G-major');
+    assert.equal(prev.id, 'D-major');
+    assert.equal(next.id, 'C-major');
+  });
+
+  it('stays within the same type (C dur next is F dur, not a minor)', () => {
+    const { next } = adjacentScales(all, 'C-major');
+    assert.equal(next.id, 'F-major');
+  });
+
+  it('ends of the category return null', () => {
+    assert.equal(adjacentScales(all, 'Cis-major').prev, null);
+    assert.equal(adjacentScales(all, 'Ces-major').next, null);
+    assert.equal(adjacentScales(all, 'Ais-major-from').prev, null);
+    assert.equal(adjacentScales(all, 'A-major-from').next, null);
+  });
+
+  it('major-from: neighbours by start pitch (C → H/Ces before, Cis after)', () => {
+    const { prev, next } = adjacentScales(all, 'C-major-from');
+    assert.equal(prev.id, 'Ces-major-from');
+    assert.equal(next.id, 'Cis-major-from');
+  });
+
+  it('whole-tone: C ↔ Des', () => {
+    assert.equal(adjacentScales(all, 'C-whole-tone').next.id, 'Des-whole-tone');
+    assert.equal(adjacentScales(all, 'Des-whole-tone').prev.id, 'C-whole-tone');
+  });
+
+  it('respects filters — scale missing from the list has no neighbours', () => {
+    const sharpsOnly = filteredScales(new Set(['major']), new Set(['sharp']));
+    assert.deepEqual(adjacentScales(sharpsOnly, 'F-major'), { prev: null, next: null });
+    assert.equal(adjacentScales(sharpsOnly, 'C-major').prev.id, 'G-major');
+    assert.equal(adjacentScales(sharpsOnly, 'C-major').next, null);
+  });
+});
+
+describe('scalePair / dedupePairs', () => {
+  const byId = (id) => SCALE_CATALOG.find((s) => s.id === id);
+  const ids = (list) => list.map((s) => s.id);
+
+  it('enharmonic major-from pair, sharp spelling first (from either member)', () => {
+    assert.deepEqual(ids(scalePair(byId('B-major-from'))), ['Ais-major-from', 'B-major-from']);
+    assert.deepEqual(ids(scalePair(byId('Ais-major-from'))), ['Ais-major-from', 'B-major-from']);
+    assert.deepEqual(ids(scalePair(byId('Ces-major-from'))), ['H-major-from', 'Ces-major-from']);
+  });
+
+  it('single major-from and regular scales are alone', () => {
+    assert.deepEqual(ids(scalePair(byId('C-major-from'))), ['C-major-from']);
+    assert.deepEqual(ids(scalePair(byId('B-major'))), ['B-major']);
+  });
+
+  it('dedupePairs keeps one scale per pitch: 12 major-from scales', () => {
+    const all = filteredScales(new Set(['major-from']), new Set(['sharp','flat']));
+    const deduped = dedupePairs(all);
+    assert.equal(deduped.length, 12);
+    assert.ok(deduped.includes(byId('Ais-major-from')));
+    assert.ok(!deduped.includes(byId('B-major-from')));
+  });
+
+  it('dedupePairs keeps the flat spelling when the sharp one is filtered out', () => {
+    const flatsOnly = dedupePairs(filteredScales(new Set(['major-from']), new Set(['flat'])));
+    assert.ok(flatsOnly.includes(byId('B-major-from')));
+  });
+
+  it('adjacentScales on deduped list steps by pitch (Ais/B → H/Ces)', () => {
+    const list = dedupePairs(filteredScales(new Set(['major-from']), new Set(['sharp','flat'])));
+    assert.equal(adjacentScales(list, 'Ais-major-from').next.id, 'H-major-from');
+    assert.equal(adjacentScales(list, 'C-major-from').prev.id, 'H-major-from');
+  });
+
+  it('dedupePairs leaves regular scales untouched', () => {
+    const majors = filteredScales(new Set(['major']), new Set(['sharp','flat']));
+    assert.equal(dedupePairs(majors).length, majors.length);
+  });
+});
+
+describe('splitOctaveNumbers', () => {
+  it('marks octave numbers in a two-name line', () => {
+    assert.deepEqual(splitOctaveNumbers('F♯5 – Fis5'), [
+      { text: 'F♯' }, { text: '5', octave: true }, { text: ' – Fis' }, { text: '5', octave: true },
+    ]);
+  });
+
+  it('keeps line breaks in text parts', () => {
+    assert.deepEqual(splitOctaveNumbers('E4\nF♭4 – Fes4').map((p) => p.text), ['E', '4', '\nF♭', '4', ' – Fes', '4']);
+  });
+
+  it('label without numbers is a single text part', () => {
+    assert.deepEqual(splitOctaveNumbers('C'), [{ text: 'C' }]);
+  });
+});
+
+describe('noteLabelParts', () => {
+  it('sharp',          () => assert.deepEqual(noteLabelParts('Fis'), { letter: 'F', accidental: '#' }));
+  it('flat',           () => assert.deepEqual(noteLabelParts('Es'), { letter: 'E', accidental: '♭' }));
+  it('double-sharp',   () => assert.deepEqual(noteLabelParts('Fisis'), { letter: 'F', accidental: '×' }));
+  it('natural',        () => assert.deepEqual(noteLabelParts('C'), { letter: 'C', accidental: '' }));
+  it('Czech B as is',  () => assert.deepEqual(noteLabelParts('B'), { letter: 'B', accidental: '' }));
+  it('lowercase minor', () => {
+    assert.deepEqual(noteLabelParts('Gis', true), { letter: 'g', accidental: '#' });
+    assert.deepEqual(noteLabelParts('B', true), { letter: 'b', accidental: '' });
+  });
+});
+
+describe('whenMusicFontReady', () => {
+  it('resolves after the font loads and asks for ScalesMusic', async () => {
+    const calls = [];
+    const fonts = { load: (font, text) => { calls.push([font, text]); return Promise.resolve([]); } };
+    await whenMusicFontReady(fonts, 1000);
+    assert.equal(calls.length, 1);
+    assert.match(calls[0][0], /ScalesMusic/);
+  });
+
+  it('resolves when loading fails', async () => {
+    const fonts = { load: () => Promise.reject(new Error('offline')) };
+    await whenMusicFontReady(fonts, 1000);
+  });
+
+  it('resolves when load throws synchronously', async () => {
+    const fonts = { load: () => { throw new Error('bad font'); } };
+    await whenMusicFontReady(fonts, 1000);
+  });
+
+  it('resolves after the timeout when loading hangs', async () => {
+    const fonts = { load: () => new Promise(() => {}) };
+    const start = Date.now();
+    await whenMusicFontReady(fonts, 30);
+    assert.ok(Date.now() - start >= 25);
+  });
+
+  it('resolves immediately without the FontFaceSet API', async () => {
+    await whenMusicFontReady(undefined, 1000);
+    await whenMusicFontReady({}, 1000);
+  });
+});
+
+describe('visual profiles', () => {
+  it('only the two light profiles remain, named by size', () => {
+    assert.deepEqual(VISUAL_PROFILES.map((p) => p.id), ['compact', 'large']);
+    assert.deepEqual(VISUAL_PROFILES.map((p) => p.name), ['Kompaktní', 'Větší']);
+  });
+
+  it('auto: phone (short side < 600) → Kompaktní, larger screens → Větší', () => {
+    assert.equal(autoProfileId(390), 'compact');
+    assert.equal(autoProfileId(599), 'compact');
+    assert.equal(autoProfileId(600), 'large');
+    assert.equal(autoProfileId(1080), 'large');
+  });
+
+  it('resolveProfileId: manual choice wins, auto and unknown ids resolve by screen', () => {
+    assert.equal(resolveProfileId('large', 390), 'large');
+    assert.equal(resolveProfileId(AUTO_PROFILE_ID, 390), 'compact');
+    assert.equal(resolveProfileId('dark', 1440), 'large');
+    assert.equal(resolveProfileId(null, 390), 'compact');
+  });
+
+  it('migrateProfileChoice: legacy ids renamed, current kept, unknown → auto', () => {
+    assert.equal(migrateProfileChoice('light'), 'compact');
+    assert.equal(migrateProfileChoice('light-large'), 'large');
+    assert.equal(migrateProfileChoice('compact'), 'compact');
+    assert.equal(migrateProfileChoice('large'), 'large');
+    assert.equal(migrateProfileChoice(AUTO_PROFILE_ID), AUTO_PROFILE_ID);
+    assert.equal(migrateProfileChoice('dark'), AUTO_PROFILE_ID);
+    assert.equal(migrateProfileChoice('dark-large'), AUTO_PROFILE_ID);
+    assert.equal(migrateProfileChoice(null), AUTO_PROFILE_ID);
+  });
+});
+
+describe('music font subset', () => {
+  it('every SMuFL glyph used by notation.js is in the font subset script', () => {
+    const script = readFileSync(new URL('../tools/subset-music-font.py', import.meta.url), 'utf8');
+    const subsetCodePoints = [...script.matchAll(/0x(E[0-9A-F]{3}):/g)].map((m) => parseInt(m[1], 16)).sort();
+    const usedCodePoints = Object.values(SMUFL).map((ch) => ch.codePointAt(0)).sort();
+    assert.deepEqual(usedCodePoints, subsetCodePoints);
+  });
+});
+
+// ─── Scale summary labels ───────────────────────────────────────────────────
+
+const catalogEntry = (id) => SCALE_CATALOG.find((s) => s.id === id);
+
+describe('keySignatureLabel', () => {
+  it('is empty without a key signature', () => {
+    assert.equal(keySignatureLabel(0), '');
+  });
+  it('lists sharps in key signature order', () => {
+    assert.equal(keySignatureLabel(2), '2 ♯ : F♯ C♯');
+  });
+  it('lists flats in key signature order', () => {
+    assert.equal(keySignatureLabel(-3), '3 ♭ : H♭ E♭ A♭');
+  });
+  it('uses double sharps for theoretical keys (Ais dur, 10 sharps)', () => {
+    assert.equal(keySignatureLabel(10), '10 ♯ : F♯ C♯ G♯ D♯ A♯ E♯ H♯ F× C× G×');
+  });
+});
+
+describe('scaleAccidentalsLabel', () => {
+  it('uses the key signature for dur / moll', () => {
+    assert.equal(scaleAccidentalsLabel(catalogEntry('B-major')), '2 ♭ : H♭ E♭');
+    assert.equal(scaleAccidentalsLabel(catalogEntry('e-minor')), '1 ♯ : F♯');
+  });
+  it('is empty for C dur', () => {
+    assert.equal(scaleAccidentalsLabel(catalogEntry('C-major')), '');
+  });
+  it('uses the key signature for a major-from scale', () => {
+    assert.equal(scaleAccidentalsLabel(catalogEntry('Ais-major-from')), keySignatureLabel(10));
+  });
+  it('lists the notes\' own accidentals for whole-tone scales', () => {
+    assert.equal(scaleAccidentalsLabel(catalogEntry('C-whole-tone')), '3 ♯ : F♯ G♯ A♯');
+    assert.equal(scaleAccidentalsLabel(catalogEntry('Des-whole-tone')), '2 ♭ : D♭ E♭');
+  });
+});
+
+describe('scaleNotesText', () => {
+  it('joins short names without octaves with a middle dot', () => {
+    assert.equal(scaleNotesText(generateScale('Fis-major', 4)), 'F♯ · G♯ · A♯ · H · C♯ · D♯ · E♯ · F♯');
+  });
+  it('writes B as H♭', () => {
+    assert.equal(scaleNotesText(generateScale('B-major', 3)), 'H♭ · C · D · E♭ · F · G · A · H♭');
+  });
+  it('lowercases minor scales', () => {
+    assert.equal(scaleNotesText(generateScale('a-minor', 4, 'harmonic'), true), 'a · h · c · d · e · f · g♯ · a');
+  });
+  it('uses × for double sharps', () => {
+    assert.equal(scaleNotesText(generateScale('Gis-major-from', 4)), 'G♯ · A♯ · H♯ · C♯ · D♯ · E♯ · F× · G♯');
+  });
+});
+
+describe('scalesStartingAt', () => {
+  const ids = (name, octave) => scalesStartingAt(name, octave).map((s) => s.id);
+
+  it('finds dur, moll and major-from scales of a pitch incl. enharmonic roots', () => {
+    assert.deepEqual(ids('B', 3).sort(), ['Ais-major-from', 'B-major', 'B-major-from', 'ais-minor', 'b-minor'].sort());
+  });
+  it('gives the same result for an enharmonic spelling', () => {
+    assert.deepEqual(ids('Ais', 3).sort(), ids('B', 3).sort());
+  });
+  it('matches major-from only at its exact start octave', () => {
+    assert.ok(ids('B', 4).includes('B-major'));
+    assert.ok(!ids('B', 4).includes('B-major-from'));
+  });
+  it('includes whole-tone scales by root', () => {
+    assert.ok(ids('C', 5).includes('C-whole-tone'));
+    assert.ok(ids('Cis', 4).includes('Des-whole-tone'));
+    assert.ok(!ids('D', 4).some((id) => id.endsWith('whole-tone')));
+  });
+  it('maps Ces4 / H3 to the same pitch (Ces dur from H3)', () => {
+    assert.ok(ids('H', 3).includes('Ces-major'));
+    assert.ok(ids('H', 3).includes('Ces-major-from'));
+  });
+});
+
+describe('shortScaleName', () => {
+  it('uses the short root name', () => {
+    assert.equal(shortScaleName(catalogEntry('Fis-major'), 'dur'), 'F♯ dur');
+    assert.equal(shortScaleName(catalogEntry('B-major'), 'dur'), 'H♭ dur');
+    assert.equal(shortScaleName(catalogEntry('C-whole-tone'), 'celotónová'), 'C celotónová');
+  });
+  it('keeps minor roots lowercase', () => {
+    assert.equal(shortScaleName(catalogEntry('fis-minor'), 'moll'), 'f♯ moll');
+    assert.equal(shortScaleName(catalogEntry('b-minor'), 'moll'), 'h♭ moll');
+  });
+  it('works for theoretical keys (Gis dur)', () => {
+    assert.equal(shortScaleName(catalogEntry('Gis-major-from'), 'dur'), 'G♯ dur');
+  });
 });

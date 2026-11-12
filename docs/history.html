@@ -40,6 +40,12 @@
       color: var(--text);
       line-height: 1.55;
     }
+    .history-credits {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .history-credits a { color: inherit; }
   </style>
   <script>
     try {
@@ -93,6 +99,11 @@
 
   <main class="history-main">
     <section class="scale-section">
+
+      <div class="history-entry">
+        <p class="history-version">1.0.50 · 2026-11-12</p>
+        <p class="history-desc">Na úvodní stránce přibyla sekce „Dur od každého půltónu“ — durové stupnice od nejnižšího tónu saxofonu (B3) po každém půltónu až po A4 (Ais, Dis a Gis dur jsou teoretické tóniny s dvojitými křížky). Enharmonické dvojice Ais/B, H/Ces, Cis/Des, Dis/Es, Fis/Ges a Gis/As mají jednu kartu a jednu stránku, kde jsou obě stupnice pod sebou — barevně stejné, liší se jen křížkovými a béčkovými názvy not. V rozsahu saxofonu se zobrazí celá stupnice; nový filtr „Dur od tónu“. Nadpis stupnice v rozsahu saxofonu má nově vlevo navigaci „‹ předchozí | stupnice | další ›“ se zkrácenými názvy (např. „F♯ dur | G♭ dur“) v rámci stejné kategorie (dur, moll, celotónové, dur od tónu) — odkazy mají pevnou šířku a šipky jsou na krajích, takže se při přepínání neposouvají; přepínač Aiolská / Harmonická / Melodická je vpravo. Pod nadpisem je vždy přehled stupnice: tučně název a všechny tóny ve zkráceném zápisu (např. „Fis dur: F♯ · G♯ · A♯ · H · C♯ · D♯ · E♯ · F♯“). Ve výběru stupnic mají i enharmonické dvojice (např. Ais dur | B dur) u každého názvu počet a seznam křížků či béček ve zkráceném zápisu (např. „6 ♯ : F♯ C♯ G♯ D♯ A♯ E♯“). Nová volba „Celý rozsah“ (nahoře ve výběru, i bez odkazu na stupnici) ukáže všechny tóny alt saxofonu, zvlášť s křížkovými a s béčkovými názvy — klepnutím na notu se pod osnovou zobrazí stupnice, které jí začínají (dur, moll, celotónové, dur od tónu); na úvodní stránce na něj vede nová sekce „Nástroje“. Tooltip nad notou v rozsahu je nově víceřádkový a ukazuje všechny názvy tónu (např. E i Fes, F i Eis, G i Fisis), každý na samostatném řádku i se zkratkou (např. „F♯5 – Fis5“). Názvy not, které do stupnice nepatří, jsou pod osnovou rozsahu nově jemně vidět (dřív byly skryté). V názvech pod notami je znaménko # / ♭ menší a mírně nad písmenem, aby vynikl hlavně název tónu; v tooltipu je číslo oktávy menší a šedé. Osnova má nový vzhled: houslový klíč, posuvky i hlavičky not jsou kreslené notovým písmem Bravura (jako v tištěných notách), hlavičky not jsou mírně vypouklé a noty, klíč i předznamenání mají jemný stín a tenký okraj, takže se neslévají s linkami osnovy. Tmavé vizuální profily byly odstraněny a zbylé dva se jmenují podle velikosti: „Kompaktní“ a „Větší“. Profil se nově volí automaticky — Kompaktní na mobilu, Větší na počítači (ručně lze přepnout).</p>
+      </div>
 
       <div class="history-entry">
         <p class="history-version">1.0.49 · 2026-09-18</p>
@@ -180,26 +191,24 @@
       </div>
 
     </section>
+
+    <section class="scale-section history-credits">
+      <p>Houslový klíč, posuvky a hlavičky not jsou kreslené písmem ScalesMusic — ořezanou
+        verzí notového písma
+        <a href="https://github.com/steinbergmedia/bravura" rel="noopener">Bravura</a>
+        © Steinberg Media Technologies GmbH, licence
+        <a href="/fonts/Bravura-OFL.txt">SIL Open Font License 1.1</a>.</p>
+    </section>
   </main>
 
   <footer class="app-footer" id="app-footer"></footer>
 
   <script type="module">
     import { APP_VERSION, BUILD_DATE } from '/js/defaults.js';
-    import { VISUAL_PROFILES, applyProfile, savedProfileId } from '/js/themes.js';
+    import { applyProfile, savedProfileId, initProfileSelect } from '/js/themes.js';
 
     applyProfile(savedProfileId());
-
-    const sel = document.getElementById('profile-select');
-    const currentId = savedProfileId();
-    VISUAL_PROFILES.forEach((p) => {
-      const opt = document.createElement('option');
-      opt.value = p.id;
-      opt.textContent = p.name;
-      if (p.id === currentId) opt.selected = true;
-      sel.appendChild(opt);
-    });
-    sel.addEventListener('change', (e) => applyProfile(e.target.value));
+    initProfileSelect(document.getElementById('profile-select'));
 
     const footer = document.getElementById('app-footer');
     if (footer) {

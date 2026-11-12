@@ -6,8 +6,8 @@ import {
   accidentalType,
   scaleStartOctave,
 } from './music.js';
-import { renderScaleStaff } from './notation.js';
-import { VISUAL_PROFILES, applyProfile, savedProfileId } from './themes.js';
+import { renderScaleStaff, whenMusicFontReady } from './notation.js';
+import { applyProfile, savedProfileId, initProfileSelect } from './themes.js';
 import { DEFAULT_SCALE_ID, APP_VERSION, BUILD_DATE } from './defaults.js';
 import { initAnalytics, trackScaleView } from './analytics.js';
 
@@ -267,9 +267,12 @@ function hashToScaleId(hash) {
 
 function applyHash(hash) {
   if (!hash) return;
-  const id = hashToScaleId(hash);
-  const entry = SCALE_CATALOG.find((s) => s.id === id);
-  if (!entry) return;
+  const found = SCALE_CATALOG.find((s) => s.id === hashToScaleId(hash));
+  // The last scale id is shared with the range page, which also offers types this
+  // page cannot show: 'major-from' falls back to its base major scale, others are ignored.
+  const entry = found?.baseId ? SCALE_CATALOG.find((s) => s.id === found.baseId) : found;
+  if (!entry || (entry.type !== 'major' && entry.type !== 'minor')) return;
+  const id = entry.id;
   // Ensure the required filters are active so the scale is visible
   if (!state.filterType.has(entry.type)) state.filterType.add(entry.type);
   if (entry.accidental !== 'natural' && !state.filterAcc.has(entry.accidental)) {
@@ -291,22 +294,6 @@ function registerSW() {
   }
 }
 
-function initProfileSelect() {
-  const sel = $('profile-select');
-  const currentId = savedProfileId();
-  VISUAL_PROFILES.forEach((p) => {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = p.name;
-    if (p.id === currentId) opt.selected = true;
-    sel.appendChild(opt);
-  });
-  sel.addEventListener('change', (e) => {
-    applyProfile(e.target.value);
-    update();
-  });
-}
-
 document.addEventListener('DOMContentLoaded', () => {
   initAnalytics();
   applyProfile(savedProfileId());
@@ -316,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   applyHash(location.hash);
   initFilterChips();
-  initProfileSelect();
+  initProfileSelect($('profile-select'), update);
 
   $('scale-select').addEventListener('change', (e) => {
     state.scaleId = e.target.value;
@@ -331,7 +318,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   repopulateSelect();
-  update();
   registerSW();
 
   const footer = document.getElementById('app-footer');
@@ -340,10 +326,14 @@ document.addEventListener('DOMContentLoaded', () => {
     footer.appendChild(a);
   }
 
-  if (typeof ResizeObserver !== 'undefined') {
-    const ro = new ResizeObserver(() => update());
-    document.querySelectorAll('.staff-container').forEach((el) => ro.observe(el));
-  } else {
-    window.addEventListener('resize', () => update());
-  }
+  // First staff render waits for the music font (the resize observer also renders on observe)
+  whenMusicFontReady().then(() => {
+    update();
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => update());
+      document.querySelectorAll('.staff-container').forEach((el) => ro.observe(el));
+    } else {
+      window.addEventListener('resize', () => update());
+    }
+  });
 });

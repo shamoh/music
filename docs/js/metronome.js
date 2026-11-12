@@ -428,18 +428,9 @@ if (typeof document !== 'undefined') {
   function initMetronome() {
     state = loadState();
 
-    import('/js/themes.js').then(({ VISUAL_PROFILES, applyProfile, savedProfileId }) => {
+    import('/js/themes.js').then(({ applyProfile, savedProfileId, initProfileSelect }) => {
       applyProfile(savedProfileId());
-      const sel     = document.getElementById('profile-select');
-      const current = savedProfileId();
-      for (const p of VISUAL_PROFILES) {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.textContent = p.name;
-        if (p.id === current) opt.selected = true;
-        sel.appendChild(opt);
-      }
-      sel.addEventListener('change', e => applyProfile(e.target.value));
+      initProfileSelect(document.getElementById('profile-select'));
     });
 
     import('/js/analytics.js').then(({ initAnalytics }) => initAnalytics());

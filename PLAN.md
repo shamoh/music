@@ -93,6 +93,7 @@ slot  nota
 - Přepínač nástroje (Alt Sax / Tenorový Sax / klavír / ...)
 - Cvičení pro danou stupnici
 - Akordy (triády, septakordy) pro každý stupeň stupnice
+- Moll stupnice od každého půltónu (obdoba „Dur od tónu“ — typ `major-from`, start B3 … A4)
 
 ## Průběh implementace
 

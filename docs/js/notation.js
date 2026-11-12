@@ -1,14 +1,9 @@
-import { noteToStaffSlot, accidentalType, computeInlineAccidentals, enharmonicEquivalent } from './music.js';
+import { noteToStaffSlot, accidentalType, computeInlineAccidentals, enharmonicEquivalent, notePitchMidi, noteTooltipLines, noteLabelParts } from './music.js';
 
-// Short note label for display on staff: "Fis"→"F#", "Es"→"E♭", "B"→"B♭", "C"→"C"
-// lowercase=true converts the base letter to lowercase (minor scales)
-function shortNoteLabel(noteName, lowercase = false) {
-  if (noteName === 'B') return lowercase ? 'b' : 'B';
-  const base = noteName[0];
-  const acc = accidentalType(noteName);
-  const suffix = acc === 'double-sharp' ? '×' : acc === 'sharp' ? '#' : acc === 'flat' ? '♭' : '';
-  return (lowercase ? base.toLowerCase() : base) + suffix;
-}
+// Accidental sign in the note label is drawn smaller, raised and not bold —
+// the letter is what matters ("F" + small raised "#").
+const LABEL_ACC_FONT_SCALE = 0.7;
+const LABEL_ACC_RAISE_EM   = 0.45;
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -57,18 +52,57 @@ function drawStaffLinesScaled(svg, x1, x2, staffTop, ls) {
   }
 }
 
-// Baseline at E4 (bottom staff line) so the curl sits near G4 and the clef
-// extends naturally above the staff top.
+// ─── Music font (ScalesMusic = Bravura subset, SMuFL) ────────────────────────
+//
+// /fonts/ScalesMusic.woff is a subset of Bravura (SIL OFL, renamed as the license
+// requires) containing ONLY the glyphs in SMUFL below. Using another glyph means
+// adding it to SMUFL and to tools/subset-music-font.py and rebuilding the font
+// (a unit test keeps both lists in sync). SMuFL glyphs are scaled so that the
+// font size equals the staff height (4 line spacings), and each glyph's baseline
+// is its staff position (G clef: the G4 line; accidentals: the note's line/space).
+const MUSIC_FONT_NAME = 'ScalesMusic';
+const MUSIC_FONT = `${MUSIC_FONT_NAME}, serif`;
+export const SMUFL = {
+  gClef:        '\uE050',
+  noteheadBlack: '\uE0A4',
+  flat:         '\uE260',
+  natural:      '\uE261',
+  sharp:        '\uE262',
+  'double-sharp': '\uE263',
+};
+
+function musicFontSize(ls) { return ls * 4; }
+
+// Resolves once the music font is loaded, so the first staff render does not
+// flash empty boxes (SMuFL code points are missing in fallback fonts).
+// Never rejects and never waits longer than timeoutMs (font missing offline,
+// FontFaceSet API unavailable) — the staff is then drawn anyway.
+// fonts: a FontFaceSet (document.fonts), injectable for tests.
+export function whenMusicFontReady(fonts = globalThis.document?.fonts, timeoutMs = 3000) {
+  if (!fonts?.load) return Promise.resolve();
+  let timer;
+  const timeout = new Promise((resolve) => { timer = setTimeout(resolve, timeoutMs); });
+  const loaded = Promise.resolve()
+    .then(() => fonts.load(`16px ${MUSIC_FONT_NAME}`, SMUFL.gClef))
+    .catch(() => {});
+
+  return Promise.race([loaded, timeout]).then(() => clearTimeout(timer));
+}
+
+// Staff lines start left of the clef (the Bravura G clef is about 2.7 line spacings wide).
+const STAFF_START_LS = 1.2;
+
+// G clef: baseline on the G4 line (slot 0), centered at x.
 function drawTrebleClefScaled(svg, x, staffTop, ls) {
   svg.appendChild(
     svgText(svgEl('text', {
       x,
-      y: slotToY(-2, staffTop, ls),
-      'font-size': ls * 5.5,
+      y: slotToY(0, staffTop, ls),
+      'font-size': musicFontSize(ls),
       fill: 'currentColor',
-      'font-family': 'serif',
+      'font-family': MUSIC_FONT,
       'text-anchor': 'middle',
-    }), '𝄞')
+    }), SMUFL.gClef)
   );
 }
 
@@ -86,47 +120,64 @@ function drawLedgerLinesScaled(svg, x, slot, staffTop, ls, nr, halfW = nr * 2.5,
   }
 }
 
-function drawAccidentalScaled(svg, x, slot, type, staffTop, ls, nr, fill = 'currentColor') {
-  const y = slotToY(slot, staffTop, ls);
-  const char = type === 'double-sharp' ? '𝄪' : type === 'sharp' ? '♯' : type === 'flat' ? '♭' : '♮';
-  svg.appendChild(
-    svgText(svgEl('text', {
-      x: x - nr * 2.2,
-      y: y + nr * 0.5,
-      'font-size': ls * 1.4,
-      fill,
-      'text-anchor': 'middle',
-      'font-family': 'serif',
-    }), char)
-  );
-}
-
-// Draw a key signature accidental centered at cx (used for key sig symbols,
-// not note-attached accidentals — no nr offset).
-// Flat symbols are drawn at 99% of their natural rendered width (requires SVG in DOM).
-function drawKeySigAccidental(svg, cx, slot, type, staffTop, ls) {
-  const y = slotToY(slot, staffTop, ls);
+// Accidental glyph (type: 'sharp' | 'flat' | 'natural' | 'double-sharp') centered
+// at cx, baseline on the staff slot. The halo (a stroke in the background color)
+// is drawn as a separate underlay copy so the glyph itself stays crisp.
+function drawAccidentalGlyph(svg, cx, slot, type, staffTop, ls, fill, halo) {
   const attrs = {
     x: cx,
-    y: y + ls * 0.3,
-    'font-size': ls * 1.4,
-    fill: 'currentColor',
+    y: slotToY(slot, staffTop, ls),
+    'font-size': musicFontSize(ls),
+    fill,
     'text-anchor': 'middle',
-    'font-family': 'serif',
-    'lengthAdjust': 'spacingAndGlyphs',
+    'font-family': MUSIC_FONT,
   };
-  if (type === 'sharp') attrs['textLength'] = ls * 0.6;
-  const el = svgText(svgEl('text', attrs), type === 'sharp' ? '♯' : '♭');
-  svg.appendChild(el);
-  if (type === 'flat') {
-    const w = el.getComputedTextLength();
-    if (w > 0) el.setAttribute('textLength', w * 0.99);
+  if (halo) svg.appendChild(svgText(svgEl('text', { ...attrs, ...haloAttrs(ls), fill: 'var(--bg)' }), SMUFL[type]));
+  svg.appendChild(svgText(svgEl('text', attrs), SMUFL[type]));
+}
+
+// Black note head glyph centered at (x, y). The halo is an underlay copy with a
+// background-colored stroke. The shine is a gradient ellipse slightly smaller
+// than the glyph (the gradient fades out before its edge, so it never spills
+// outside the note head).
+function drawNoteheadGlyph(svg, x, y, ls, color, halo, shine) {
+  const attrs = {
+    x,
+    y,
+    'font-size': musicFontSize(ls),
+    fill: color,
+    'text-anchor': 'middle',
+    'font-family': MUSIC_FONT,
+  };
+  if (halo) svg.appendChild(svgText(svgEl('text', { ...attrs, ...haloAttrs(ls), fill: 'var(--bg)' }), SMUFL.noteheadBlack));
+  svg.appendChild(svgText(svgEl('text', attrs), SMUFL.noteheadBlack));
+  if (shine) {
+    svg.appendChild(svgEl('ellipse', {
+      cx: x, cy: y,
+      rx: ls * SHINE_RX_LS, ry: ls * SHINE_RY_LS,
+      transform: `rotate(-20, ${x}, ${y})`,
+      fill: shine,
+    }));
   }
 }
 
+// Shine ellipse size, a bit smaller than the Bravura note head (≈1.18 × 1 ls).
+const SHINE_RX_LS = 0.5;
+const SHINE_RY_LS = 0.36;
+
+// Distance between the note center and the center of its accidental.
+const INLINE_ACC_OFFSET_LS = 1.55;
+
+function drawAccidentalScaled(svg, x, slot, type, staffTop, ls, fill = 'currentColor', halo = false) {
+  drawAccidentalGlyph(svg, x - ls * INLINE_ACC_OFFSET_LS, slot, type, staffTop, ls, fill, halo);
+}
+
+// Key signature accidentals are about one line spacing wide.
+const KEY_SIG_SPACING_LS = 1.05;
+
 function keySignatureWidth(keySig, ls) {
   const count = Math.abs(keySig);
-  return count > 0 ? count * ls * 0.46 + ls * 1.3 : 0;
+  return count > 0 ? count * ls * KEY_SIG_SPACING_LS + ls * 1.3 : 0;
 }
 
 function drawKeySignature(svg, keySig, staffTop, ls, startX) {
@@ -135,30 +186,30 @@ function drawKeySignature(svg, keySig, staffTop, ls, startX) {
   const slots = isSharp ? SHARP_KEY_SIG_SLOTS : FLAT_KEY_SIG_SLOTS;
   const count = Math.abs(keySig);
   const type = isSharp ? 'sharp' : 'flat';
-  const spacing = ls * 0.46;
+  const spacing = ls * KEY_SIG_SPACING_LS;
 
   for (let i = 0; i < count; i++) {
-    drawKeySigAccidental(svg, startX + i * spacing + spacing * 0.5, slots[i], type, staffTop, ls);
+    drawAccidentalGlyph(svg, startX + i * spacing + spacing * 0.5, slots[i], type, staffTop, ls, 'currentColor', true);
   }
 }
 
-function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor', ledgerColor = null, labelColor = null, labelBg = null, showLabel = false, lowercase = false, ledgerHalfW = nr * 2.5, inlineAcc = null, labelY = null, pillW = ls * 3.5 } = {}) {
+// halo=true: thin outline in the page background color around the note head and
+// its accidental, so staff lines stop just short of them.
+// shine: url() of the shine gradient — overlay making the note head look slightly convex.
+// ledgerLayer: where ledger lines go (the staff layer, below the note heads).
+function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor', ledgerColor = null, labelColor = null, labelBg = null, showLabel = false, lowercase = false, ledgerHalfW = nr * 2.5, inlineAcc = null, labelY = null, pillW = ls * 3.5, halo = false, shine = null, ledgerLayer = svg } = {}) {
   const slot = noteToStaffSlot(note.name, note.octave);
   const y = slotToY(slot, staffTop, ls);
   const resolvedLedger = ledgerColor ?? color;
   const resolvedLabel  = labelColor  ?? color;
 
-  svg.appendChild(svgEl('ellipse', {
-    cx: x, cy: y,
-    rx: nr * 1.1, ry: nr * 0.85,
-    fill: color,
-    transform: `rotate(-15, ${x}, ${y})`,
-  }));
+  drawNoteheadGlyph(svg, x, y, ls, color, halo, shine);
 
-  // Ledger lines drawn after the note head so they appear on top of it
-  drawLedgerLinesScaled(svg, x, slot, staffTop, ls, nr, ledgerHalfW, resolvedLedger);
+  // Ledger lines belong to the staff: drawn into ledgerLayer (the staff layer), so
+  // they sit at the same height as the staff lines — below the note heads.
+  drawLedgerLinesScaled(ledgerLayer, x, slot, staffTop, ls, nr, ledgerHalfW, resolvedLedger);
 
-  if (inlineAcc) drawAccidentalScaled(svg, x, slot, inlineAcc, staffTop, ls, nr, color);
+  if (inlineAcc) drawAccidentalScaled(svg, x, slot, inlineAcc, staffTop, ls, color, halo);
 
   if (showLabel) {
     const ly = labelY !== null ? labelY : staffTop + ls * 4 + ls * 2.8;
@@ -173,17 +224,26 @@ function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor'
         fill: labelBg,
       }));
     }
-    svg.appendChild(
-      svgText(svgEl('text', {
-        x,
-        y: ly,
-        'font-size': ls * 1.6,
-        fill: resolvedLabel,
-        'text-anchor': 'middle',
-        'font-family': 'sans-serif',
-        'font-weight': 'bold',
-      }), shortNoteLabel(note.name, lowercase))
-    );
+    const { letter, accidental } = noteLabelParts(note.name, lowercase);
+    const label = svgText(svgEl('text', {
+      x,
+      y: ly,
+      'font-size': ls * 1.6,
+      fill: resolvedLabel,
+      'text-anchor': 'middle',
+      'font-family': 'sans-serif',
+      'font-weight': 'bold',
+    }), letter);
+    if (accidental) {
+      const accFontSize = ls * 1.6 * LABEL_ACC_FONT_SCALE;
+      label.appendChild(svgText(svgEl('tspan', {
+        dy: -accFontSize * LABEL_ACC_RAISE_EM,
+        'font-size': accFontSize,
+        'font-weight': 'normal',
+        opacity: 0.8,
+      }), accidental));
+    }
+    svg.appendChild(label);
   }
 }
 
@@ -194,6 +254,72 @@ function buildStaffSvg(width, totalHeight, label) {
     viewBox: `0 0 ${width} ${totalHeight}`,
     'aria-label': label,
   });
+}
+
+// ─── Plastic look: halo + drop shadow ────────────────────────────────────────
+
+// Halo width and drop shadow geometry, relative to the staff line spacing (ls).
+const HALO_WIDTH_LS  = 0.14;
+const SHADOW_DX_LS   = 0.06;
+const SHADOW_DY_LS   = 0.1;
+const SHADOW_BLUR_LS = 0.08;
+
+// Stroke in the page background color painted under the fill (paint-order),
+// so the shape keeps its size and only gets a thin separating outline.
+function haloAttrs(ls) {
+  return {
+    stroke: 'var(--bg)',
+    'stroke-width': ls * HALO_WIDTH_LS,
+    'stroke-linejoin': 'round',
+    'paint-order': 'stroke',
+  };
+}
+
+// Unique def ids — a page can show several staffs at once.
+let staffDefsSeq = 0;
+
+// Adds the drop-shadow filter and the note-head shine gradient to the SVG and
+// returns their url() references. Shadow color comes from the visual profile
+// (--note-shadow). The shine is color-neutral (white highlight top-left, slight
+// dark rim bottom-right), laid over the note head in its own color.
+function addStaffDefs(svg, ls) {
+  const seq = ++staffDefsSeq;
+  const id = `note-shadow-${seq}`;
+  const shineId = `note-shine-${seq}`;
+  const defs = svgEl('defs', {});
+  const gradient = svgEl('radialGradient', { id: shineId, cx: '0.4', cy: '0.35', r: '0.7', fx: '0.32', fy: '0.25' });
+  for (const [offset, color, opacity] of [[0, '#fff', 0.55], [0.45, '#fff', 0], [0.7, '#000', 0], [1, '#000', 0.3]]) {
+    gradient.appendChild(svgEl('stop', { offset, 'stop-color': color, 'stop-opacity': opacity }));
+  }
+  defs.appendChild(gradient);
+  const filter = svgEl('filter', { id, x: '-20%', y: '-20%', width: '140%', height: '140%' });
+  filter.appendChild(svgEl('feDropShadow', {
+    dx: ls * SHADOW_DX_LS,
+    dy: ls * SHADOW_DY_LS,
+    stdDeviation: ls * SHADOW_BLUR_LS,
+    style: 'flood-color: var(--note-shadow, rgba(0,0,0,0.35))',
+  }));
+  defs.appendChild(filter);
+  svg.appendChild(defs);
+
+  return { shadow: `url(#${id})`, shine: `url(#${shineId})` };
+}
+
+// SVG has no z-index — paint order is DOM order. These layers fix the order
+// regardless of when an element is drawn:
+//   muted notes → staff lines → clef + key signature → scale notes.
+// Clef, key signature and scale notes get a drop shadow (one filter per layer,
+// not per note); muted notes stay flat. The staff and symbol layers ignore
+// pointer events so note tooltips under them still work.
+function createStaffLayers(svg, ls) {
+  const { shadow, shine } = addStaffDefs(svg, ls);
+  const mutedLayer   = svgEl('g', { 'data-layer': 'muted-notes' });
+  const staffLayer   = svgEl('g', { 'data-layer': 'staff', 'pointer-events': 'none' });
+  const symbolsLayer = svgEl('g', { 'data-layer': 'clef-key-signature', 'pointer-events': 'none', filter: shadow });
+  const notesLayer   = svgEl('g', { 'data-layer': 'scale-notes', filter: shadow });
+  svg.append(mutedLayer, staffLayer, symbolsLayer, notesLayer);
+
+  return { mutedLayer, staffLayer, symbolsLayer, notesLayer, shine };
 }
 
 export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig = 0, isMinor = false) {
@@ -213,9 +339,10 @@ export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig
 
   const svg = buildStaffSvg(containerWidth, totalHeight, 'Notová osnova stupnice');
   containerEl.appendChild(svg);
-  drawStaffLinesScaled(svg, clefWidth, containerWidth - ls * 0.5, staffTop, ls);
-  drawTrebleClefScaled(svg, clefWidth - ls * 0.5, staffTop, ls);
-  drawKeySignature(svg, keySig, staffTop, ls, clefWidth + ls * 1.2);
+  const { staffLayer, symbolsLayer, notesLayer, shine } = createStaffLayers(svg, ls);
+  drawStaffLinesScaled(staffLayer, ls * STAFF_START_LS, containerWidth - ls * 0.5, staffTop, ls);
+  drawTrebleClefScaled(symbolsLayer, clefWidth - ls * 0.5, staffTop, ls);
+  drawKeySignature(symbolsLayer, keySig, staffTop, ls, clefWidth + ls * 1.2);
 
   const inlineAccs = computeInlineAccidentals(scaleNotes.map((n) => n.name), keySig);
 
@@ -233,7 +360,7 @@ export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig
     const ledgerColor = `var(--note-${k}-ledger)`;
     const labelColor  = `var(--note-${k}-label)`;
     const labelBg     = `var(--note-${k}-label-bg, transparent)`;
-    drawNoteScaled(svg, x, note, staffTop, ls, noteRadius, { color, ledgerColor, labelColor, labelBg, pillW, showLabel: true, lowercase: isMinor, inlineAcc: inlineAccs[i], labelY });
+    drawNoteScaled(notesLayer, x, note, staffTop, ls, noteRadius, { color, ledgerColor, labelColor, labelBg, pillW, showLabel: true, lowercase: isMinor, inlineAcc: inlineAccs[i], labelY, halo: true, shine, ledgerLayer: staffLayer });
   });
 }
 
@@ -249,9 +376,7 @@ const RANGE_SECTION_MIDI_MAX = [47, 61, 73]; // section i = pitchMidi ≤ value[
 
 
 function rangeSection(note) {
-  const midi = note.name === 'Ces' ? (note.octave - 1) * 12 + 11
-             : note.name === 'His' ? (note.octave + 1) * 12
-             : note.octave * 12 + note.semitone;
+  const midi = notePitchMidi(note.name, note.octave);
   const idx = RANGE_SECTION_MIDI_MAX.findIndex((max) => midi <= max);
   return idx === -1 ? 3 : idx;
 }
@@ -267,12 +392,13 @@ function nameSetWithEnharmonics(names) {
   return set;
 }
 
-export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteNames, keySig = 0, isMinor = false) {
+// showTonic=false draws no tonic highlight (e.g. the full instrument range).
+export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteNames, keySig = 0, isMinor = false, { showTonic = true } = {}) {
   clearEl(containerEl);
 
   const scaleSet  = nameSetWithEnharmonics(scaleNotes.map((n) => n.name));
   const chordSet  = nameSetWithEnharmonics(chordNoteNames);
-  const tonicName = scaleNotes[0]?.name;
+  const tonicName = showTonic ? scaleNotes[0]?.name : undefined;
   const tonicSet  = nameSetWithEnharmonics(tonicName ? [tonicName] : []);
   const containerWidth = containerEl.clientWidth || 400;
   const fontScale = profileFontScale();
@@ -309,10 +435,12 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
     }));
   });
 
-  drawStaffLinesScaled(svg, clefWidth, width - ls * 0.5, staffTop, ls);
-  drawTrebleClefScaled(svg, clefWidth - ls * 0.5, staffTop, ls);
+  const { mutedLayer, staffLayer, symbolsLayer, notesLayer, shine } = createStaffLayers(svg, ls);
 
-  // Ledger lines drawn on top of note heads — cap width so consecutive lines don't merge
+  drawStaffLinesScaled(staffLayer, ls * STAFF_START_LS, width - ls * 0.5, staffTop, ls);
+  drawTrebleClefScaled(symbolsLayer, clefWidth - ls * 0.5, staffTop, ls);
+
+  // Ledger line half-width — capped so lines of neighbouring notes don't merge
   const ledgerHalfW = Math.min(noteRadius * 2.5, step * 0.46);
 
   const lowestSlot = Math.min(...rangeNotes.map((n) => noteToStaffSlot(n.name, n.octave)));
@@ -333,23 +461,18 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
     const labelColor  = `var(--note-${k}-label)`;
     const labelBg     = `var(--note-${k}-label-bg, transparent)`;
     const inlineAcc = accidentalType(note.name);
-    const enh = enharmonicEquivalent(note.name, note.octave);
-    const displayName = (isMinor ? note.name.toLowerCase() : note.name) + note.octave;
-    const enhSuffix = enh
-      ? ` (=${(isMinor ? enh.name.toLowerCase() : enh.name)}${enh.octave})`
-      : '';
-    const tooltipLabel = displayName + enhSuffix;
+    const tooltipLabel = noteTooltipLines(note.name, note.octave, isMinor).join('\n');
 
-    const g = svgEl('g', { 'data-tooltip': tooltipLabel });
+    const g = svgEl('g', { 'data-tooltip': tooltipLabel, 'data-note': note.name, 'data-octave': note.octave });
     g.appendChild(svgEl('rect', { x: x - step * 0.5, y: 0, width: step, height: totalHeight, fill: 'transparent' }));
     g.appendChild(svgEl('rect', {
       x: x - step * 0.5 + noteGap, y: 0,
       width: step - noteGap * 2, height: totalHeight,
       fill: 'none', 'data-highlight': '',
     }));
-    svg.appendChild(g);
+    (k === 'muted' ? mutedLayer : notesLayer).appendChild(g);
 
     const pillW = Math.min(ls * 3.5, step * 0.9);
-    drawNoteScaled(g, x, note, staffTop, ls, noteRadius, { color, ledgerColor, labelColor, labelBg, pillW, ledgerHalfW, showLabel: true, labelY, inlineAcc, lowercase: isMinor });
+    drawNoteScaled(g, x, note, staffTop, ls, noteRadius, { color, ledgerColor, labelColor, labelBg, pillW, ledgerHalfW, showLabel: true, labelY, inlineAcc, lowercase: isMinor, halo: k !== 'muted', shine: k !== 'muted' ? shine : null, ledgerLayer: staffLayer });
   });
 }

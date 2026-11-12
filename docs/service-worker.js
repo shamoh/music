@@ -1,10 +1,11 @@
-const CACHE_NAME = 'scales-1.0.49';
+const CACHE_NAME = 'scales-1.0.50';
 const ASSETS = [
   '/',
   '/index.html',
   '/history.html',
   '/manifest.json',
   '/css/style.css',
+  '/fonts/ScalesMusic.woff',
   '/js/music.js',
   '/js/notation.js',
   '/js/app.js',

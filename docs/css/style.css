@@ -1,35 +1,45 @@
+/* ScalesMusic = subset of the Bravura music font (SMuFL) with only the glyphs drawn
+   on the staff: clef, note head, accidentals. Renamed as required by the SIL Open
+   Font License (see /fonts/Bravura-OFL.txt). Rebuild with tools/subset-music-font.py. */
+@font-face {
+  font-family: 'ScalesMusic';
+  src: url('/fonts/ScalesMusic.woff') format('woff');
+  font-display: block;
+}
+
 :root {
-  --bg:         #1a1a2e;
-  --bg-card:    #16213e;
-  --bg-input:   #0f3460;
-  --text:       #e0e0e0;
-  --text-muted: #6a7080;
-  --accent:     #e94560;
-  --accent2:    #f5a623;
-  --border:     #2a2a4a;
+  --bg:         #f4f4f8;
+  --bg-card:    #ffffff;
+  --bg-input:   #e4e4f0;
+  --text:       #1a1a2e;
+  --text-muted: #505068;
+  --accent:     #c0002a;
+  --accent2:    #c07000;
+  --border:     #c0c0d8;
   --radius:     10px;
 
   /* Note color hierarchy — used in SVG staffs and note chips */
-  --note-tonic:  #ff3355;
-  --note-chord:  #e94560;
-  --note-scale:  #e07888;
-  --note-muted:  #444464;
+  --note-tonic:  #000000;
+  --note-chord:  #000000;
+  --note-scale:  #000000;
+  --note-muted:  #e8e8f2;
+  --note-shadow: rgba(40,40,80,0.3);
 
   /* Visual profile font scale — JS overrides this per profile */
   --font-scale: 1;
 
   /* Note chip text color — overridden per profile (dark bg → white, light pastel bg → dark) */
-  --chip-text: #fff;
+  --chip-text: #ffffff;
 
   /* Tonic column highlight color in range staff */
-  --tonic-col-bg: rgba(70,160,90,0.20);
+  --tonic-col-bg: rgba(184,24,56,0.22);
 
-  /* Logo variables (default dark values) */
-  --logo-clef:   #b09878;
-  --logo-staff:  #7878a0;
-  --logo-tonic:  #a8b4e0;
-  --logo-chord:  #e0a8b4;
-  --logo-accent: #88a888;
+  /* Logo variables (default light values) */
+  --logo-clef:   #8c7050;
+  --logo-staff:  #a0a0c0;
+  --logo-tonic:  #6c8ebf;
+  --logo-chord:  #c07a8a;
+  --logo-accent: #78a078;
 }
 
 /* Scales all rem-based text sizes when profile changes --font-scale */
@@ -204,6 +214,70 @@ header h1 {
   width: 1px;
   background: var(--border);
   flex-shrink: 0;
+}
+
+/* ─── Range page heading: ‹ previous | current | next › ─── */
+.range-section > .title-row { flex-wrap: wrap; }
+.range-section > .title-row > .type-nav { margin: 0; }
+.scale-heading {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+/* Widths are set inline (widest name of the group) so the links never move */
+.scale-heading > .scale-nav-item,
+.scale-heading > .scale-nav-current {
+  flex: none;
+  white-space: nowrap;
+  margin: 0;
+}
+.scale-heading > .scale-nav-current {
+  padding: 0 0.6rem;
+  text-align: center;
+}
+.scale-nav-item {
+  padding: 0 0.6rem;
+  font-size: 0.87rem;
+  color: var(--text-muted);
+}
+/* Arrows sit at the outer edges, so they stay in place for every scale of the group */
+.scale-nav-prev { text-align: left; }
+.scale-nav-next { text-align: right; }
+.scale-nav-item a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.12s;
+}
+.scale-nav-item a:hover { color: var(--text); }
+.scale-nav-item.disabled { opacity: 0.4; }
+.scale-nav-sep {
+  align-self: stretch;
+  width: 1px;
+  margin: 0.15rem 0;
+  background: var(--border);
+}
+.scale-heading.single > .scale-nav-item,
+.scale-heading.single > .scale-nav-sep { display: none; }
+.scale-heading.single > .scale-nav-current { padding-left: 0; text-align: left; }
+/* Narrow screen where the three sections don't fit: current scale on its own
+   row, previous / next below it (still fixed, so they don't move either) */
+.scale-heading.stacked { flex-wrap: wrap; width: 100%; }
+.scale-heading.stacked > .scale-nav-current { order: -1; flex-basis: 100%; width: auto !important; padding: 0; text-align: left; }
+.scale-heading.stacked > .scale-nav-sep-first { display: none; }
+.scale-heading.stacked > .scale-nav-item { width: auto !important; flex: 1 1 0; }
+.scale-heading.stacked > .scale-nav-prev { padding-left: 0; }
+.scale-heading.stacked > .scale-nav-next { padding-right: 0; }
+
+/* Subtitle under the heading: scale notes and key signature, same color as the heading */
+.range-subtitle {
+  font-size: 0.9rem;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+}
+.range-subtitle-octave {
+  font-size: 0.72em;
+  vertical-align: -0.25em;
+  line-height: 0;
 }
 
 /* ─── Main layout — mobile portrait (default) ─── */
@@ -440,6 +514,25 @@ main {
 
 .range-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 1rem; margin-bottom: 0.6rem; }
 
+/* Full range: scales starting on the clicked note */
+.start-scales {
+  margin-top: 0.8rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.start-scales-title { font-weight: 600; margin-bottom: 0.4rem; }
+.start-scales dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 0.8rem;
+}
+.start-scales dt { color: var(--text-muted); }
+.start-scales dd { margin: 0; }
+.start-scales a { color: var(--accent2); text-decoration: none; }
+.start-scales a:hover { text-decoration: underline; }
+
 .range-dir-label {
   font-size: 0.85rem;
   font-weight: 600;
@@ -459,8 +552,17 @@ main {
   font-weight: 600;
   pointer-events: none;
   z-index: 200;
-  white-space: nowrap;
+  white-space: pre;
+  text-align: left;
+  line-height: 1.45;
   transform: translate(-50%, calc(-100% - 10px));
+}
+.note-tooltip-octave {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 0.72em;
+  vertical-align: -0.25em;
+  line-height: 0;
 }
 
 /* ─── Minor range variants ─── */

@@ -173,6 +173,72 @@ export const SCALE_CATALOG = [
     notes: ['Des','Es','F','G','A','H','Des'] },
 ];
 
+// ── Major from a specific pitch / Dur od tónu ─────────────────────────────
+//
+// One entry per semitone from the lowest alto sax note (B3) up to A4,
+// appended to SCALE_CATALOG below.
+
+// Theoretical major keys (8–10 sharps, with double sharps) offered only as
+// 'major-from' scales — in practice written as As, Es and B major.
+const THEORETICAL_MAJOR = {
+  Gis: { semitone: 8,  keySig: 8,  notes: ['Gis','Ais','His','Cis','Dis','Eis','Fisis','Gis'] },
+  Dis: { semitone: 3,  keySig: 9,  notes: ['Dis','Eis','Fisis','Gis','Ais','His','Cisis','Dis'] },
+  Ais: { semitone: 10, keySig: 10, notes: ['Ais','His','Cisis','Dis','Eis','Fisis','Gisis','Ais'] },
+};
+
+// Start pitches (written name + octave) for 'major-from' scales: every semitone
+// from B3 to A4. Enharmonic pairs are listed sharp-first (Ais/B, H/Ces, Cis/Des,
+// Dis/Es, Fis/Ges, Gis/As); Ais, Dis and Gis major come from THEORETICAL_MAJOR.
+// Ces4 sounds as H3 (octave convention).
+function majorFromStarts() {
+  return [
+    ['Ais', 3], ['B', 3], ['H', 3], ['Ces', 4], ['C', 4], ['Cis', 4], ['Des', 4], ['D', 4],
+    ['Dis', 4], ['Es', 4], ['E', 4], ['F', 4], ['Fis', 4], ['Ges', 4], ['G', 4],
+    ['Gis', 4], ['As', 4], ['A', 4],
+  ];
+}
+
+// Builds 'major-from' entries. Catalog keys copy notes and key data from their
+// base major entry (baseId); theoretical keys have no base entry.
+function buildMajorFromEntries() {
+  return majorFromStarts().map(([root, startOctave]) => {
+    const common = { id: `${root}-major-from`, root, startOctave, type: 'major-from' };
+    const theoretical = THEORETICAL_MAJOR[root];
+    if (theoretical) return { ...common, accidental: 'sharp', ...theoretical };
+
+    const base = SCALE_CATALOG.find((s) => s.id === `${root}-major`);
+    if (!base) throw new Error(`Unknown base scale: ${root}-major`);
+
+    return {
+      ...common,
+      baseId: base.id,
+      semitone: base.semitone,
+      accidental: base.accidental,
+      keySig: base.keySig,
+      notes: base.notes,
+    };
+  });
+}
+
+SCALE_CATALOG.push(...buildMajorFromEntries());
+
+// Pitch number of a written note, accounting for Ces/His crossing the octave
+// boundary (Ces4 sounds as H3, His3 sounds as C4).
+export function notePitchMidi(name, octave) {
+  const semitone = noteNameToSemitone(name);
+  if (name === 'Ces') return (octave - 1) * 12 + 11;
+  if (name === 'His') return (octave + 1) * 12;
+  return octave * 12 + semitone;
+}
+
+// Pitch range { lowMidi, highMidi } of the one octave starting at the scale's
+// start note, or null for scales without a fixed start pitch.
+export function scaleFocusRange(entry) {
+  if (!entry || entry.startOctave === undefined) return null;
+  const lowMidi = notePitchMidi(entry.notes[0], entry.startOctave);
+  return { lowMidi, highMidi: lowMidi + 12 };
+}
+
 // ─── Scale generation ────────────────────────────────────────────────────────
 
 // Assigns octaves and semitone numbers to a raw note-name array.
@@ -211,6 +277,7 @@ export function generateScale(scaleId, startOctave = 4, variant = 'natural') {
 export function scaleStartOctave(scaleId) {
   const entry = SCALE_CATALOG.find((s) => s.id === scaleId);
   if (!entry) return 4;
+  if (entry.startOctave !== undefined) return entry.startOctave;
   const notes4 = assignOctaves(entry.notes, 4);
   const maxSlot = Math.max(...notes4.map((n) => noteToStaffSlot(n.name, n.octave)));
   if (maxSlot < 8) return 4;
@@ -232,14 +299,64 @@ export function getChordNotes(scaleNotes) {
 // filterType: Set of 'major' | 'minor'
 // filterAcc:  Set of 'sharp' | 'flat'
 // 'natural' scales always included when at least one type matches.
+// Sorted by key signature (sharps first); scales with a fixed start pitch
+// ('major-from') are sorted by that pitch instead.
 export function filteredScales(filterType, filterAcc) {
-  return SCALE_CATALOG
-    .filter((s) => {
-      if (!filterType.has(s.type)) return false;
-      if (s.accidental === 'natural') return true;
-      return filterAcc.has(s.accidental);
-    })
-    .sort((a, b) => b.keySig - a.keySig);
+  const visible = SCALE_CATALOG.filter((s) => {
+    if (!filterType.has(s.type)) return false;
+    if (s.accidental === 'natural') return true;
+    return filterAcc.has(s.accidental);
+  });
+  const byKeySig = visible.filter((s) => !scaleFocusRange(s)).sort((a, b) => b.keySig - a.keySig);
+  const byPitch  = visible.filter((s) => scaleFocusRange(s))
+    .sort((a, b) => scaleFocusRange(a).lowMidi - scaleFocusRange(b).lowMidi);
+
+  return [...byKeySig, ...byPitch];
+}
+
+// Scales of the same type starting on the same pitch as entry (enharmonic
+// 'major-from' pairs such as Ais/B), in catalog order — sharp spelling first.
+// Scales without a fixed start pitch return just [entry].
+export function scalePair(entry) {
+  const focus = scaleFocusRange(entry);
+  if (!focus) return [entry];
+
+  return SCALE_CATALOG.filter((s) => s.type === entry.type && scaleFocusRange(s)?.lowMidi === focus.lowMidi);
+}
+
+// Keeps one scale per enharmonic pair: drops a scale whose pair leader
+// (first of scalePair) is also in the list.
+export function dedupePairs(scales) {
+  return scales.filter((s) => {
+    const leader = scalePair(s)[0];
+    return leader === s || !scales.includes(leader);
+  });
+}
+
+// Previous and next scale of the same type as scaleId within an ordered list
+// (e.g. the result of filteredScales). Returns { prev, next }, null at the ends
+// or when the scale is not in the list.
+export function adjacentScales(scales, scaleId) {
+  const entry = scales.find((s) => s.id === scaleId);
+  if (!entry) return { prev: null, next: null };
+  const sameType = scales.filter((s) => s.type === entry.type);
+  const idx = sameType.indexOf(entry);
+
+  return { prev: sameType[idx - 1] ?? null, next: sameType[idx + 1] ?? null };
+}
+
+// Scales starting on the given written note, in catalog order.
+// Scales without a fixed start pitch (dur, moll, whole-tone) match by pitch
+// class, so enharmonic roots are included (Fis dur and Ges dur for Fis or Ges);
+// 'major-from' scales must start on exactly that pitch (octave included).
+export function scalesStartingAt(name, octave) {
+  const semitone = noteNameToSemitone(name);
+  const pitch = notePitchMidi(name, octave);
+
+  return SCALE_CATALOG.filter((s) => {
+    const focus = scaleFocusRange(s);
+    return focus ? focus.lowMidi === pitch : s.semitone === semitone;
+  });
 }
 
 // ─── Alto Saxophone range ────────────────────────────────────────────────────
@@ -280,20 +397,127 @@ export function buildScaleRange(scaleNotes) {
   const lowMidi  = ALTO_SAX_LOW.octave  * 12 + ALTO_SAX_LOW.semitone;
   const highMidi = ALTO_SAX_HIGH.octave * 12 + ALTO_SAX_HIGH.semitone;
 
-  function pitchMidi(name, semitone, oct) {
-    if (name === 'Ces') return (oct - 1) * 12 + 11;
-    if (name === 'His') return (oct + 1) * 12;
-    return oct * 12 + semitone;
-  }
-
   const result = [];
   for (const { name, semitone } of entries) {
     for (let oct = 3; oct <= 6; oct++) {
-      const midi = pitchMidi(name, semitone, oct);
+      const midi = notePitchMidi(name, oct);
       if (midi >= lowMidi && midi <= highMidi) result.push({ name, semitone, octave: oct });
     }
   }
-  return result.sort((a, b) => pitchMidi(a.name, a.semitone, a.octave) - pitchMidi(b.name, b.semitone, b.octave));
+  return result.sort((a, b) => notePitchMidi(a.name, a.octave) - notePitchMidi(b.name, b.octave));
+}
+
+// ─── Enharmonic spellings (tooltip) ──────────────────────────────────────────
+
+// Order of alternative spellings: natural, sharp, flat, double-sharp.
+const SPELLING_ORDER = { null: 0, sharp: 1, flat: 2, 'double-sharp': 3 };
+
+// All note names known to the app that sound at the same pitch as name+octave.
+// The given note comes first, the alternatives follow in SPELLING_ORDER.
+// e.g. ('E', 4) → [E4, Fes4]; ('C', 5) → [C5, His4]; ('G', 4) → [G4, Fisis4]
+export function enharmonicSpellings(name, octave) {
+  const pitch = notePitchMidi(name, octave);
+  const alternatives = [];
+  for (const other of Object.keys(NOTE_SEMITONE)) {
+    if (other === name) continue;
+    for (const oct of [octave - 1, octave, octave + 1]) {
+      if (notePitchMidi(other, oct) === pitch) alternatives.push({ name: other, octave: oct });
+    }
+  }
+  alternatives.sort((a, b) => SPELLING_ORDER[accidentalType(a.name)] - SPELLING_ORDER[accidentalType(b.name)]);
+
+  return [{ name, octave }, ...alternatives];
+}
+
+// Short letter + accidental symbol form of a Czech note name:
+// 'Fis' → 'F♯', 'Es' → 'E♭', 'Fisis' → 'F×', 'C' → 'C'.
+// 'B' is H-flat in Czech notation, so it becomes 'H♭' (letter follows diatonicLetter).
+export function shortNoteName(name) {
+  const acc = accidentalType(name);
+  const symbol = acc === 'double-sharp' ? '×' : acc === 'sharp' ? '♯' : acc === 'flat' ? '♭' : '';
+
+  return diatonicLetter(name) + symbol;
+}
+
+// Splits a tooltip label into parts, marking octave numbers so they can be
+// styled less prominently: 'F♯5 – Fis5' →
+// [{text:'F♯'}, {text:'5', octave:true}, {text:' – Fis'}, {text:'5', octave:true}]
+export function splitOctaveNumbers(label) {
+  return label.split(/(\d+)/)
+    .filter((part) => part !== '')
+    .map((part) => (/^\d+$/.test(part) ? { text: part, octave: true } : { text: part }));
+}
+
+// Parts of the short label drawn under a note on the staff: the letter and the
+// accidental sign, so the sign can be drawn less prominently.
+// 'Fis' → {letter:'F', accidental:'#'}, 'Es' → {'E','♭'}, 'Fisis' → {'F','×'},
+// 'B' → {'B',''} (Czech B is shown as is). lowercase=true for minor scales.
+export function noteLabelParts(name, lowercase = false) {
+  const letter = lowercase ? name[0].toLowerCase() : name[0].toUpperCase();
+  if (name === 'B') return { letter, accidental: '' };
+  const acc = accidentalType(name);
+  const accidental = acc === 'double-sharp' ? '×' : acc === 'sharp' ? '#' : acc === 'flat' ? '♭' : '';
+
+  return { letter, accidental };
+}
+
+// Tooltip lines for a note: one line per enharmonic spelling, "F♯5 – Fis5".
+// Natural notes show only the long name (short form would be identical).
+// lowercase=true is used for minor scales.
+export function noteTooltipLines(name, octave, lowercase = false) {
+  return enharmonicSpellings(name, octave).map((n) => {
+    const longName  = (lowercase ? n.name.toLowerCase() : n.name) + n.octave;
+    if (accidentalType(n.name) === null) return longName;
+    const shortName = (lowercase ? shortNoteName(n.name).toLowerCase() : shortNoteName(n.name)) + n.octave;
+
+    return `${shortName} – ${longName}`;
+  });
+}
+
+// ─── Scale summary labels (range page subtitle, scale select) ───────────────
+
+// Key signature order; sharps 8–10 (theoretical Gis, Dis, Ais major) are double sharps.
+const KEY_SIG_SHARP_ORDER = ['Fis', 'Cis', 'Gis', 'Dis', 'Ais', 'Eis', 'His', 'Fisis', 'Cisis', 'Gisis'];
+const KEY_SIG_FLAT_ORDER  = ['B', 'Es', 'As', 'Des', 'Ges', 'Ces', 'Fes'];
+
+const shortNames = (names) => names.map(shortNoteName).join(' ');
+
+// "2 ♯ : F♯ C♯" / "3 ♭ : H♭ E♭ A♭"; '' for no key signature.
+export function keySignatureLabel(keySig) {
+  if (keySig === 0) return '';
+  if (keySig > 0) return `${keySig} ♯ : ${shortNames(KEY_SIG_SHARP_ORDER.slice(0, keySig))}`;
+  const n = Math.abs(keySig);
+
+  return `${n} ♭ : ${shortNames(KEY_SIG_FLAT_ORDER.slice(0, n))}`;
+}
+
+// Count and list of sharps and flats of a scale. Keyed scales (dur/moll) use
+// their key signature; scales without one (whole-tone) list the accidentals of
+// their own notes in scale order. '' when the scale has none.
+export function scaleAccidentalsLabel(entry) {
+  if (entry.keySig !== 0) return keySignatureLabel(entry.keySig);
+  const unique = [...new Set(entry.notes)];
+  const sharps = unique.filter((n) => ['sharp', 'double-sharp'].includes(accidentalType(n)));
+  const flats  = unique.filter((n) => accidentalType(n) === 'flat');
+  const groups = [];
+  if (sharps.length) groups.push(`${sharps.length} ♯ : ${shortNames(sharps)}`);
+  if (flats.length)  groups.push(`${flats.length} ♭ : ${shortNames(flats)}`);
+
+  return groups.join('; ');
+}
+
+// Short scale name: 'F♯ dur', 'H♭ dur', 'f♯ moll', 'C celotónová'.
+// typeLabel is the Czech type word ('dur', 'moll', ...); minor roots stay lowercase.
+export function shortScaleName(entry, typeLabel) {
+  const root = shortNoteName(entry.root[0].toUpperCase() + entry.root.slice(1));
+
+  return `${entry.type === 'minor' ? root.toLowerCase() : root} ${typeLabel}`;
+}
+
+// Short note names without octaves, separated by a middle dot:
+// "H♭ · C · D · E♭ · F · G · A · H♭" (lowercase for minor).
+export function scaleNotesText(notes, lowercase = false) {
+  return notes.map((n) => (lowercase ? shortNoteName(n.name).toLowerCase() : shortNoteName(n.name))).join(' · ');
 }
 
 // ─── Staff slot calculation ──────────────────────────────────────────────────
