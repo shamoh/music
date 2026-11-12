@@ -17,7 +17,7 @@ import {
   shortScaleName,
 } from '/js/music.js';
 import { renderRangeStaff, whenMusicFontReady } from '/js/notation.js';
-import { applyProfile, savedProfileId, initProfileSelect } from '/js/themes.js';
+import { applyProfile, savedProfileId, initProfileSelect, initSectionTintSelect } from '/js/themes.js';
 import { DEFAULT_SCALE_ID, APP_VERSION, BUILD_DATE } from '/js/defaults.js';
 import { initAnalytics, trackScaleView } from '/js/analytics.js';
 
@@ -315,7 +315,7 @@ function setTooltipContent(el, label) {
   while (el.firstChild) el.removeChild(el.firstChild);
   for (const { text, octave } of splitOctaveNumbers(label)) {
     el.appendChild(octave
-      ? Object.assign(document.createElement('span'), { className: 'note-tooltip-octave', textContent: text })
+      ? Object.assign(document.createElement('span'), { className: 'note-octave', textContent: text })
       : document.createTextNode(text));
   }
 }
@@ -377,10 +377,14 @@ function renderStartScales() {
   panel.hidden = !note;
   if (!note) return;
 
-  panel.appendChild(Object.assign(document.createElement('p'), {
+  // "Stupnice od tónu C♯4" — written like the tooltip: full-size accidental,
+  // smaller muted octave number
+  const title = Object.assign(document.createElement('p'), {
     className: 'start-scales-title',
-    textContent: `Stupnice od tónu ${note.name}${note.octave}`,
-  }));
+    textContent: `Stupnice od tónu ${shortNoteName(note.name)}`,
+  });
+  title.appendChild(Object.assign(document.createElement('span'), { className: 'note-octave', textContent: String(note.octave) }));
+  panel.appendChild(title);
   const scales = dedupePairs(scalesStartingAt(note.name, note.octave));
   const list = document.createElement('dl');
   for (const [type, label] of START_SCALE_GROUPS) {
@@ -389,7 +393,7 @@ function renderStartScales() {
     list.appendChild(Object.assign(document.createElement('dt'), { textContent: label }));
     const dd = document.createElement('dd');
     ofType.forEach((s, i) => {
-      if (i > 0) dd.appendChild(document.createTextNode(' · '));
+      if (i > 0) dd.appendChild(Object.assign(document.createElement('span'), { className: 'start-scales-sep', textContent: '•' }));
       dd.appendChild(Object.assign(document.createElement('a'), { href: makeHash(s, 'natural'), textContent: pairName(s) }));
     });
     list.appendChild(dd);
@@ -458,10 +462,11 @@ function renderFullRange() {
   $('nav-scales-link').href = '/scales/';
   updateScaleHeading(null);
   updateTypeNav(null);
-  // Same pitches twice, like an enharmonic pair: sharp names first, then flat names
+  // Same pitches twice, like an enharmonic pair: sharp names first, then flat names.
+  // The twin block must be visible before drawing — a hidden staff has no width.
+  $('twin-block').hidden = false;
   renderFullRangeStaff($('range-staff'), $('range-subtitle'), 'Křížky', buildAltSaxRange(false));
   renderFullRangeStaff($('range-staff-twin'), $('twin-subtitle'), 'Béčka', buildAltSaxRange(true));
-  $('twin-block').hidden = false;
   $('asc-label').hidden = true;
   $('desc-block').hidden = true;
   $('range-hint').textContent = FULL_RANGE_HINT;
@@ -537,6 +542,7 @@ document.addEventListener('DOMContentLoaded', () => {
   applyHashToState();
   initFilterChips();
   initProfileSelect($('profile-select'));
+  initSectionTintSelect($('section-tint-select'));
   repopulateSelect();
   registerSW();
   initTooltip();

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scales-1.0.50';
+const CACHE_NAME = 'scales-1.0.51';
 const ASSETS = [
   '/',
   '/index.html',

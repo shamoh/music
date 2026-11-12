@@ -1,6 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="80" fill="#1a1a2e"/>
-  <ellipse cx="245" cy="345" rx="78" ry="54"
-           transform="rotate(-22 245 345)" fill="white"/>
-  <rect x="312" y="100" width="28" height="254" rx="14" fill="white"/>
+  <!-- App icon: the header logo (docs/*.html, svg.logo) on a light tile.
+       The logo fits the maskable safe zone (circle of 80 % diameter). -->
+  <rect width="512" height="512" rx="96" fill="#f4f4f8"/>
+  <g transform="translate(58.2 149.5) scale(4.6)">
+    <g stroke="#8a8aa0" stroke-width="1" fill="none" opacity="0.5">
+      <path d="M 6 14 Q 45 9, 80 14"/>
+      <path d="M 6 19 Q 45 14, 80 19"/>
+      <path d="M 6 24 Q 45 19, 80 24"/>
+      <path d="M 6 29 Q 45 24, 80 29"/>
+      <path d="M 6 34 Q 45 29, 80 34"/>
+    </g>
+    <path d="M 16.05 43.5 L 19.95 4 C 19.95 1, 23.85 0, 25.8 3 C 27.75 6, 26.45 11, 18.65 17 C 10.85 23, 7.6 29.5, 11.5 34.5 C 15.4 39.5, 24.5 39.5, 27.75 33.5 C 30.35 28, 23.85 22.5, 18.65 26.5 C 16.05 28.5, 16.7 31.5, 20.6 31" stroke="#3d2e1e" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="16.05" cy="43.5" r="2.8" fill="#3d2e1e"/>
+    <ellipse cx="38" cy="30" rx="5.6" ry="3.8" transform="rotate(-20 38 30)" fill="#8a1530"/>
+    <line x1="43.2" y1="30" x2="43.2" y2="13" stroke="#8a1530" stroke-width="2.2" stroke-linecap="round"/>
+    <ellipse cx="53" cy="24" rx="5.6" ry="3.8" transform="rotate(-20 53 24)" fill="#1a1a2e"/>
+    <line x1="58.2" y1="24" x2="58.2" y2="7" stroke="#1a1a2e" stroke-width="2.2" stroke-linecap="round"/>
+    <polygon points="43.2,13 58.2,7 58.2,11 43.2,17" fill="#1a1a2e"/>
+    <ellipse cx="68" cy="18" rx="5.6" ry="3.8" transform="rotate(-20 68 18)" fill="#2f4a36"/>
+    <line x1="62.8" y1="18" x2="62.8" y2="35" stroke="#2f4a36" stroke-width="2.2" stroke-linecap="round"/>
+  </g>
 </svg>

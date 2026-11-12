@@ -32,6 +32,7 @@ import {
   ALTO_SAX_HIGH,
 } from '../docs/js/music.js';
 import { whenMusicFontReady, SMUFL } from '../docs/js/notation.js';
+import { sectionTintVars, SECTION_TINTS, DEFAULT_SECTION_TINT_ID } from '../docs/js/themes.js';
 import { readFileSync } from 'node:fs';
 import { VISUAL_PROFILES, autoProfileId, resolveProfileId, migrateProfileChoice, AUTO_PROFILE_ID } from '../docs/js/themes.js';
 
@@ -839,13 +840,13 @@ describe('splitOctaveNumbers', () => {
 });
 
 describe('noteLabelParts', () => {
-  it('sharp',          () => assert.deepEqual(noteLabelParts('Fis'), { letter: 'F', accidental: '#' }));
+  it('sharp',          () => assert.deepEqual(noteLabelParts('Fis'), { letter: 'F', accidental: '♯' }));
   it('flat',           () => assert.deepEqual(noteLabelParts('Es'), { letter: 'E', accidental: '♭' }));
   it('double-sharp',   () => assert.deepEqual(noteLabelParts('Fisis'), { letter: 'F', accidental: '×' }));
   it('natural',        () => assert.deepEqual(noteLabelParts('C'), { letter: 'C', accidental: '' }));
   it('Czech B as is',  () => assert.deepEqual(noteLabelParts('B'), { letter: 'B', accidental: '' }));
   it('lowercase minor', () => {
-    assert.deepEqual(noteLabelParts('Gis', true), { letter: 'g', accidental: '#' });
+    assert.deepEqual(noteLabelParts('Gis', true), { letter: 'g', accidental: '♯' });
     assert.deepEqual(noteLabelParts('B', true), { letter: 'b', accidental: '' });
   });
 });
@@ -1010,5 +1011,27 @@ describe('shortScaleName', () => {
   });
   it('works for theoretical keys (Gis dur)', () => {
     assert.equal(shortScaleName(catalogEntry('Gis-major-from'), 'dur'), 'G♯ dur');
+  });
+});
+
+describe('sectionTintVars', () => {
+  it('keeps the original colors for the default (normal) level', () => {
+    const vars = sectionTintVars('normal');
+    assert.equal(vars['--section-bg-1'], 'rgba(80,110,220,0.1)');
+    assert.equal(vars['--section-chord-bg-4'], 'rgba(215,105,90,0.24)');
+  });
+  it('defines all 8 variables for every level', () => {
+    for (const t of SECTION_TINTS) assert.equal(Object.keys(sectionTintVars(t.id)).length, 8);
+  });
+  it('orders levels from strongest to none', () => {
+    const alphas = SECTION_TINTS.map((t) => t.alpha);
+    assert.deepEqual([...alphas].sort((a, b) => b - a), alphas);
+    assert.ok(SECTION_TINTS.every((t) => t.chordAlpha >= t.alpha));
+  });
+  it('makes every band transparent for none', () => {
+    assert.ok(Object.values(sectionTintVars('none')).every((v) => v === 'transparent'));
+  });
+  it('falls back to the default level for an unknown id', () => {
+    assert.deepEqual(sectionTintVars('bogus'), sectionTintVars(DEFAULT_SECTION_TINT_ID));
   });
 });

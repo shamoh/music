@@ -1,9 +1,14 @@
 import { noteToStaffSlot, accidentalType, computeInlineAccidentals, enharmonicEquivalent, notePitchMidi, noteTooltipLines, noteLabelParts } from './music.js';
 
 // Accidental sign in the note label is drawn smaller, raised and not bold —
-// the letter is what matters ("F" + small raised "#").
+// the letter is what matters ("F" + small raised "♯").
 const LABEL_ACC_FONT_SCALE = 0.7;
 const LABEL_ACC_RAISE_EM   = 0.45;
+
+// Label chip (pill) around the note name, in staff spaces relative to the text
+// baseline: the top leaves room above the raised accidental.
+const LABEL_PILL_TOP_LS    = 1.8;
+const LABEL_PILL_BOTTOM_LS = 0.65;
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -214,12 +219,11 @@ function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor'
   if (showLabel) {
     const ly = labelY !== null ? labelY : staffTop + ls * 4 + ls * 2.8;
     if (labelBg) {
-      const pillH = ls * 2.0;
       svg.appendChild(svgEl('rect', {
         x: x - pillW / 2,
-        y: ly - pillH * 0.78,
+        y: ly - ls * LABEL_PILL_TOP_LS,
         width: pillW,
-        height: pillH,
+        height: ls * (LABEL_PILL_TOP_LS + LABEL_PILL_BOTTOM_LS),
         rx: Math.round(ls * 0.4),
         fill: labelBg,
       }));

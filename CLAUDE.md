@@ -64,9 +64,9 @@ Three values must always be updated together:
 
 | File | Key | Current |
 | --- | --- | --- |
-| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.50'` |
-| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-11-12 01:38'` |
-| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.50'` |
+| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.51'` |
+| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-11-12 08:19'` |
+| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.51'` |
 
 `APP_VERSION` and `BUILD_DATE` drive the footer display (`Scales vX.Y.Z · YYYY-MM-DD HH:MM`).
 `CACHE_NAME` forces the browser to drop the old PWA cache and re-fetch all assets.
@@ -76,13 +76,14 @@ Three values must always be updated together:
 
 - **Every change** → always update `BUILD_DATE` to the current date and time (`YYYY-MM-DD HH:MM`). Run `date` via Bash — never estimate.
 - **`APP_VERSION` increments ONCE per conversation** — bump the patch digit on the **first change of a new conversation** (`1.0.41` → `1.0.42`). Keep that version for all further changes within the same conversation. Each digit is an independent integer — no carries (`1.0.9` → `1.0.10`, never `1.1.0`). To determine the right next version: check `git show HEAD:docs/js/defaults.js` for the last committed version, then look at the current `APP_VERSION` — the next version is `current + 1`.
+- **A pushed version is final** — once the current `APP_VERSION` has been pushed (published), the next change gets a new patch version, even within the same conversation or on the same day. Every published build must have a unique version, so it is visible on a device that the new one was downloaded. Check with `git show origin/main:docs/js/defaults.js`: if it has the current `APP_VERSION`, bump it. Never change the history entry of a pushed version — start a new entry instead.
 - **`CACHE_NAME` always matches `APP_VERSION`** — update together when `APP_VERSION` changes.
 - **Explicit request only** — when the user writes "zvedni verzi" → bump the minor digit and reset patch (`1.0.x` → `1.1.0`).
 
 ### history.html — one entry per conversation
 
 - Maintain a **single entry** for the current `APP_VERSION` at the top of the `<section>`.
-- As changes accumulate within a conversation, **update (merge) that entry** — do not add new entries for each incremental change.
+- As changes accumulate within a conversation, **update (merge) that entry** — do not add new entries for each incremental change. Exception: a pushed version's entry is final (see *A pushed version is final*).
 - The entry should reflect what changed **from the user's perspective**. Changes that were made and then reverted within the same conversation leave no trace.
 - If all changes are **purely technical** (refactor, cleanup, internal fix invisible to users) → skip the history entry entirely.
 

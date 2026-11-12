@@ -450,13 +450,13 @@ export function splitOctaveNumbers(label) {
 
 // Parts of the short label drawn under a note on the staff: the letter and the
 // accidental sign, so the sign can be drawn less prominently.
-// 'Fis' → {letter:'F', accidental:'#'}, 'Es' → {'E','♭'}, 'Fisis' → {'F','×'},
+// 'Fis' → {letter:'F', accidental:'♯'}, 'Es' → {'E','♭'}, 'Fisis' → {'F','×'},
 // 'B' → {'B',''} (Czech B is shown as is). lowercase=true for minor scales.
 export function noteLabelParts(name, lowercase = false) {
   const letter = lowercase ? name[0].toLowerCase() : name[0].toUpperCase();
   if (name === 'B') return { letter, accidental: '' };
   const acc = accidentalType(name);
-  const accidental = acc === 'double-sharp' ? '×' : acc === 'sharp' ? '#' : acc === 'flat' ? '♭' : '';
+  const accidental = acc === 'double-sharp' ? '×' : acc === 'sharp' ? '♯' : acc === 'flat' ? '♭' : '';
 
   return { letter, accidental };
 }

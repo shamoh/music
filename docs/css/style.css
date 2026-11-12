@@ -35,11 +35,11 @@
   --tonic-col-bg: rgba(184,24,56,0.22);
 
   /* Logo variables (default light values) */
-  --logo-clef:   #8c7050;
-  --logo-staff:  #a0a0c0;
-  --logo-tonic:  #6c8ebf;
-  --logo-chord:  #c07a8a;
-  --logo-accent: #78a078;
+  --logo-clef:   #3d2e1e;
+  --logo-staff:  #8a8aa0;
+  --logo-tonic:  #8a1530;
+  --logo-chord:  #1a1a2e;
+  --logo-accent: #2f4a36;
 }
 
 /* Scales all rem-based text sizes when profile changes --font-scale */
@@ -274,6 +274,12 @@ header h1 {
   color: var(--text);
   margin-bottom: 0.4rem;
 }
+/* Heading row and the first subtitle are separated like two stacked staves */
+.title-row + .range-subtitle {
+  border-top: 1px solid var(--border);
+  padding-top: 0.7rem;
+  margin-top: 0.6rem;
+}
 .range-subtitle-octave {
   font-size: 0.72em;
   vertical-align: -0.25em;
@@ -391,6 +397,67 @@ main {
   max-width: 9rem;
   flex-shrink: 0;
 }
+/* ─── Header settings menu (gear) ─── */
+.settings {
+  position: relative;
+  flex-shrink: 0;
+}
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.settings-toggle svg { width: 1.25rem; height: 1.25rem; }
+.settings-toggle:hover,
+.settings-toggle[aria-expanded="true"] {
+  background: var(--bg-input);
+  color: var(--text);
+}
+.settings-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.settings-panel {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 12rem;
+  padding: 0.7rem 0.8rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(26, 26, 46, 0.15);
+}
+.settings-panel[hidden] { display: none; }
+.settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.settings-row .profile-select { max-width: none; width: 100%; }
+.settings-link {
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--accent2);
+  text-decoration: none;
+}
+.settings-link:hover { text-decoration: underline; }
 .profile-select:focus {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -530,7 +597,16 @@ main {
 }
 .start-scales dt { color: var(--text-muted); }
 .start-scales dd { margin: 0; }
-.start-scales a { color: var(--accent2); text-decoration: none; }
+.start-scales a { color: var(--accent2); font-weight: 700; text-decoration: none; }
+/* Separator between two scales on a row: bigger dot with more space around */
+.start-scales-sep {
+  display: inline-block;
+  margin: 0 0.7em;
+  color: var(--text-muted);
+  font-size: 1.6em;
+  line-height: 0;
+  vertical-align: -0.1em;
+}
 .start-scales a:hover { text-decoration: underline; }
 
 .range-dir-label {
@@ -557,7 +633,9 @@ main {
   line-height: 1.45;
   transform: translate(-50%, calc(-100% - 10px));
 }
-.note-tooltip-octave {
+/* Octave number after a note name ("C♯4"): smaller, lowered and muted.
+   Shared by the note tooltip and the start-scales panel title. */
+.note-octave {
   color: var(--text-muted);
   font-weight: 400;
   font-size: 0.72em;

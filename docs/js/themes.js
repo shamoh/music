@@ -30,23 +30,15 @@ export const VISUAL_PROFILES = [
       '--note-muted-label':     '#b4b4c8',
       '--note-muted-label-bg':  'transparent',
       '--note-shadow':          'rgba(40,40,80,0.3)',
-      '--section-bg-1':       'rgba(80,110,220,0.10)',
-      '--section-bg-2':       'rgba(210,155,55,0.10)',
-      '--section-bg-3':       'rgba(60,180,185,0.10)',
-      '--section-bg-4':       'rgba(215,105,90,0.10)',
-      '--section-chord-bg-1': 'rgba(80,110,220,0.24)',
-      '--section-chord-bg-2': 'rgba(210,155,55,0.24)',
-      '--section-chord-bg-3': 'rgba(60,180,185,0.24)',
-      '--section-chord-bg-4': 'rgba(215,105,90,0.24)',
       '--font-scale': '1',
       '--note-col-width': '28',
       '--chip-text': '#ffffff',
       '--tonic-col-bg': 'rgba(184,24,56,0.22)',
-      '--logo-clef':   '#8c7050',
-      '--logo-staff':  '#a0a0c0',
-      '--logo-tonic':  '#6c8ebf',
-      '--logo-chord':  '#c07a8a',
-      '--logo-accent': '#78a078',
+      '--logo-clef':   '#3d2e1e',
+      '--logo-staff':  '#8a8aa0',
+      '--logo-tonic':  '#8a1530',
+      '--logo-chord':  '#1a1a2e',
+      '--logo-accent': '#2f4a36',
     },
   },
   {
@@ -78,23 +70,15 @@ export const VISUAL_PROFILES = [
       '--note-muted-label':     '#b4b4c8',
       '--note-muted-label-bg':  'transparent',
       '--note-shadow':          'rgba(40,40,80,0.3)',
-      '--section-bg-1':       'rgba(80,110,220,0.10)',
-      '--section-bg-2':       'rgba(210,155,55,0.10)',
-      '--section-bg-3':       'rgba(60,180,185,0.10)',
-      '--section-bg-4':       'rgba(215,105,90,0.10)',
-      '--section-chord-bg-1': 'rgba(80,110,220,0.24)',
-      '--section-chord-bg-2': 'rgba(210,155,55,0.24)',
-      '--section-chord-bg-3': 'rgba(60,180,185,0.24)',
-      '--section-chord-bg-4': 'rgba(215,105,90,0.24)',
       '--font-scale': '1.1',
       '--note-col-width': '36',
       '--chip-text': '#ffffff',
       '--tonic-col-bg': 'rgba(184,24,56,0.22)',
-      '--logo-clef':   '#8c7050',
-      '--logo-staff':  '#a0a0c0',
-      '--logo-tonic':  '#6c8ebf',
-      '--logo-chord':  '#c07a8a',
-      '--logo-accent': '#78a078',
+      '--logo-clef':   '#3d2e1e',
+      '--logo-staff':  '#8a8aa0',
+      '--logo-tonic':  '#8a1530',
+      '--logo-chord':  '#1a1a2e',
+      '--logo-accent': '#2f4a36',
     },
   },
 ];
@@ -170,6 +154,7 @@ export function applyProfile(id) {
 // Fills the profile <select> ('Automaticky' + profiles), selects the saved choice
 // and applies + remembers the choice on change. onChange runs after applying.
 export function initProfileSelect(sel, onChange = () => {}) {
+  initSettingsMenu();
   if (!sel) return;
   const options = [{ id: AUTO_PROFILE_ID, name: AUTO_PROFILE_NAME }, ...VISUAL_PROFILES];
   const current = savedProfileChoice();
@@ -184,5 +169,95 @@ export function initProfileSelect(sel, onChange = () => {}) {
     try { localStorage.setItem(CHOICE_KEY, e.target.value); } catch (_) {}
     applyProfile(e.target.value);
     onChange();
+  });
+}
+
+// ─── Section tint (background bands of the saxophone range sections) ─────────
+//
+// The range staff colors each note column by the instrument section it belongs
+// to (low / middle / high / altissimo). The tint level is chosen independently
+// of the visual profile; 'none' leaves the staff clean.
+
+const SECTION_COLORS = ['80,110,220', '210,155,55', '60,180,185', '215,105,90'];
+
+// alpha of the plain band and of a band under a chord note
+export const SECTION_TINTS = [
+  { id: 'strong', name: 'Výrazné', alpha: 0.20, chordAlpha: 0.42 },
+  { id: 'normal', name: 'Střední', alpha: 0.10, chordAlpha: 0.24 },
+  { id: 'subtle', name: 'Jemné', alpha: 0.05, chordAlpha: 0.13 },
+  { id: 'none',   name: 'Žádné', alpha: 0,    chordAlpha: 0 },
+];
+export const DEFAULT_SECTION_TINT_ID = 'normal';
+const SECTION_TINT_KEY = 'scales-section-tint';
+
+// CSS variables --section-bg-N / --section-chord-bg-N for a tint level
+// (unknown ids fall back to the default level).
+export function sectionTintVars(id) {
+  const tint = SECTION_TINTS.find((t) => t.id === id)
+    ?? SECTION_TINTS.find((t) => t.id === DEFAULT_SECTION_TINT_ID);
+  const vars = {};
+  SECTION_COLORS.forEach((rgb, i) => {
+    vars[`--section-bg-${i + 1}`]       = tint.alpha      ? `rgba(${rgb},${tint.alpha})`      : 'transparent';
+    vars[`--section-chord-bg-${i + 1}`] = tint.chordAlpha ? `rgba(${rgb},${tint.chordAlpha})` : 'transparent';
+  });
+
+  return vars;
+}
+
+export function savedSectionTintId() {
+  try {
+    const stored = localStorage.getItem(SECTION_TINT_KEY);
+    return SECTION_TINTS.some((t) => t.id === stored) ? stored : DEFAULT_SECTION_TINT_ID;
+  } catch (_) {
+    return DEFAULT_SECTION_TINT_ID;
+  }
+}
+
+export function applySectionTint(id) {
+  const root = document.documentElement;
+  for (const [k, v] of Object.entries(sectionTintVars(id))) root.style.setProperty(k, v);
+}
+
+// Fills the tint <select>, applies the saved level and applies + remembers a
+// new one on change. onChange runs after applying (e.g. to redraw the staff).
+export function initSectionTintSelect(sel, onChange = () => {}) {
+  applySectionTint(savedSectionTintId());
+  if (!sel) return;
+  const current = savedSectionTintId();
+  for (const t of SECTION_TINTS) {
+    const opt = Object.assign(document.createElement('option'), { value: t.id, textContent: t.name });
+    if (t.id === current) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  sel.addEventListener('change', (e) => {
+    try { localStorage.setItem(SECTION_TINT_KEY, e.target.value); } catch (_) {}
+    applySectionTint(e.target.value);
+    onChange();
+  });
+}
+
+// ─── Settings menu (gear button in the header) ───────────────────────────────
+
+// Opens / closes the header settings panel (#settings-toggle / #settings-panel).
+// Closes on a click outside the menu and on Escape. Safe to call more than once.
+export function initSettingsMenu() {
+  const toggle = document.getElementById('settings-toggle');
+  const panel  = document.getElementById('settings-panel');
+  if (!toggle || !panel || toggle.dataset.ready) return;
+  toggle.dataset.ready = '1';
+
+  const setOpen = (open) => {
+    panel.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+  };
+  toggle.addEventListener('click', () => setOpen(panel.hidden));
+  document.addEventListener('click', (e) => {
+    if (!panel.hidden && !e.target.closest('.settings')) setOpen(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !panel.hidden) {
+      setOpen(false);
+      toggle.focus();
+    }
   });
 }

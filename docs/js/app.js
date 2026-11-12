@@ -32,11 +32,11 @@ function saveLastScaleId(id) {
 const SHARP_NAMES = ['fis', 'cis', 'gis', 'dis', 'ais', 'eis', 'his'];
 const FLAT_NAMES  = ['be',  'es',  'as',  'des', 'ges', 'ces', 'fes'];
 
-// Main scale title label: "(2# fis, cis)" or "(3♭ be, es, as)"
+// Main scale title label: "(2♯ fis, cis)" or "(3♭ be, es, as)"
 function keySigLabel(keySig) {
   if (keySig === 0) return '';
   if (keySig > 0) {
-    return ` (${keySig}# : ${SHARP_NAMES.slice(0, keySig).join(', ')})`;
+    return ` (${keySig}♯ : ${SHARP_NAMES.slice(0, keySig).join(', ')})`;
   }
   const n = Math.abs(keySig);
   return ` (${n}♭ : ${FLAT_NAMES.slice(0, n).join(', ')})`;
@@ -53,7 +53,7 @@ function noteChipLabel(name) {
   return enh ? `${name} (=${enh})` : name;
 }
 
-// Compute label like "(2♭ es, as)" or "(1♭ be, 1# cis)" from actual variant notes
+// Compute label like "(2♭ es, as)" or "(1♭ be, 1♯ cis)" from actual variant notes
 function scaleAccidentalLabel(notes) {
   const flatNames = [], sharpNames = [];
   const seen = new Set();
@@ -67,7 +67,7 @@ function scaleAccidentalLabel(notes) {
   }
   const parts = [];
   if (flatNames.length > 0)  parts.push(`${flatNames.length}♭ : ${flatNames.join(', ')}`);
-  if (sharpNames.length > 0) parts.push(`${sharpNames.length}# : ${sharpNames.join(', ')}`);
+  if (sharpNames.length > 0) parts.push(`${sharpNames.length}♯ : ${sharpNames.join(', ')}`);
   return parts.length > 0 ? ` (${parts.join(', ')})` : '';
 }
 
