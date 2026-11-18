@@ -94,6 +94,13 @@ slot  nota
 - Cvičení pro danou stupnici
 - Akordy (triády, septakordy) pro každý stupeň stupnice
 - Moll stupnice od každého půltónu (obdoba „Dur od tónu“ — typ `major-from`, start B3 … A4)
+- Hmaty alt saxofonu — prototyp v `prototypes/fingering/` (schéma klapek + všechny hmaty včetně alternativ)
+  - Obecné moduly (renderer, helpery, stránka) v `prototypes/fingering/`, data nástrojů v `prototypes/fingering/instrument/<rodina>/<nástroj>/`; co je společné celé rodině (u saxofonů mapa klapek a hmaty psaných tónů), leží o úroveň výš v `instrument/<rodina>/` — např. `saxophone/keys.js`, `saxophone/fingerings.js`, `saxophone/alto/instrument.js`
+  - Interaktivní schéma klapek zůstane i ve výsledné aplikaci: klepnutím vybrat klapku (klapky) → vypíše se, ve kterých tónech a ve kterých variantách hmatu se používá
+  - Základní a alternativní hmaty: každý tón má jeden základní hmat (ten, který hráč běžně trénuje), ostatní varianty jsou alternativy
+    - V datech: základní je první varianta v seznamu
+    - Hmaty stupnice: výchozí zobrazení jen základních hmatů, alternativy na vyžádání — pod nebo vedle základního hmatu podle typu zobrazení
+    - Do budoucna osobní volba: hráč si u tónu zvolí, který hmat je pro něj základní, a postupně si „odemyká“ alternativy, které už umí
 
 ## Průběh implementace
 
