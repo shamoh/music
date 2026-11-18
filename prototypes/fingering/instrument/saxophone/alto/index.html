@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prototype — alto sax fingerings</title>
+  <link rel="stylesheet" href="../../../fingering.css">
+</head>
+<body>
+  <h1>Prototyp: hmaty alt saxofonu</h1>
+  <p class="hint">Schéma z pohledu hráče. Černě = stisknutá klapka. Psaná výška tónů.</p>
+
+  <h2>1. Klapky</h2>
+  <p class="hint">Klepnutím na klapku (nebo na řádek legendy) ji přepneš — dá se tak „naklikat“ libovolný hmat.</p>
+  <div class="keymap">
+    <div id="keymap-diagram"></div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <h2>2. Všechny hmaty</h2>
+  <p class="hint">U každého tónu je první základní hmat, za ním alternativy.
+    Štítek <span class="verify">ověřit</span> = hmat, který je potřeba zkontrolovat.</p>
+  <label class="toggle"><input type="checkbox" id="show-alternatives" checked> Zobrazit i alternativní hmaty</label>
+  <div class="notes" id="notes"></div>
+
+  <script type="module">
+    import { SAXOPHONE_ALTO } from './instrument.js';
+    import { mountKeymap, renderFingeringGrid } from '../../../fingering-page.js';
+
+    mountKeymap(SAXOPHONE_ALTO, document.getElementById('keymap-diagram'), document.getElementById('legend'));
+    const notesEl = document.getElementById('notes');
+    const showAlternatives = document.getElementById('show-alternatives');
+    const renderNotes = () => renderFingeringGrid(SAXOPHONE_ALTO, notesEl, { basicOnly: !showAlternatives.checked });
+    showAlternatives.addEventListener('change', renderNotes);
+    renderNotes();
+  </script>
+</body>
+</html>
