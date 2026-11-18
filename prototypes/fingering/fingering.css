@@ -1,0 +1,29 @@
+:root { --fg: #111; --muted: #666; --line: #ddd; --card: #fafafa; --accent: #e0457b; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 16px; font: 15px/1.4 system-ui, sans-serif; color: var(--fg); background: #fff; }
+h1 { font-size: 20px; margin: 0 0 4px; }
+h2 { font-size: 17px; margin: 32px 0 12px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+.hint { color: var(--muted); margin: 0 0 12px; }
+
+.keymap { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.keymap .key-diagram .key { cursor: pointer; }
+.legend { min-width: 240px; flex: 1; }
+.legend h3 { font-size: 14px; margin: 12px 0 4px; }
+.legend ul { list-style: none; margin: 0; padding: 0; }
+.legend li { padding: 1px 0; cursor: pointer; }
+.legend li.on { font-weight: 700; color: var(--accent); }
+.legend code { color: var(--muted); font-size: 12px; }
+.pressed-list { margin-top: 12px; font-family: ui-monospace, monospace; font-size: 13px; color: var(--muted); }
+
+.toggle { display: inline-flex; gap: 6px; align-items: center; margin: 0 0 12px; cursor: pointer; }
+.notes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.note-card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+.note-card.multi { grid-column: span 2; }
+.note-title { font-weight: 700; margin-bottom: 6px; }
+.note-title .alt { font-weight: 400; color: var(--muted); }
+.variants { display: flex; gap: 8px; flex-wrap: wrap; }
+.variant { text-align: center; font-size: 12px; }
+.variant .name { margin-top: 2px; }
+.verify { display: inline-block; margin-top: 2px; padding: 0 5px; border-radius: 4px;
+          background: #fde7ef; color: var(--accent); font-size: 11px; font-weight: 600; }
+@media (max-width: 400px) { .note-card.multi { grid-column: span 1; } }
