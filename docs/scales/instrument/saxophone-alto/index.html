@@ -3,139 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#f4f4f8" />
-  <meta name="description" content="Rozsah Alt Saxofonu — Scales" />
   <title>Scales — Rozsah Alt Saxofonu</title>
-  <link rel="manifest" href="/manifest.json" />
-  <link rel="apple-touch-icon" href="/icons/icon.svg" />
-  <link rel="stylesheet" href="/css/style.css" />
+  <!-- The saxophone range page moved to /scales/instrument/saxophone/alto/. This page keeps
+       old links, bookmarks and installed apps working: it forwards to the new address and
+       keeps the scale in the hash (#a-moll?type=harmonic). -->
+  <link rel="canonical" href="/scales/instrument/saxophone/alto/" />
   <script>
-    try {
-      const vars = JSON.parse(localStorage.getItem('scales-profile-vars') || 'null');
-      if (vars) {
-        const r = document.documentElement;
-        for (const [k, v] of Object.entries(vars)) r.style.setProperty(k, v);
-      }
-    } catch (_) {}
+    location.replace('/scales/instrument/saxophone/alto/' + location.search + location.hash);
   </script>
+  <!-- Without JavaScript the hash is lost, but the page still opens -->
+  <noscript><meta http-equiv="refresh" content="0; url=/scales/instrument/saxophone/alto/" /></noscript>
 </head>
 <body>
-  <header>
-    <h1>
-      <a href="/" class="bc-logo">
-        <svg class="logo" viewBox="0 0 85 50" aria-hidden="true">
-          <!-- Staff Lines -->
-          <path d="M 6 14 Q 45 9, 80 14" stroke="var(--logo-staff, #8a8aa0)" stroke-width="1" fill="none" opacity="0.5" />
-          <path d="M 6 19 Q 45 14, 80 19" stroke="var(--logo-staff, #8a8aa0)" stroke-width="1" fill="none" opacity="0.5" />
-          <path d="M 6 24 Q 45 19, 80 24" stroke="var(--logo-staff, #8a8aa0)" stroke-width="1" fill="none" opacity="0.5" />
-          <path d="M 6 29 Q 45 24, 80 29" stroke="var(--logo-staff, #8a8aa0)" stroke-width="1" fill="none" opacity="0.5" />
-          <path d="M 6 34 Q 45 29, 80 34" stroke="var(--logo-staff, #8a8aa0)" stroke-width="1" fill="none" opacity="0.5" />
-          <!-- Treble Clef -->
-          <path d="M 16.05 43.5 L 19.95 4 C 19.95 1, 23.85 0, 25.8 3 C 27.75 6, 26.45 11, 18.65 17 C 10.85 23, 7.6 29.5, 11.5 34.5 C 15.4 39.5, 24.5 39.5, 27.75 33.5 C 30.35 28, 23.85 22.5, 18.65 26.5 C 16.05 28.5, 16.7 31.5, 20.6 31" stroke="var(--logo-clef, #3d2e1e)" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round" />
-          <circle cx="16.05" cy="43.5" r="2.8" fill="var(--logo-clef, #3d2e1e)" />
-          <!-- Notes -->
-          <ellipse cx="38" cy="30" rx="5.6" ry="3.8" transform="rotate(-20 38 30)" fill="var(--logo-tonic, #8a1530)" />
-          <line x1="43.2" y1="30" x2="43.2" y2="13" stroke="var(--logo-tonic, #8a1530)" stroke-width="2.2" stroke-linecap="round" />
-          <ellipse cx="53" cy="24" rx="5.6" ry="3.8" transform="rotate(-20 53 24)" fill="var(--logo-chord, #1a1a2e)" />
-          <line x1="58.2" y1="24" x2="58.2" y2="7" stroke="var(--logo-chord, #1a1a2e)" stroke-width="2.2" stroke-linecap="round" />
-          <polygon points="43.2,13 58.2,7 58.2,11 43.2,17" fill="var(--logo-chord, #1a1a2e)" />
-          <ellipse cx="68" cy="18" rx="5.6" ry="3.8" transform="rotate(-20 68 18)" fill="var(--logo-accent, #2f4a36)" />
-          <line x1="62.8" y1="18" x2="62.8" y2="35" stroke="var(--logo-accent, #2f4a36)" stroke-width="2.2" stroke-linecap="round" />
-        </svg>
-      </a>
-      <a href="/" class="bc-link">Hudební nauka</a>
-      <span class="bc-sep" aria-hidden="true">|</span>
-      <a id="nav-scales-link" href="/scales/" class="bc-link">Stupnice</a>
-      <span class="bc-sep" aria-hidden="true">|</span>
-      <a href="/metronome/" class="bc-link">Metronom</a>
-    </h1>
-    <div class="settings">
-      <button type="button" id="settings-toggle" class="settings-toggle" aria-label="Nastavení" aria-expanded="false" aria-controls="settings-panel">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94a7.07 7.07 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.03 7.03 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2.4h-3.84a.5.5 0 0 0-.49.42l-.36 2.54c-.59.24-1.13.56-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.67 8.88a.5.5 0 0 0 .12.64l2.03 1.58a7.07 7.07 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.5.38 1.04.7 1.63.94l.36 2.54c.04.24.25.42.49.42h3.84c.24 0 .45-.18.49-.42l.36-2.54c.59-.24 1.13-.56 1.63-.94l2.39.96c.22.08.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg>
-      </button>
-      <div id="settings-panel" class="settings-panel" hidden>
-        <label class="settings-row">Vzhled
-          <select id="profile-select" class="profile-select"></select>
-        </label>
-        <label class="settings-row">Podbarvení rozsahu
-          <select id="section-tint-select" class="profile-select"></select>
-        </label>
-        <a class="settings-link" href="/history.html">Historie verzí</a>
-      </div>
-    </div>
-  </header>
-
-  <main class="range-main">
-    <!-- Filter + scale selector -->
-    <section class="filter-bar" aria-label="Výběr stupnice">
-
-      <div class="filter-group">
-        <span class="filter-label">Typ</span>
-        <button class="filter-chip active" data-filter-type="major" aria-pressed="true">Dur</button>
-        <button class="filter-chip active" data-filter-type="minor" aria-pressed="true">Moll</button>
-        <button class="filter-chip active" data-filter-type="whole-tone" aria-pressed="true">Celotónová</button>
-        <button class="filter-chip active" data-filter-type="major-from" aria-pressed="true">Dur od tónu</button>
-      </div>
-
-      <div class="filter-group">
-        <span class="filter-label">Klíč</span>
-        <button class="filter-chip active" data-filter-acc="sharp" aria-pressed="true">♯ Kříže</button>
-        <button class="filter-chip active" data-filter-acc="flat"  aria-pressed="true">♭ Béčka</button>
-      </div>
-
-      <div class="filter-group scale-select-group">
-        <label for="scale-select" class="filter-label">Stupnice</label>
-        <select id="scale-select" aria-label="Výběr stupnice"></select>
-      </div>
-
-    </section>
-
-    <section class="range-section">
-      <div class="title-row">
-        <div id="scale-heading" class="scale-heading">
-          <span id="scale-nav-prev" class="scale-nav-item scale-nav-prev"></span>
-          <span class="scale-nav-sep scale-nav-sep-first" aria-hidden="true"></span>
-          <h2 id="range-title" class="scale-nav-current"></h2>
-          <span class="scale-nav-sep" aria-hidden="true"></span>
-          <span id="scale-nav-next" class="scale-nav-item scale-nav-next"></span>
-        </div>
-        <nav id="type-nav" class="type-nav" hidden></nav>
-      </div>
-      <p id="range-subtitle" class="range-subtitle"></p>
-      <p id="asc-label" class="range-dir-label" hidden>↑ vzestupná</p>
-      <div id="range-staff" class="staff-container" aria-live="polite"></div>
-
-      <div id="twin-block" class="range-variant" hidden>
-        <p id="twin-subtitle" class="range-subtitle"></p>
-        <div id="range-staff-twin" class="staff-container" aria-live="polite"></div>
-      </div>
-      <div id="note-details" class="note-details">
-        <div id="start-scales" class="start-scales" aria-live="polite" hidden></div>
-        <div id="note-fingerings" class="note-fingerings" aria-live="polite" hidden></div>
-      </div>
-
-      <div id="desc-block" class="range-variant" hidden>
-        <h3>↓ sestupná <span class="variant-hint">(aiolská)</span></h3>
-        <div id="range-staff-desc" class="staff-container" aria-live="polite"></div>
-      </div>
-
-      <!-- Melodic minor: the note fingerings panel moves here, right above the fingerings -->
-      <div id="note-details-bottom" class="note-details"></div>
-      <div id="fingering-chart" class="fingering-chart" hidden></div>
-
-      <p id="range-hint" class="range-hint"></p>
-    </section>
-  </main>
-
-  <!-- Keyboard shortcuts for the selected note (hidden on touch devices) -->
-  <p class="key-hint">
-    Vybraný tón:
-    <span><kbd>Esc</kbd> zruší výběr</span>
-    <span><kbd>←</kbd> <kbd>→</kbd> předchozí / další tón</span>
-    <span><kbd>↑</kbd> <kbd>↓</kbd> o oktávu výš / níž</span>
-    <span><kbd>Home</kbd> <kbd>End</kbd> nejnižší / nejvyšší tón</span>
-  </p>
-  <footer class="app-footer" id="app-footer"></footer>
-  <script type="module" src="/scales/instrument/saxophone-alto/app.js"></script>
+  <p>Stránka se přesunula: <a href="/scales/instrument/saxophone/alto/">Rozsah Alt Saxofonu</a></p>
 </body>
 </html>

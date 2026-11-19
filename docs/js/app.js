@@ -256,7 +256,7 @@ function renderMajorView(entry) {
   renderNoteRow($('major-note-row'), scale, chordNames);
   renderScaleStaff($('major-staff'), scale, chordNames, entry.keySig, false);
 
-  $('major-range-link').href = '/scales/instrument/saxophone-alto/#' + scaleIdToHash(entry.id);
+  $('major-range-link').href = '/scales/instrument/saxophone/alto/#' + scaleIdToHash(entry.id);
 }
 
 function renderMinorView(entry) {
@@ -276,7 +276,7 @@ function renderMinorView(entry) {
   renderVariant('minor-melodic', entry.id, 'melodic', chordNames, entry.keySig, true, octave);
 
   const code = scaleIdToHash(entry.id);
-  const basePath = '/scales/instrument/saxophone-alto/#';
+  const basePath = '/scales/instrument/saxophone/alto/#';
   document.querySelectorAll('#minor-view .range-link[data-range-type]').forEach((a) => {
     const t = a.dataset.rangeType;
     a.href = basePath + code + (t !== 'natural' ? '?type=' + t : '');

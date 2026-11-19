@@ -25,9 +25,11 @@ const ASSETS = [
   '/icons/icon-512.png',
   '/scales/',
   '/scales/index.html',
+  '/scales/instrument/saxophone/alto/',
+  '/scales/instrument/saxophone/alto/index.html',
+  '/scales/instrument/saxophone/alto/app.js',
   '/scales/instrument/saxophone-alto/',
   '/scales/instrument/saxophone-alto/index.html',
-  '/scales/instrument/saxophone-alto/app.js',
   '/metronome/',
   '/metronome/index.html',
 ];

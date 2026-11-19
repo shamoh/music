@@ -53,7 +53,8 @@ docs/                               GitHub Pages publishing root
     instrument/saxophone/           key map + fingerings shared by saxophones; alto/instrument.js = descriptor
   scales/
     index.html                      main page — scale staff
-    instrument/saxophone-alto/      range staff page with URL routing (#a-moll?type=harmonic)
+    instrument/saxophone/alto/      range staff page with URL routing (#a-moll?type=harmonic)
+    instrument/saxophone-alto/      redirect from the old address (public links, installed PWA)
   fonts/
     ScalesMusic.woff                Bravura subset (clef, note head, accidentals) — rebuild via tools/
     Bravura-OFL.txt                 SIL OFL license, must stay next to the font
@@ -70,7 +71,7 @@ Three values must always be updated together:
 | File | Key | Current |
 | --- | --- | --- |
 | `docs/js/defaults.js` | `APP_VERSION` | `'1.0.53'` |
-| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-11-19 21:34'` |
+| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-11-19 21:55'` |
 | `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.53'` |
 
 `APP_VERSION` and `BUILD_DATE` drive the footer display (`Scales vX.Y.Z · YYYY-MM-DD HH:MM`).

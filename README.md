@@ -8,7 +8,7 @@ A progressive web app (PWA) for learning musical scales on the Alto Saxophone.
 - **Scale types** — Major (Dur), Natural Minor, Harmonic Minor, Melodic Minor
 - **Chord highlighting** — tonic triad (1st, 3rd, 5th degree) highlighted in each scale
 - **Visual staff** — custom SVG treble clef notation, no external libraries
-- **Alto Saxophone range** — separate page (`/scales/instrument/saxophone-alto/`) with the full written range and scale notes highlighted; URL routing via hash (`#a-moll?type=harmonic`)
+- **Alto Saxophone range** — separate page (`/scales/instrument/saxophone/alto/`) with the full written range and scale notes highlighted; URL routing via hash (`#a-moll?type=harmonic`)
 - **Offline support** — installable as a PWA in Chrome and on Android, works without internet
 - **Responsive** — adapts to mobile portrait, landscape, and wide desktop layouts
 
@@ -63,7 +63,7 @@ scales/
   js/themes.js                          visual profiles (colors, font scale)
   js/defaults.js                        APP_VERSION, default scale and profile IDs
   js/analytics.js                       Google Analytics 4 (cookieless, no banner needed)
-  instrument/saxophone-alto/
+  instrument/saxophone/alto/
     index.html                          range staff page
     app.js                              URL routing, range rendering
   icons/                                PWA icons (SVG + 192×192 and 512×512 PNG)
