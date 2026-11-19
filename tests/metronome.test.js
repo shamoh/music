@@ -9,6 +9,17 @@ import {
   upsertSavedRhythm,
   deleteSavedRhythm,
   RHYTHM_PATTERNS,
+  TEMPO_KEY_STEPS,
+  patternIdForKey,
+  isTapKey,
+  beatCountStepForKey,
+  accentBeatForKey,
+  defaultRhythmName,
+  isSaveKey,
+  ROW_KEY_STEPS,
+  adjacentRowIndex,
+  isDeleteKey,
+  rowIndexAfterDelete,
 } from '../docs/js/metronome.js';
 
 describe('bpmToInterval', () => {
@@ -145,5 +156,147 @@ describe('deleteSavedRhythm', () => {
 
   it('returns empty list when only item is deleted', () => {
     assert.equal(deleteSavedRhythm([r1], 'Valčík').length, 0);
+  });
+});
+
+describe('TEMPO_KEY_STEPS', () => {
+  it('changes the tempo by 1 BPM with ←/→ and by 5 BPM with ↓/↑', () => {
+    assert.deepEqual(TEMPO_KEY_STEPS, { ArrowLeft: -1, ArrowRight: 1, ArrowDown: -5, ArrowUp: 5 });
+  });
+  it('stays within the BPM limits at the ends', () => {
+    assert.equal(validateBpm(240 + TEMPO_KEY_STEPS.ArrowUp), 240);
+    assert.equal(validateBpm(40 + TEMPO_KEY_STEPS.ArrowDown), 40);
+    assert.equal(validateBpm(100 + TEMPO_KEY_STEPS.ArrowLeft), 99);
+  });
+  it('has no step for other keys', () => {
+    assert.equal(TEMPO_KEY_STEPS[' '], undefined);
+    assert.equal(TEMPO_KEY_STEPS.Home, undefined);
+  });
+});
+
+describe('patternIdForKey', () => {
+  it('maps digits 1–6 to the patterns in their order, 6 = custom', () => {
+    assert.deepEqual(['1', '2', '3', '4', '5', '6'].map(patternIdForKey), ['4/4', '3/4', '2/4', '6/8', '5/4', 'custom']);
+  });
+  it('has no pattern for 0 and digits beyond the patterns', () => {
+    assert.equal(patternIdForKey('0'), null);
+    assert.equal(patternIdForKey('7'), null);
+    assert.equal(patternIdForKey('9'), null);
+  });
+  it('ignores other keys', () => {
+    for (const key of ['a', 'T', ' ', 'ArrowLeft', '12', '']) assert.equal(patternIdForKey(key), null, key);
+  });
+});
+
+describe('isTapKey', () => {
+  it('accepts T in either case', () => {
+    assert.equal(isTapKey('t'), true);
+    assert.equal(isTapKey('T'), true);
+  });
+  it('rejects other keys', () => {
+    assert.equal(isTapKey('y'), false);
+    assert.equal(isTapKey(' '), false);
+  });
+});
+
+describe('beatCountStepForKey', () => {
+  it('adds a beat with + or = (US keyboard, + needs Shift)', () => {
+    assert.equal(beatCountStepForKey('+'), 1);
+    assert.equal(beatCountStepForKey('='), 1);
+  });
+  it('removes a beat with − (hyphen or minus sign)', () => {
+    assert.equal(beatCountStepForKey('-'), -1);
+    assert.equal(beatCountStepForKey('−'), -1);
+  });
+  it('ignores other keys', () => {
+    for (const key of ['1', '_', 'ArrowUp', ' ']) assert.equal(beatCountStepForKey(key), null, key);
+  });
+  it('stays within 2–8 beats at the ends', () => {
+    assert.equal(validateBeatCount(8 + beatCountStepForKey('+')), 8);
+    assert.equal(validateBeatCount(2 + beatCountStepForKey('-')), 2);
+  });
+});
+
+describe('accentBeatForKey', () => {
+  it('maps Shift + digit 1–8 to the beat index, by the physical key', () => {
+    assert.equal(accentBeatForKey({ shiftKey: true, code: 'Digit1', key: '!' }), 0);
+    assert.equal(accentBeatForKey({ shiftKey: true, code: 'Digit8', key: '*' }), 7);
+  });
+  it('needs Shift', () => {
+    assert.equal(accentBeatForKey({ shiftKey: false, code: 'Digit1', key: '1' }), null);
+  });
+  it('ignores 0, 9 and other keys', () => {
+    assert.equal(accentBeatForKey({ shiftKey: true, code: 'Digit0' }), null);
+    assert.equal(accentBeatForKey({ shiftKey: true, code: 'Digit9' }), null);
+    assert.equal(accentBeatForKey({ shiftKey: true, code: 'KeyT' }), null);
+    assert.equal(accentBeatForKey({ shiftKey: true }), null);
+  });
+});
+
+describe('defaultRhythmName', () => {
+  it('names a fixed pattern by its id and tempo', () => {
+    assert.equal(defaultRhythmName({ patternId: '3/4', bpm: 90, customBeats: 4, customAccents: [0] }), '3/4 · 90 BPM');
+  });
+  it('names the custom pattern by its beats and accents (1-based)', () => {
+    assert.equal(defaultRhythmName({ patternId: 'custom', bpm: 120, customBeats: 5, customAccents: [0, 2] }), 'Vlastní 5 [1 3] · 120 BPM');
+  });
+  it('names a custom pattern without accents', () => {
+    assert.equal(defaultRhythmName({ patternId: 'custom', bpm: 60, customBeats: 3, customAccents: [] }), 'Vlastní 3 · 60 BPM');
+  });
+  it('gives different names to different tempos, so saving does not overwrite them', () => {
+    const a = defaultRhythmName({ patternId: '4/4', bpm: 100 });
+    const b = defaultRhythmName({ patternId: '4/4', bpm: 110 });
+    assert.notEqual(a, b);
+  });
+});
+
+describe('isSaveKey', () => {
+  it('accepts S in either case', () => {
+    assert.equal(isSaveKey('s'), true);
+    assert.equal(isSaveKey('S'), true);
+  });
+  it('rejects other keys', () => {
+    assert.equal(isSaveKey('t'), false);
+  });
+});
+
+describe('adjacentRowIndex', () => {
+  it('moves up and down with ↑ / ↓', () => {
+    assert.equal(adjacentRowIndex(1, ROW_KEY_STEPS.ArrowDown, 3), 2);
+    assert.equal(adjacentRowIndex(1, ROW_KEY_STEPS.ArrowUp, 3), 0);
+  });
+  it('stays at the first and the last row', () => {
+    assert.equal(adjacentRowIndex(0, ROW_KEY_STEPS.ArrowUp, 3), 0);
+    assert.equal(adjacentRowIndex(2, ROW_KEY_STEPS.ArrowDown, 3), 2);
+  });
+  it('stays on a single row', () => {
+    assert.equal(adjacentRowIndex(0, ROW_KEY_STEPS.ArrowDown, 1), 0);
+  });
+  it('has steps only for ↑ / ↓', () => {
+    assert.deepEqual(ROW_KEY_STEPS, { ArrowUp: -1, ArrowDown: 1 });
+  });
+});
+
+describe('isDeleteKey', () => {
+  it('accepts Delete and Backspace (the Mac "delete" key)', () => {
+    assert.equal(isDeleteKey('Delete'), true);
+    assert.equal(isDeleteKey('Backspace'), true);
+  });
+  it('rejects other keys', () => {
+    assert.equal(isDeleteKey('Enter'), false);
+    assert.equal(isDeleteKey('d'), false);
+  });
+});
+
+describe('rowIndexAfterDelete', () => {
+  it('focuses the row that took the deleted one\'s place', () => {
+    assert.equal(rowIndexAfterDelete(1, 3), 1);
+    assert.equal(rowIndexAfterDelete(0, 2), 0);
+  });
+  it('focuses the new last row after deleting the last one', () => {
+    assert.equal(rowIndexAfterDelete(3, 3), 2);
+  });
+  it('gives -1 when the list is empty', () => {
+    assert.equal(rowIndexAfterDelete(0, 0), -1);
   });
 });

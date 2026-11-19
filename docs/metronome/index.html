@@ -224,6 +224,15 @@
     .metro-saved-row:last-child { border-bottom: none; }
     .metro-saved-row:hover, .metro-saved-row:focus-visible { background: var(--bg-input); outline: none; }
     .metro-saved-row td { padding: 0.5rem 0.5rem; color: var(--text); }
+    /* Just saved or loaded rhythm: the row lights up and fades out (SAVED_FLASH_MS in metronome.js) */
+    .metro-saved-row.just-saved { animation: metro-saved-flash 1.6s ease-out; }
+    @keyframes metro-saved-flash {
+      0%, 30% { background: color-mix(in srgb, var(--accent2, #f5a623) 35%, transparent); }
+      100%    { background: transparent; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .metro-saved-row.just-saved { animation: none; background: color-mix(in srgb, var(--accent2, #f5a623) 25%, transparent); }
+    }
     .metro-delete-btn {
       padding: 0.25rem 0.6rem;
       border: 1px solid var(--border);
@@ -236,6 +245,39 @@
       white-space: nowrap;
     }
     .metro-delete-btn:hover { background: #c0392b; border-color: #c0392b; color: #fff; }
+
+    /* Notice after deleting a rhythm, with undo (UNDO_TOAST_MS in metronome.js) */
+    .metro-toast {
+      position: fixed;
+      left: 50%;
+      bottom: 4.5rem;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      max-width: calc(100% - 2rem);
+      padding: 0.55rem 0.6rem 0.55rem 1rem;
+      border-radius: var(--radius, 8px);
+      background: var(--text);
+      color: var(--bg-card);
+      font-size: 0.9rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      z-index: 300;
+    }
+    .metro-toast[hidden] { display: none; }
+    .metro-toast-undo {
+      padding: 0.3rem 0.8rem;
+      border: 1px solid currentColor;
+      border-radius: 6px;
+      background: none;
+      color: inherit;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .metro-toast-undo:hover { background: color-mix(in srgb, var(--bg-card) 20%, transparent); }
+    .metro-toast kbd { font: inherit; opacity: 0.75; font-weight: 400; }
     .metro-saved-empty { color: var(--text-muted); font-size: 0.9rem; padding: 0.4rem 0; }
   </style>
   <script>
@@ -348,6 +390,23 @@
 
   </main>
 
+  <div id="metro-toast" class="metro-toast" role="status" aria-live="polite" hidden>
+    <span id="metro-toast-text"></span>
+    <button type="button" id="metro-toast-undo" class="metro-toast-undo">Vrátit <kbd>⌘Z</kbd></button>
+  </div>
+
+  <!-- Keyboard shortcuts (hidden on touch devices) -->
+  <p class="key-hint">
+    Klávesy:
+    <span><kbd>Mezerník</kbd> spustí / zastaví</span>
+    <span><kbd>←</kbd> <kbd>→</kbd> pomaleji / rychleji o 1 BPM</span>
+    <span><kbd>↓</kbd> <kbd>↑</kbd> o 5 BPM</span>
+    <span><kbd>T</kbd> tap tempo</span>
+    <span><kbd>S</kbd> uložit rytmus</span>
+    <span>uložené rytmy: <kbd>↑</kbd> <kbd>↓</kbd> výběr, <kbd>Enter</kbd> načíst, <kbd>Delete</kbd> smazat, <kbd>⌘</kbd> <kbd>Z</kbd> vrátit (<kbd>Esc</kbd> zavře hlášení)</span>
+    <span><kbd>1</kbd>–<kbd>6</kbd> vzor (4/4, 3/4, 2/4, 6/8, 5/4, vlastní)</span>
+    <span>vlastní vzor: <kbd>+</kbd> <kbd>−</kbd> počet dob, <kbd>Shift</kbd> + <kbd>1</kbd>–<kbd>8</kbd> přízvučná doba</span>
+  </p>
   <footer class="app-footer" id="app-footer"></footer>
   <script type="module" src="/js/metronome.js"></script>
 </body>

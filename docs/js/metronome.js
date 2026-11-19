@@ -1,3 +1,5 @@
+import { initPageKeys, initUndoKey, isFormField, activatesOnKey } from './page-keys.js';
+
 // ── Pure functions (exported for testing) ─────────────────────────────────────
 
 export const RHYTHM_PATTERNS = [
@@ -8,6 +10,60 @@ export const RHYTHM_PATTERNS = [
   { id: '5/4', label: '5/4 — složený',       beats: 5, accents: [0, 3] },
   { id: 'custom', label: 'Vlastní',           beats: null, accents: null },
 ];
+
+// Keyboard: ←/→ change the tempo by 1 BPM, ↓/↑ by 5 BPM (Space starts / stops)
+export const TEMPO_KEY_STEPS = { ArrowLeft: -1, ArrowRight: 1, ArrowDown: -5, ArrowUp: 5 };
+
+// Keyboard: digits 1–6 pick the rhythm patterns in their order (4/4, 3/4, 2/4, 6/8,
+// 5/4, custom). → pattern id, or null for other keys.
+export function patternIdForKey(key) {
+  const index = /^[1-9]$/.test(key) ? Number(key) - 1 : -1;
+
+  return RHYTHM_PATTERNS[index]?.id ?? null;
+}
+
+// Keyboard (custom pattern): + (also = and the numpad +) adds a beat, − removes one.
+// → +1 / -1, or null for other keys.
+export function beatCountStepForKey(key) {
+  if (key === '+' || key === '=') return 1;
+  if (key === '-' || key === '−') return -1;
+
+  return null;
+}
+
+// Keyboard (custom pattern): Shift + digit 1–8 toggles the accent of that beat. Uses the
+// physical key (event.code): Shift + 1 types "!" on a US keyboard.
+// → beat index (0-based), or null for other key presses.
+export function accentBeatForKey(event) {
+  const match = event.shiftKey && /^Digit([1-8])$/.exec(event.code ?? '');
+
+  return match ? Number(match[1]) - 1 : null;
+}
+
+// Keyboard (saved rhythms list): ↑ / ↓ on a focused row move to the previous / next
+// row; stays at the first / last one. → index of the row to focus.
+export const ROW_KEY_STEPS = { ArrowUp: -1, ArrowDown: 1 };
+
+export function adjacentRowIndex(index, step, count) {
+  return Math.max(0, Math.min(count - 1, index + step));
+}
+
+// Keyboard (saved rhythms list): Delete on a focused row deletes it — also Backspace,
+// the "delete" key of Mac keyboards.
+export function isDeleteKey(key) {
+  return key === 'Delete' || key === 'Backspace';
+}
+
+// Row to focus after the row at `index` was deleted and `count` rows are left: the one
+// that took its place, or the new last one; -1 when the list is empty.
+export function rowIndexAfterDelete(index, count) {
+  return count === 0 ? -1 : Math.min(index, count - 1);
+}
+
+// Keyboard: T (either case) is the tap tempo key
+export function isTapKey(key) {
+  return key === 't' || key === 'T';
+}
 
 export function bpmToInterval(bpm) {
   return 60000 / bpm;
@@ -39,6 +95,17 @@ export function savedRhythmPatternLabel(saved) {
     return acc.length ? `Vlastní ${n} [${acc.join(' ')}]` : `Vlastní ${n}`;
   }
   return saved.patternId;
+}
+
+// Name a rhythm is saved under when the name field is empty: pattern + tempo, e.g.
+// "3/4 · 90 BPM", "Vlastní 5 [1 3] · 120 BPM".
+export function defaultRhythmName({ patternId, customBeats, customAccents, bpm }) {
+  return `${savedRhythmPatternLabel({ patternId, customBeats, customAccents })} · ${bpm} BPM`;
+}
+
+// Keyboard: S (either case) saves the current rhythm
+export function isSaveKey(key) {
+  return key === 's' || key === 'S';
 }
 
 export function upsertSavedRhythm(list, rhythm) {
@@ -83,6 +150,13 @@ if (typeof document !== 'undefined') {
     localStorage.setItem('metronome-pattern-id', state.patternId);
     localStorage.setItem('metronome-custom-beats', state.customBeats);
     localStorage.setItem('metronome-custom-accents', JSON.stringify(state.customAccents));
+    updateRhythmNamePlaceholder();
+  }
+
+  // The empty name field shows the name the rhythm would be saved under
+  function updateRhythmNamePlaceholder() {
+    const nameInput = document.getElementById('metro-rhythm-name');
+    if (nameInput) nameInput.placeholder = defaultRhythmName(state);
   }
 
   function loadSavedRhythms() {
@@ -235,6 +309,91 @@ if (typeof document !== 'undefined') {
     updateBpmDisplay();
   }
 
+  // ── Keyboard ───────────────────────────────────────────────────────────────
+
+  // Space starts / stops, arrows change the tempo (TEMPO_KEY_STEPS), T taps the tempo,
+  // 1–6 pick a rhythm pattern, S saves the rhythm. Keys stay with a focused control that handles them
+  // itself (Space on a button or a saved-rhythm row, arrows on the tempo slider, typing
+  // in the name field) and with the settings menu.
+  function onMetronomeKey(e) {
+    // Escape closes the undo notice (the deletion becomes final)
+    if (e.key === 'Escape') {
+      if (lastDeleted) hideUndoToast();
+      return;
+    }
+    if (e.key === ' ') {
+      if (activatesOnKey(e.target)) return;
+      e.preventDefault();   // no page scroll
+      togglePlay();
+      return;
+    }
+    if (isFormField(e.target) || e.repeat && isTapKey(e.key)) return;
+    if (onSavedRowKey(e)) return;
+    if (state.patternId === 'custom' && onCustomPatternKey(e)) return;
+    const step = TEMPO_KEY_STEPS[e.key];
+    const patternId = patternIdForKey(e.key);
+    if (step) {
+      e.preventDefault();
+      onBpmChange(state.bpm + step);
+    } else if (isTapKey(e.key)) {
+      onTap();
+    } else if (isSaveKey(e.key)) {
+      onSaveRhythm();
+    } else if (patternId) {
+      onPatternSelect(patternId);
+    }
+  }
+
+  // Custom pattern only: +/− change the number of beats, Shift + 1–8 toggles an accent
+  // (a beat beyond the current count is ignored). → true when the key was handled.
+  function onCustomPatternKey(e) {
+    const beatStep = beatCountStepForKey(e.key);
+    const accentBeat = accentBeatForKey(e);
+    if (beatStep) {
+      e.preventDefault();
+      setCustomBeats(state.customBeats + beatStep);
+      return true;
+    }
+    if (accentBeat !== null) {
+      e.preventDefault();
+      if (accentBeat < state.customBeats) onAccentToggle(accentBeat);
+      return true;
+    }
+
+    return false;
+  }
+
+  // Saved rhythms list: ↑ / ↓ on a focused row move the focus to the previous / next
+  // row instead of changing the tempo, Delete (Backspace) deletes the row (undo from the
+  // notice or Cmd+Z); Enter (or Space) on the row loads it (row's own keydown handler).
+  // → true when the key was handled.
+  function onSavedRowKey(e) {
+    const row = e.target.closest?.('.metro-saved-row');
+    if (!row) return false;
+    const rows = [...document.querySelectorAll('.metro-saved-row')];
+    const index = rows.indexOf(row);
+    if (isDeleteKey(e.key)) {
+      e.preventDefault();   // Backspace must not navigate back
+      // Deleting re-renders the list: keep the keyboard in it
+      if (onDeleteSavedRhythm(row.dataset.name)) {
+        const left = [...document.querySelectorAll('.metro-saved-row')];
+        left[rowIndexAfterDelete(index, left.length)]?.focus();
+      }
+      return true;
+    }
+    const step = ROW_KEY_STEPS[e.key];
+    if (!step) return false;
+    e.preventDefault();
+    rows[adjacentRowIndex(index, step, rows.length)].focus();
+
+    return true;
+  }
+
+  function togglePlay() {
+    if (isPlaying) stopMetronome();
+    else startMetronome();
+  }
+
   // ── UI: play button ────────────────────────────────────────────────────────
 
   function updatePlayButton() {
@@ -273,6 +432,16 @@ if (typeof document !== 'undefined') {
       btn.addEventListener('click', () => onAccentToggle(i));
       container.appendChild(btn);
     }
+  }
+
+  // Number of beats of the custom pattern (slider, +/− keys); accents beyond it are dropped
+  function setCustomBeats(value) {
+    state.customBeats = validateBeatCount(value);
+    state.customAccents = state.customAccents.filter(i => i < state.customBeats);
+    saveState();
+    renderAccentButtons();
+    renderBeatDots();
+    restartIfPlaying();
   }
 
   function onAccentToggle(beatIndex) {
@@ -327,6 +496,7 @@ if (typeof document !== 'undefined') {
     for (const saved of filtered) {
       const tr = tbody.insertRow();
       tr.className = 'metro-saved-row';
+      tr.dataset.name = saved.name;
       tr.setAttribute('tabindex', '0');
       tr.setAttribute('title', `Načíst: ${saved.name}`);
       tr.addEventListener('click', e => {
@@ -353,9 +523,9 @@ if (typeof document !== 'undefined') {
   }
 
   function onSaveRhythm() {
+    // An empty name field saves under the default name (pattern + tempo, its placeholder)
     const nameInput = document.getElementById('metro-rhythm-name');
-    const name = nameInput?.value.trim();
-    if (!name) { nameInput?.focus(); return; }
+    const name = nameInput?.value.trim() || defaultRhythmName(state);
 
     const rhythm = {
       name,
@@ -368,6 +538,23 @@ if (typeof document !== 'undefined') {
     persistSavedRhythms(upsertSavedRhythm(loadSavedRhythms(), rhythm));
     updateFilterRange();
     renderSavedRhythms();
+    flashRhythmRow(name);
+  }
+
+  // Briefly highlights the row of a just saved or loaded rhythm, so it is visible what
+  // happened (scrolled into view when needed; nothing when the BPM filter hides it).
+  const SAVED_FLASH_MS = 1600;
+  const flashTimers = new WeakMap();   // row → timer removing the highlight
+
+  function flashRhythmRow(name) {
+    const row = [...document.querySelectorAll('.metro-saved-row')].find(tr => tr.dataset.name === name);
+    if (!row) return;
+    row.classList.remove('just-saved');
+    void row.offsetWidth;   // restart the animation on a repeated click
+    row.classList.add('just-saved');
+    row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    clearTimeout(flashTimers.get(row));
+    flashTimers.set(row, setTimeout(() => row.classList.remove('just-saved'), SAVED_FLASH_MS));
   }
 
   function onLoadSavedRhythm(saved) {
@@ -387,13 +574,59 @@ if (typeof document !== 'undefined') {
     updateBpmDisplay();
     updateCustomSection();
     restartIfPlaying();
+    flashRhythmRow(saved.name);
   }
 
+  // Deletes right away; a short notice offers to undo it (button or Cmd+Z / Ctrl+Z).
+  // → true when the rhythm was deleted.
   function onDeleteSavedRhythm(name) {
-    if (!confirm(`Smazat rytmus „${name}"?`)) return;
-    persistSavedRhythms(deleteSavedRhythm(loadSavedRhythms(), name));
+    const list = loadSavedRhythms();
+    const rhythm = list.find(r => r.name === name);
+    if (!rhythm) return false;
+    persistSavedRhythms(deleteSavedRhythm(list, name));
     updateFilterRange();
     renderSavedRhythms();
+    lastDeleted = rhythm;
+    showUndoToast(`Rytmus „${name}“ byl smazán.`);
+
+    return true;
+  }
+
+  // ── Undo of the last deletion ──────────────────────────────────────────────
+
+  const UNDO_TOAST_MS = 6000;
+  let lastDeleted = null;
+  let undoToastTimer = null;
+
+  function showUndoToast(message) {
+    const toast = document.getElementById('metro-toast');
+    if (!toast) return;
+    document.getElementById('metro-toast-text').textContent = message;
+    toast.hidden = false;
+    clearTimeout(undoToastTimer);
+    undoToastTimer = setTimeout(hideUndoToast, UNDO_TOAST_MS);
+  }
+
+  // Once the notice is gone, the deletion is final
+  function hideUndoToast() {
+    clearTimeout(undoToastTimer);
+    const toast = document.getElementById('metro-toast');
+    if (toast) toast.hidden = true;
+    lastDeleted = null;
+  }
+
+  // Puts the last deleted rhythm back (merged into the current list, so rhythms saved
+  // in the meantime stay) and highlights its row. → true when there was one to restore.
+  function undoDelete() {
+    if (!lastDeleted) return false;
+    const rhythm = lastDeleted;
+    persistSavedRhythms(upsertSavedRhythm(loadSavedRhythms(), rhythm));
+    hideUndoToast();
+    updateFilterRange();
+    renderSavedRhythms();
+    flashRhythmRow(rhythm.name);
+
+    return true;
   }
 
   function updateFilterRange() {
@@ -453,17 +686,11 @@ if (typeof document !== 'undefined') {
     updatePlayButton();
     updateFilterRange();
     renderSavedRhythms();
+    updateRhythmNamePlaceholder();
 
     const customBeatsSlider = document.getElementById('metro-custom-beats');
     if (customBeatsSlider) {
-      customBeatsSlider.addEventListener('input', () => {
-        state.customBeats = validateBeatCount(customBeatsSlider.value);
-        state.customAccents = state.customAccents.filter(i => i < state.customBeats);
-        saveState();
-        renderAccentButtons();
-        renderBeatDots();
-        restartIfPlaying();
-      });
+      customBeatsSlider.addEventListener('input', () => setCustomBeats(customBeatsSlider.value));
     }
 
     document.getElementById('metro-bpm-slider')
@@ -473,7 +700,10 @@ if (typeof document !== 'undefined') {
     document.getElementById('metro-bpm-plus')
       ?.addEventListener('click', () => onBpmChange(state.bpm + 1));
     document.getElementById('metro-play')
-      ?.addEventListener('click', () => { if (isPlaying) stopMetronome(); else startMetronome(); });
+      ?.addEventListener('click', togglePlay);
+    initPageKeys(onMetronomeKey);
+    initUndoKey((e) => { if (undoDelete()) e.preventDefault(); });
+    document.getElementById('metro-toast-undo')?.addEventListener('click', undoDelete);
     document.getElementById('metro-tap')
       ?.addEventListener('click', onTap);
     document.getElementById('metro-save-rhythm')
