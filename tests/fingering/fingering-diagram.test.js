@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { renderKeyDiagram } from '../../prototypes/fingering/fingering-diagram.js';
+import { renderKeyDiagram, diagramBounds } from '../../docs/js/fingering-diagram.js';
+import { SAXOPHONE_ALTO } from '../../docs/js/instrument/saxophone/alto/instrument.js';
 
 // Minimal fake instrument — the renderer must not depend on any real instrument
 const TOY = {
@@ -60,5 +61,39 @@ describe('renderKeyDiagram', () => {
 
   it('keeps the viewBox aspect ratio for the requested width', () => {
     assert.match(renderKeyDiagram(TOY, [], { width: 50 }), /width="50" height="100"/);
+  });
+});
+
+describe('diagramBounds', () => {
+  it('covers keys and decorations', () => {
+    // body rect 10..30 x 10..110, split line 0..40 at y 50, keys within
+    assert.deepEqual(diagramBounds(TOY), { x: 0, y: 10, width: 40, height: 100 });
+  });
+
+  it('grows by the padding on every side', () => {
+    assert.deepEqual(diagramBounds(TOY, 2), { x: -2, y: 8, width: 44, height: 104 });
+  });
+
+  it('works with keys only', () => {
+    assert.deepEqual(diagramBounds({ ...TOY, decorations: undefined }), { x: 14, y: 15, width: 12, height: 48 });
+  });
+
+  it('fits inside the full viewBox of the alto sax', () => {
+    const b = diagramBounds(SAXOPHONE_ALTO);
+    assert.ok(b.x >= 0 && b.y >= 0);
+    assert.ok(b.x + b.width <= SAXOPHONE_ALTO.viewBox.width && b.y + b.height <= SAXOPHONE_ALTO.viewBox.height);
+    assert.ok(b.width < SAXOPHONE_ALTO.viewBox.width * 0.8, 'the label margins are dropped');
+  });
+});
+
+describe('renderKeyDiagram — crop', () => {
+  it('uses the full viewBox by default', () => {
+    assert.match(renderKeyDiagram(TOY), /viewBox="0 0 100 200"/);
+  });
+
+  it('crops the viewBox to the drawing and keeps the aspect ratio', () => {
+    const svg = renderKeyDiagram(TOY, [], { crop: true, width: 46 });
+    assert.match(svg, /viewBox="-3 7 46 106"/);
+    assert.match(svg, /width="46" height="106"/);
   });
 });

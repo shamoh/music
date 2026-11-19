@@ -364,6 +364,72 @@ export function scalesStartingAt(name, octave) {
 export const ALTO_SAX_LOW  = { name: 'B',   semitone: 10, octave: 3 };
 export const ALTO_SAX_HIGH = { name: 'F',   semitone: 5,  octave: 6 };
 
+// The alto sax range is split into 4 sections fixed by pitch (frequency),
+// independent of scale or key signature; the range staff tints them and the
+// fingering chart puts each on its own row.
+// App MIDI = octave*12 + semitone  (C4=48, H3=47).
+// Ces/His cross octave boundaries: Ces4 pitchMidi=(4-1)*12+11=47, His3 pitchMidi=(3+1)*12=48.
+//
+// Sec 0 (≤47):   Ais3/B3  H3/Ces4
+// Sec 1 (48–61): His3/C4  Cis4/Des4  D4  Dis4/Es4  E4/Fes4  Eis4/F4  Fis4/Ges4  G4  Gis4/As4  A4  Ais4/B4  H4/Ces5  His4/C5  Cis5/Des5
+// Sec 2 (62–73): D5  Dis5/Es5  E5/Fes5  Eis5/F5  Fis5/Ges5  G5  Gis5/As5  A5  Ais5/B5  H5/Ces6  His5/C6  Cis6/Des6
+// Sec 3 (≥74):   D6  Dis6/Es6  E6/Fes6  Eis6/F6
+const ALTO_SAX_SECTION_MIDI_MAX = [47, 61, 73]; // section i = pitchMidi ≤ value[i]; section 3 = remainder
+
+// Section index 0–3 of a written note within the alto sax range.
+export function altSaxRangeSection(name, octave) {
+  const midi = notePitchMidi(name, octave);
+  const idx = ALTO_SAX_SECTION_MIDI_MAX.findIndex((max) => midi <= max);
+
+  return idx === -1 ? 3 : idx;
+}
+
+// The note of the list with the same pitch as { name, octave } in any spelling
+// (Fis4 finds Ges4, Ces5 finds H4), or undefined.
+export function findSamePitch(notes, { name, octave }) {
+  const pitch = notePitchMidi(name, octave);
+
+  return notes.find((n) => notePitchMidi(n.name, n.octave) === pitch);
+}
+
+// The note `step` places above (+1) or below (-1) `current` among `notes`, ordered by
+// pitch; `current` may be spelled differently. Stays on the matching note at either
+// end; undefined when no note has the pitch of `current`.
+export function adjacentNote(notes, current, step) {
+  const sorted = [...notes].sort((a, b) => notePitchMidi(a.name, a.octave) - notePitchMidi(b.name, b.octave));
+  const match = findSamePitch(sorted, current);
+  if (!match) return undefined;
+  const index = Math.min(sorted.length - 1, Math.max(0, sorted.indexOf(match) + step));
+
+  return sorted[index];
+}
+
+// The note an octave above (+1) or below (-1) `current` among `notes` (in any spelling);
+// stays on the matching note when the octave is not in the list (end of the range),
+// undefined when no note has the pitch of `current`.
+export function octaveNote(notes, current, direction) {
+  const match = findSamePitch(notes, current);
+  if (!match) return undefined;
+  const pitch = notePitchMidi(match.name, match.octave) + 12 * direction;
+
+  return notes.find((n) => notePitchMidi(n.name, n.octave) === pitch) ?? match;
+}
+
+// The lowest (end = -1) or highest (end = +1) note of `notes` by pitch, undefined for none.
+export function rangeEndNote(notes, end) {
+  const sorted = [...notes].sort((a, b) => notePitchMidi(a.name, a.octave) - notePitchMidi(b.name, b.octave));
+
+  return end < 0 ? sorted[0] : sorted.at(-1);
+}
+
+// Notes of a range (e.g. the alto sax range in a scale's spelling) whose pitch
+// class belongs to the scale, in the range's order and spelling.
+export function rangeScaleNotes(rangeNotes, scaleNotes) {
+  const semitones = new Set(scaleNotes.map((n) => noteNameToSemitone(n.name)));
+
+  return rangeNotes.filter((n) => semitones.has(noteNameToSemitone(n.name)));
+}
+
 // useFlats=true → flat names for chromatic accidentals (Des/Es/As/B)
 // useFlats=false → sharp names (Cis/Dis/Gis/Ais)
 export function buildAltSaxRange(useFlats = true) {

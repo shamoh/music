@@ -1,4 +1,4 @@
-import { noteToStaffSlot, accidentalType, computeInlineAccidentals, enharmonicEquivalent, notePitchMidi, noteTooltipLines, noteLabelParts } from './music.js';
+import { altSaxRangeSection, noteToStaffSlot, accidentalType, computeInlineAccidentals, enharmonicEquivalent, noteTooltipLines, noteLabelParts } from './music.js';
 
 // Accidental sign in the note label is drawn smaller, raised and not bold —
 // the letter is what matters ("F" + small raised "♯").
@@ -368,23 +368,6 @@ export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig
   });
 }
 
-// Sections are fixed by pitch (frequency), independent of scale or key signature.
-// App MIDI = octave*12 + semitone  (C4=48, H3=47).
-// Ces/His cross octave boundaries: Ces4 pitchMidi=(4-1)*12+11=47, His3 pitchMidi=(3+1)*12=48.
-//
-// Sec 1 (≤47):   Ais3/B3  H3/Ces4
-// Sec 2 (48–61): His3/C4  Cis4/Des4  D4  Dis4/Es4  E4/Fes4  Eis4/F4  Fis4/Ges4  G4  Gis4/As4  A4  Ais4/B4  H4/Ces5  His4/C5  Cis5/Des5
-// Sec 3 (62–73): D5  Dis5/Es5  E5/Fes5  Eis5/F5  Fis5/Ges5  G5  Gis5/As5  A5  Ais5/B5  H5/Ces6  His5/C6  Cis6/Des6
-// Sec 4 (≥74):   D6  Dis6/Es6  E6/Fes6  Eis6/F6
-const RANGE_SECTION_MIDI_MAX = [47, 61, 73]; // section i = pitchMidi ≤ value[i]; section 3 = remainder
-
-
-function rangeSection(note) {
-  const midi = notePitchMidi(note.name, note.octave);
-  const idx = RANGE_SECTION_MIDI_MAX.findIndex((max) => midi <= max);
-  return idx === -1 ? 3 : idx;
-}
-
 // Build a name set that also includes enharmonic equivalents so that e.g.
 // "Fis" in the scale matches "Ges" in the chromatic range display.
 function nameSetWithEnharmonics(names) {
@@ -426,7 +409,7 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
   const noteGap = Math.max(1.5, step * 0.06);
   rangeNotes.forEach((note, i) => {
     const cx = notesStartX + (i + 1) * step;
-    const secIdx = rangeSection(note) + 1;
+    const secIdx = altSaxRangeSection(note.name, note.octave) + 1;
     const secFill = chordSet.has(note.name)
                   ? `var(--section-chord-bg-${secIdx})`
                   : `var(--section-bg-${secIdx})`;

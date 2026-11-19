@@ -2,7 +2,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { notePitchMidi } from '../../docs/js/music.js';
-import { SAXOPHONE_ALTO } from '../../prototypes/fingering/instrument/saxophone/alto/instrument.js';
+import { SAXOPHONE_ALTO } from '../../docs/js/instrument/saxophone/alto/instrument.js';
 
 const INSTRUMENTS = [SAXOPHONE_ALTO];
 

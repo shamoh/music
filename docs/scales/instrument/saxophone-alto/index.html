@@ -109,17 +109,32 @@
         <p id="twin-subtitle" class="range-subtitle"></p>
         <div id="range-staff-twin" class="staff-container" aria-live="polite"></div>
       </div>
-      <div id="start-scales" class="start-scales" aria-live="polite" hidden></div>
+      <div id="note-details" class="note-details">
+        <div id="start-scales" class="start-scales" aria-live="polite" hidden></div>
+        <div id="note-fingerings" class="note-fingerings" aria-live="polite" hidden></div>
+      </div>
 
       <div id="desc-block" class="range-variant" hidden>
         <h3>↓ sestupná <span class="variant-hint">(aiolská)</span></h3>
         <div id="range-staff-desc" class="staff-container" aria-live="polite"></div>
       </div>
 
+      <!-- Melodic minor: the note fingerings panel moves here, right above the fingerings -->
+      <div id="note-details-bottom" class="note-details"></div>
+      <div id="fingering-chart" class="fingering-chart" hidden></div>
+
       <p id="range-hint" class="range-hint"></p>
     </section>
   </main>
 
+  <!-- Keyboard shortcuts for the selected note (hidden on touch devices) -->
+  <p class="key-hint">
+    Vybraný tón:
+    <span><kbd>Esc</kbd> zruší výběr</span>
+    <span><kbd>←</kbd> <kbd>→</kbd> předchozí / další tón</span>
+    <span><kbd>↑</kbd> <kbd>↓</kbd> o oktávu výš / níž</span>
+    <span><kbd>Home</kbd> <kbd>End</kbd> nejnižší / nejvyšší tón</span>
+  </p>
   <footer class="app-footer" id="app-footer"></footer>
   <script type="module" src="/scales/instrument/saxophone-alto/app.js"></script>
 </body>

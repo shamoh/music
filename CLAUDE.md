@@ -19,7 +19,7 @@ Czech notation (C D E F G A H), custom SVG staff notation, installable offline (
 ## Running the app
 
 ```bash
-python3 server.py   # serves from docs/, then open http://localhost:8080
+python3 server.py   # serves from docs/, then open http://localhost:8023
 ```
 
 ## Tests
@@ -46,6 +46,9 @@ docs/                               GitHub Pages publishing root
     themes.js                       visual profiles Kompaktní / Větší (auto: Kompaktní on phones, Větší on larger screens)
     defaults.js                     APP_VERSION, DEFAULT_SCALE_ID, DEFAULT_PROFILE_ID
     analytics.js                    Google Analytics integration
+    fingering-diagram.js            SVG key diagram of an instrument (string, no DOM)
+    fingering.js                    fingering helpers: lookup by note, rows of the fingering chart
+    instrument/saxophone/           key map + fingerings shared by saxophones; alto/instrument.js = descriptor
   scales/
     index.html                      main page — scale staff
     instrument/saxophone-alto/      range staff page with URL routing (#a-moll?type=harmonic)
@@ -64,9 +67,9 @@ Three values must always be updated together:
 
 | File | Key | Current |
 | --- | --- | --- |
-| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.51'` |
-| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-11-12 08:19'` |
-| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.51'` |
+| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.52'` |
+| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-11-19 13:52'` |
+| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.52'` |
 
 `APP_VERSION` and `BUILD_DATE` drive the footer display (`Scales vX.Y.Z · YYYY-MM-DD HH:MM`).
 `CACHE_NAME` forces the browser to drop the old PWA cache and re-fetch all assets.

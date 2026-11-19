@@ -21,7 +21,7 @@ python3 server.py        # recommended — disables HTML caching
 python3 server.py 9000   # optional: specify a different port
 ```
 
-Then open `http://localhost:8080` (or the port you chose) in any browser.
+Then open `http://localhost:8023` (or the port you chose) in any browser.
 
 `server.py` is gitignored (local dev only). It is identical to the built-in
 server except it sends `Cache-Control: no-store` for HTML responses, which
@@ -31,7 +31,7 @@ prevents the browser from serving stale redirects or old page versions after
 If you don't have `server.py`, the built-in fallback works too:
 
 ```bash
-python3 -m http.server 8080
+python3 -m http.server 8023
 ```
 
 If the browser shows an unexpected redirect after switching branches or editing

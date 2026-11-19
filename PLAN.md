@@ -95,7 +95,8 @@ slot  nota
 - Akordy (triády, septakordy) pro každý stupeň stupnice
 - Moll stupnice od každého půltónu (obdoba „Dur od tónu“ — typ `major-from`, start B3 … A4)
 - Hmaty alt saxofonu — prototyp v `prototypes/fingering/` (schéma klapek + všechny hmaty včetně alternativ)
-  - Obecné moduly (renderer, helpery, stránka) v `prototypes/fingering/`, data nástrojů v `prototypes/fingering/instrument/<rodina>/<nástroj>/`; co je společné celé rodině (u saxofonů mapa klapek a hmaty psaných tónů), leží o úroveň výš v `instrument/<rodina>/` — např. `saxophone/keys.js`, `saxophone/fingerings.js`, `saxophone/alto/instrument.js`
+  - Obecné moduly (renderer `fingering-diagram.js`, helpery `fingering.js`) v `docs/js/`, data nástrojů v `docs/js/instrument/<rodina>/<nástroj>/`; co je společné celé rodině (u saxofonů mapa klapek a hmaty psaných tónů), leží o úroveň výš v `instrument/<rodina>/` — např. `saxophone/keys.js`, `saxophone/fingerings.js`, `saxophone/alto/instrument.js`. Prototypová stránka (`prototypes/fingering/`) je používá odtamtud
+  - [x] Celý rozsah alt saxofonu: základní hmaty všech tónů ve 4 řadách podle částí rozsahu; po výběru tónu vedle stupnic jeho základní a alternativní hmaty a zvýraznění tónu v osnovách; na stránkách stupnic základní hmaty tónů stupnice s vyznačenou tónikou a po klepnutí panel alternativ (1.0.52)
   - Interaktivní schéma klapek zůstane i ve výsledné aplikaci: klepnutím vybrat klapku (klapky) → vypíše se, ve kterých tónech a ve kterých variantách hmatu se používá
   - Základní a alternativní hmaty: každý tón má jeden základní hmat (ten, který hráč běžně trénuje), ostatní varianty jsou alternativy
     - V datech: základní je první varianta v seznamu

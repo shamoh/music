@@ -2,7 +2,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { notePitchMidi } from '../../../../docs/js/music.js';
-import { FINGERINGS } from '../../../../prototypes/fingering/instrument/saxophone/fingerings.js';
+import { FINGERINGS } from '../../../../docs/js/instrument/saxophone/fingerings.js';
 
 describe('saxophone fingerings', () => {
   it('cover the written range B3..F6', () => {

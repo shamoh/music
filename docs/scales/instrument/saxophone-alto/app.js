@@ -3,6 +3,14 @@ import {
   generateScale,
   getChordNotes,
   buildAltSaxRange,
+  altSaxRangeSection,
+  notePitchMidi,
+  rangeScaleNotes,
+  findSamePitch,
+  adjacentNote,
+  octaveNote,
+  rangeEndNote,
+  noteNameToSemitone,
   filteredScales,
   accidentalType,
   adjacentScales,
@@ -17,6 +25,9 @@ import {
   shortScaleName,
 } from '/js/music.js';
 import { renderRangeStaff, whenMusicFontReady } from '/js/notation.js';
+import { renderKeyDiagram } from '/js/fingering-diagram.js';
+import { fingeringFor, fingeringRows } from '/js/fingering.js';
+import { SAXOPHONE_ALTO } from '/js/instrument/saxophone/alto/instrument.js';
 import { applyProfile, savedProfileId, initProfileSelect, initSectionTintSelect } from '/js/themes.js';
 import { DEFAULT_SCALE_ID, APP_VERSION, BUILD_DATE } from '/js/defaults.js';
 import { initAnalytics, trackScaleView } from '/js/analytics.js';
@@ -29,8 +40,8 @@ const TYPE_LABELS = { natural: 'Aiolská', harmonic: 'Harmonická', melodic: 'Me
 const FULL_RANGE_ID = 'full-range';
 const FULL_RANGE_LABEL = 'Celý rozsah';
 
-const SCALE_HINT      = 'Noty stupnice zvýrazněny barevně, ostatní šedě. Klepnutím zobrazíte název.';
-const FULL_RANGE_HINT = 'Klepnutím na notu zobrazíte její názvy a stupnice, které jí začínají.';
+const SCALE_HINT      = 'Noty stupnice zvýrazněny barevně, ostatní šedě. Klepnutím na notu nebo hmat zobrazíte název tónu a jeho základní i alternativní hmaty.';
+const FULL_RANGE_HINT = 'Klepnutím na notu nebo hmat zobrazíte názvy tónu, stupnice, které jím začínají, a jeho základní i alternativní hmaty.';
 
 // Scale-type label shown in the title and the combo box.
 const SCALE_TYPE_LABEL = { major: 'dur', minor: 'moll', 'whole-tone': 'celotónová', 'major-from': 'dur' };
@@ -72,6 +83,8 @@ const state = {
   scaleId:     DEFAULT_SCALE_ID,
   variantType: 'natural',
   startNote:   null,   // { name, octave } clicked in the full range
+  scaleNote:   null,   // { name, octave } scale note or fingering clicked on a scale page
+  scaleNotes:  [],     // notes of the shown scale within the range (arrow-key navigation)
   filterType:  new Set(['major', 'minor', 'whole-tone', 'major-from']),
   filterAcc:   new Set(['sharp', 'flat']),
 };
@@ -401,16 +414,202 @@ function renderStartScales() {
   panel.appendChild(list);
 }
 
+// Clicking a note on either staff or a fingering in the chart selects the note.
+// A note on any staff or a fingering selects the note (also on scale pages);
+// clicking the selected note again (in any spelling or place) clears the selection.
+// Grey notes outside the scale only show their tooltip.
 function initStartScales() {
-  for (const id of ['range-staff', 'range-staff-twin']) {
+  for (const id of ['range-staff', 'range-staff-twin', 'range-staff-desc', 'fingering-chart']) {
     $(id).addEventListener('click', (e) => {
-      if (state.scaleId !== FULL_RANGE_ID) return;
       const g = e.target.closest('[data-note]');
-      if (!g) return;
-      state.startNote = { name: g.dataset.note, octave: Number(g.dataset.octave) };
-      renderStartScales();
+      if (!g || g.closest('[data-layer="muted-notes"]')) return;
+      const clicked = { name: g.dataset.note, octave: Number(g.dataset.octave) };
+      const current = selectedNote();
+      setSelectedNote(current && findSamePitch([current], clicked) ? null : clicked);
     });
   }
+}
+
+// Keyboard on the selected note (scale notes on a scale page, every note in the full
+// range): Escape clears it, ←/→ move it to the previous / next note, ↑/↓ an octave
+// up / down, Home/End to the lowest / highest note. When the settings menu is open the
+// keys belong to it — Escape only closes the menu (themes.js); the capture phase sees
+// the menu before it closes. Form controls keep their own keys.
+const SELECTION_MOVES = {
+  ArrowLeft:  (notes, note) => adjacentNote(notes, note, -1),
+  ArrowRight: (notes, note) => adjacentNote(notes, note, 1),
+  ArrowDown:  (notes, note) => octaveNote(notes, note, -1),
+  ArrowUp:    (notes, note) => octaveNote(notes, note, 1),
+  Home:       (notes) => rangeEndNote(notes, -1),
+  End:        (notes) => rangeEndNote(notes, 1),
+};
+
+function initSelectionKeys() {
+  document.addEventListener('keydown', (e) => {
+    const note = selectedNote();
+    if (!note || !$('settings-panel').hidden || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.key === 'Escape') {
+      setSelectedNote(null);
+      blurFingeringCell();
+      return;
+    }
+    const move = SELECTION_MOVES[e.key];
+    if (!move || e.target.closest('select, input, textarea')) return;
+    const notes = state.scaleId === FULL_RANGE_ID ? buildAltSaxRange(false) : state.scaleNotes;
+    const next = move(notes, note);
+    if (!next) return;
+    e.preventDefault();   // the keys don't scroll the page or the staff
+    setSelectedNote({ name: next.name, octave: next.octave });
+    blurFingeringCell();
+  }, true);
+}
+
+// The keyboard would otherwise show a focus ring on the last clicked fingering,
+// which no longer has to be the selected one.
+function blurFingeringCell() {
+  if (document.activeElement?.closest('.fingering-cell')) document.activeElement.blur();
+}
+
+function setSelectedNote(note) {
+  if (state.scaleId === FULL_RANGE_ID) state.startNote = note;
+  else state.scaleNote = note;
+  renderNoteDetails();
+}
+
+// The note whose fingerings are shown: clicked in the full range or on a scale page.
+function selectedNote() {
+  return state.scaleId === FULL_RANGE_ID ? state.startNote : state.scaleNote;
+}
+
+function renderNoteDetails() {
+  if (state.scaleId === FULL_RANGE_ID) renderStartScales();
+  renderNoteFingerings();
+  markSelectedNote();
+}
+
+// ─── Full range: fingerings ──────────────────────────────────────────────────
+
+const FINGERING_CELL_WIDTH  = 60;   // default size; CSS scales it with the cell
+const FINGERING_PANEL_WIDTH = 56;
+
+// Sharp and flat spellings of a fingering's note as used by the two full-range
+// staves, e.g. [{ name: 'Cis', octave: 4 }, { name: 'Des', octave: 4 }]; one for white keys.
+function rangeSpellings(f) {
+  const pitch = notePitchMidi(f.note, f.octave);
+  const spellings = [buildAltSaxRange(false), buildAltSaxRange(true)]
+    .map((range) => range.find((n) => n.midi === pitch))
+    .filter(Boolean);
+
+  return spellings.filter((s, i) => spellings.findIndex((o) => o.name === s.name) === i);
+}
+
+// "C♯" + smaller muted octave number, like the tooltip
+function noteNameElement(tag, className, { name, octave }) {
+  const el = Object.assign(document.createElement(tag), { className, textContent: shortNoteName(name) });
+  el.appendChild(Object.assign(document.createElement('span'), { className: 'note-octave', textContent: String(octave) }));
+
+  return el;
+}
+
+// Basic fingerings in rows by range section (same colors as the staff bands);
+// the first row is aligned right, the others left. Every note keeps its column,
+// so a scale's chart has gaps where the full range has the other notes.
+// scaleNotes: notes of a scale within the range (in the scale's spelling) — only
+// these are shown, the tonic's name is marked like on the staff; null = full range,
+// every note in sharp and flat spelling. A click on a fingering selects its note.
+function renderFingeringChart(scaleNotes = null, tonicName = null) {
+  const chart = $('fingering-chart');
+  while (chart.firstChild) chart.removeChild(chart.firstChild);
+  chart.hidden = false;
+  chart.appendChild(Object.assign(document.createElement('h3'), { textContent: scaleNotes ? 'Hmaty tónů stupnice' : 'Hmaty' }));
+
+  const scaleByPitch = scaleNotes && new Map(scaleNotes.map((n) => [notePitchMidi(n.name, n.octave), n]));
+  const tonicSemitone = tonicName ? noteNameToSemitone(tonicName) : null;
+  const grid = Object.assign(document.createElement('div'), { className: 'fingering-grid' });
+  const { columns, rows } = fingeringRows(SAXOPHONE_ALTO.fingerings, (f) => altSaxRangeSection(f.note, f.octave));
+  grid.style.setProperty('--fingering-columns', columns);
+  for (const row of rows) {
+    const rowEl = Object.assign(document.createElement('div'), { className: 'fingering-row' });
+    row.entries.forEach((f, i) => {
+      const pitch = notePitchMidi(f.note, f.octave);
+      if (scaleByPitch && !scaleByPitch.has(pitch)) return;
+      const spellings = scaleByPitch ? [scaleByPitch.get(pitch)] : rangeSpellings(f);
+      const isTonic = tonicSemitone !== null && noteNameToSemitone(spellings[0].name) === tonicSemitone;
+      rowEl.appendChild(fingeringCell(f, spellings, row.section, row.startColumn + i, isTonic));
+    });
+    if (rowEl.firstChild) grid.appendChild(rowEl);
+  }
+  chart.appendChild(grid);
+  markSelectedNote();
+}
+
+function fingeringCell(f, spellings, section, column, isTonic) {
+  const cell = Object.assign(document.createElement('button'), { type: 'button', className: isTonic ? 'fingering-cell tonic' : 'fingering-cell' });
+  const [main, ...others] = spellings;
+  cell.dataset.note = main.name;
+  cell.dataset.octave = main.octave;
+  cell.style.background = `var(--section-bg-${section + 1})`;
+  cell.style.gridColumnStart = column;
+  cell.setAttribute('aria-label', `Hmat ${spellings.map((s) => s.name + s.octave).join(' / ')}`);
+  // Names in the top right corner (the diagram leaves it empty), the diagram from the top
+  const names = Object.assign(document.createElement('span'), { className: 'fingering-cell-names' });
+  names.appendChild(noteNameElement('span', 'fingering-cell-name', main));
+  for (const other of others) names.appendChild(noteNameElement('span', 'fingering-cell-name alt', other));
+  cell.insertAdjacentHTML('beforeend', renderKeyDiagram(SAXOPHONE_ALTO, f.variants[0].keys, { width: FINGERING_CELL_WIDTH, crop: true }));
+  cell.appendChild(names);
+
+  return cell;
+}
+
+// Marks the selected note (any spelling) in the fingering chart and on both staves.
+function markSelectedNote() {
+  const note = selectedNote();
+  const pitch = note ? notePitchMidi(note.name, note.octave) : null;
+  const isSelected = (el) => pitch !== null && notePitchMidi(el.dataset.note, Number(el.dataset.octave)) === pitch;
+  for (const cell of $('fingering-chart').querySelectorAll('.fingering-cell')) {
+    const selected = isSelected(cell);
+    cell.classList.toggle('selected', selected);
+    cell.setAttribute('aria-pressed', String(selected));
+  }
+  for (const id of ['range-staff', 'range-staff-twin', 'range-staff-desc']) {
+    for (const g of $(id).querySelectorAll('[data-note]')) g.classList.toggle('selected', isSelected(g));
+  }
+}
+
+// Basic and alternative fingerings of the selected note, next to its start scales.
+function renderNoteFingerings() {
+  const panel = $('note-fingerings');
+  while (panel.firstChild) panel.removeChild(panel.firstChild);
+  const note = selectedNote();
+  const entry = note && fingeringFor(SAXOPHONE_ALTO.fingerings, note.name, note.octave);
+  panel.hidden = !entry;
+  if (!entry) return;
+
+  const title = Object.assign(document.createElement('p'), { className: 'note-fingerings-title', textContent: 'Hmaty tónu ' });
+  title.appendChild(noteNameElement('span', '', note));
+  panel.appendChild(title);
+
+  // Basic and alternative fingerings side by side on one row (wraps on narrow screens)
+  const groups = Object.assign(document.createElement('div'), { className: 'note-fingerings-groups' });
+  const [basic, ...alternatives] = entry.variants;
+  appendFingeringGroup(groups, 'Základní', [basic]);
+  if (alternatives.length > 0) appendFingeringGroup(groups, 'Alternativní', alternatives);
+  panel.appendChild(groups);
+}
+
+function appendFingeringGroup(groups, label, variants) {
+  const group = Object.assign(document.createElement('div'), { className: 'note-fingerings-group' });
+  group.appendChild(Object.assign(document.createElement('p'), { className: 'note-fingerings-label', textContent: label }));
+  const list = Object.assign(document.createElement('div'), { className: 'note-fingerings-list' });
+  for (const v of variants) {
+    const figure = Object.assign(document.createElement('figure'), { className: 'fingering-variant' });
+    figure.innerHTML = renderKeyDiagram(SAXOPHONE_ALTO, v.keys, { width: FINGERING_PANEL_WIDTH, crop: true });
+    // The basic variant is often just named "Základní" — don't repeat the group label
+    if (v.name !== label) figure.appendChild(Object.assign(document.createElement('figcaption'), { textContent: v.name }));
+    list.appendChild(figure);
+  }
+  group.appendChild(list);
+  groups.appendChild(group);
 }
 
 // ─── Main update ──────────────────────────────────────────────────────────────
@@ -438,22 +637,29 @@ function buildFullSaxRange(variantScale, useFlats) {
 // 'major-from' scale: full sax range, all scale notes highlighted.
 // An enharmonic pair (e.g. Ais/B dur) is shown as two staves, sharp spelling first —
 // same pitches, so the colors match; only the note names differ.
+// Returns the scale notes of the first staff (for the fingering chart).
 function renderMajorFromStaves(entry) {
   const [first, twin] = scalePair(entry);
   setScaleSubtitle($('range-subtitle'), first, 'natural');
-  renderMajorFromStaff($('range-staff'), first);
+  const scaleNotes = renderMajorFromStaff($('range-staff'), first);
   $('twin-block').hidden = !twin;
   if (twin) {
     setScaleSubtitle($('twin-subtitle'), twin, 'natural');
     renderMajorFromStaff($('range-staff-twin'), twin);
   }
+
+  return scaleNotes;
 }
 
+// Returns the scale notes within the range, in the scale's spelling.
 function renderMajorFromStaff(staffEl, entry) {
   const scale      = generateScale(entry.id, 4, 'natural');
   const chordNames = getChordNotes(scale).map((n) => n.name);
   const useFlats   = entry.accidental === 'flat';
-  renderRangeStaff(staffEl, buildFullSaxRange(scale, useFlats), scale, chordNames, 0, false);
+  const range      = buildFullSaxRange(scale, useFlats);
+  renderRangeStaff(staffEl, range, scale, chordNames, 0, false);
+
+  return rangeScaleNotes(range, scale);
 }
 
 // The whole instrument range: every note, none of them highlighted as a tonic.
@@ -470,7 +676,9 @@ function renderFullRange() {
   $('asc-label').hidden = true;
   $('desc-block').hidden = true;
   $('range-hint').textContent = FULL_RANGE_HINT;
-  renderStartScales();
+  $('note-details').appendChild($('note-fingerings'));
+  renderFingeringChart();
+  renderNoteDetails();
   trackScaleView(FULL_RANGE_ID, 'natural');
 }
 
@@ -509,12 +717,15 @@ function update() {
   const useFlats = entry.accidental === 'flat'
     || entry.notes.some((n) => accidentalType(n) === 'flat');
 
+  let scaleNotes;
   if (entry.startOctave !== undefined) {
-    renderMajorFromStaves(entry);
+    scaleNotes = renderMajorFromStaves(entry);
   } else {
     setScaleSubtitle($('range-subtitle'), entry, isMinor ? state.variantType : 'natural');
     $('twin-block').hidden = true;
-    renderRangeStaff($('range-staff'), buildFullSaxRange(variantScale, useFlats), variantScale, chordNames, 0, isMinor);
+    const range = buildFullSaxRange(variantScale, useFlats);
+    renderRangeStaff($('range-staff'), range, variantScale, chordNames, 0, isMinor);
+    scaleNotes = rangeScaleNotes(range, variantScale);
   }
   trackScaleView(entry.id, state.variantType);
 
@@ -523,9 +734,19 @@ function update() {
   $('desc-block').hidden = !isMelodic;
 
   if (isMelodic) {
-    const descRange = buildFullSaxRange(naturalScale, useFlats).slice().reverse();
-    renderRangeStaff($('range-staff-desc'), descRange, naturalScale, chordNames, 0, isMinor);
+    const descRange = buildFullSaxRange(naturalScale, useFlats);
+    renderRangeStaff($('range-staff-desc'), descRange.slice().reverse(), naturalScale, chordNames, 0, isMinor);
+    // Fingerings of both directions; a note in both keeps the ascending spelling
+    scaleNotes = [...rangeScaleNotes(descRange, naturalScale), ...scaleNotes];
   }
+  state.scaleNotes = scaleNotes;
+  // Keep the clicked note while it stays in the scale (e.g. switching the minor variant)
+  if (state.scaleNote && !findSamePitch(scaleNotes, state.scaleNote)) state.scaleNote = null;
+  // Melodic minor has the descending staff in between — keep the panel next to the fingerings
+  const panelHost = $(isMelodic ? 'note-details-bottom' : 'note-details');
+  if ($('note-fingerings').parentNode !== panelHost) panelHost.appendChild($('note-fingerings'));
+  renderFingeringChart(scaleNotes, variantScale[0].name);
+  renderNoteFingerings();
 }
 
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
@@ -547,6 +768,7 @@ document.addEventListener('DOMContentLoaded', () => {
   registerSW();
   initTooltip();
   initStartScales();
+  initSelectionKeys();
 
   $('scale-select').addEventListener('change', (e) => {
     state.scaleId     = e.target.value;

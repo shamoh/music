@@ -5,6 +5,12 @@ import {
   getChordNotes,
   noteToStaffSlot,
   buildAltSaxRange,
+  altSaxRangeSection,
+  rangeScaleNotes,
+  findSamePitch,
+  adjacentNote,
+  octaveNote,
+  rangeEndNote,
   buildScaleRange,
   accidentalType,
   filteredScales,
@@ -270,6 +276,30 @@ describe('buildAltSaxRange', () => {
   it('useFlats=false: starts at Ais3',     () => { const r = buildAltSaxRange(false); assert.equal(r[0].name, 'Ais'); assert.equal(r[0].octave, 3); });
   it('ends at F6',                         () => { const r = buildAltSaxRange(true);  const l = r[r.length-1]; assert.equal(l.name, 'F'); assert.equal(l.octave, 6); });
   it('contains 32 semitones',              () => assert.equal(buildAltSaxRange(true).length, 32));
+});
+
+describe('altSaxRangeSection', () => {
+  it('puts B3 and H3 into section 0', () => {
+    assert.equal(altSaxRangeSection('B', 3), 0);
+    assert.equal(altSaxRangeSection('H', 3), 0);
+  });
+  it('splits sections at C4, D5 and D6', () => {
+    assert.equal(altSaxRangeSection('C', 4), 1);
+    assert.equal(altSaxRangeSection('Cis', 5), 1);
+    assert.equal(altSaxRangeSection('D', 5), 2);
+    assert.equal(altSaxRangeSection('Des', 6), 2);
+    assert.equal(altSaxRangeSection('D', 6), 3);
+    assert.equal(altSaxRangeSection('F', 6), 3);
+  });
+  it('uses the pitch, not the spelling (Ces4 = H3, His3 = C4)', () => {
+    assert.equal(altSaxRangeSection('Ces', 4), 0);
+    assert.equal(altSaxRangeSection('His', 3), 1);
+  });
+  it('divides the full range into 2 + 14 + 12 + 4 notes', () => {
+    const counts = [0, 0, 0, 0];
+    for (const n of buildAltSaxRange(true)) counts[altSaxRangeSection(n.name, n.octave)]++;
+    assert.deepEqual(counts, [2, 14, 12, 4]);
+  });
 });
 
 describe('accidentalType', () => {
@@ -1035,3 +1065,107 @@ describe('sectionTintVars', () => {
     assert.deepEqual(sectionTintVars('bogus'), sectionTintVars(DEFAULT_SECTION_TINT_ID));
   });
 });
+
+describe('rangeScaleNotes', () => {
+  it('keeps the range notes whose pitch class is in the scale, in range order', () => {
+    const scale = generateScale('G-major', 4, 'natural');
+    const notes = rangeScaleNotes(buildAltSaxRange(false), scale);
+    assert.deepEqual(notes.slice(0, 5).map((n) => n.name + n.octave), ['H3', 'C4', 'D4', 'E4', 'Fis4']);
+    assert.ok(notes.every((n) => scale.some((s) => noteNameToSemitone(s.name) === noteNameToSemitone(n.name))));
+  });
+
+  it('matches enharmonic spellings by pitch class', () => {
+    const range = [{ name: 'Ais', octave: 3 }, { name: 'H', octave: 3 }, { name: 'C', octave: 4 }];
+    assert.deepEqual(rangeScaleNotes(range, [{ name: 'B' }, { name: 'His' }]).map((n) => n.name), ['Ais', 'C']);
+  });
+
+  it('gives 7 notes per octave of a diatonic scale (19 in the 32-note range of C dur)', () => {
+    assert.equal(rangeScaleNotes(buildAltSaxRange(true), generateScale('C-major', 4, 'natural')).length, 19);
+  });
+});
+
+describe('findSamePitch', () => {
+  const notes = [{ name: 'Ges', octave: 4 }, { name: 'H', octave: 4 }, { name: 'C', octave: 5 }];
+
+  it('finds a note by the same spelling', () => {
+    assert.equal(findSamePitch(notes, { name: 'H', octave: 4 }), notes[1]);
+  });
+  it('finds a note by an enharmonic spelling, across octave boundaries', () => {
+    assert.equal(findSamePitch(notes, { name: 'Fis', octave: 4 }), notes[0]);
+    assert.equal(findSamePitch(notes, { name: 'Ces', octave: 5 }), notes[1]);
+    assert.equal(findSamePitch(notes, { name: 'His', octave: 4 }), notes[2]);
+  });
+  it('returns undefined for another pitch or octave', () => {
+    assert.equal(findSamePitch(notes, { name: 'H', octave: 5 }), undefined);
+    assert.equal(findSamePitch(notes, { name: 'G', octave: 4 }), undefined);
+    assert.equal(findSamePitch([], { name: 'G', octave: 4 }), undefined);
+  });
+});
+
+describe('adjacentNote', () => {
+  // Not sorted on purpose, like the melodic minor union (descending notes first)
+  const notes = [{ name: 'G', octave: 4 }, { name: 'Fis', octave: 4 }, { name: 'A', octave: 4 }, { name: 'E', octave: 4 }];
+
+  it('moves to the next and previous note by pitch', () => {
+    assert.deepEqual(adjacentNote(notes, { name: 'Fis', octave: 4 }, 1), { name: 'G', octave: 4 });
+    assert.deepEqual(adjacentNote(notes, { name: 'Fis', octave: 4 }, -1), { name: 'E', octave: 4 });
+  });
+  it('finds the current note in another spelling', () => {
+    assert.deepEqual(adjacentNote(notes, { name: 'Ges', octave: 4 }, 1), { name: 'G', octave: 4 });
+  });
+  it('stays at either end', () => {
+    assert.deepEqual(adjacentNote(notes, { name: 'A', octave: 4 }, 1), { name: 'A', octave: 4 });
+    assert.deepEqual(adjacentNote(notes, { name: 'E', octave: 4 }, -1), { name: 'E', octave: 4 });
+  });
+  it('returns undefined for a note that is not in the list', () => {
+    assert.equal(adjacentNote(notes, { name: 'F', octave: 4 }, 1), undefined);
+  });
+  it('walks the full alto sax range chromatically', () => {
+    const range = buildAltSaxRange(false);
+    assert.deepEqual(adjacentNote(range, { name: 'H', octave: 3 }, 1), { name: 'C', semitone: 0, octave: 4, midi: 48 });
+    assert.equal(adjacentNote(range, { name: 'F', octave: 6 }, 1).name, 'F');
+  });
+});
+
+describe('octaveNote', () => {
+  const scale = rangeScaleNotes(buildAltSaxRange(false), generateScale('G-major', 4, 'natural'));
+
+  it('moves an octave up and down', () => {
+    assert.deepEqual(pick(octaveNote(scale, { name: 'Fis', octave: 4 }, 1)), 'Fis5');
+    assert.deepEqual(pick(octaveNote(scale, { name: 'Fis', octave: 5 }, -1)), 'Fis4');
+  });
+  it('finds the current note in another spelling', () => {
+    assert.equal(pick(octaveNote(scale, { name: 'Ges', octave: 4 }, 1)), 'Fis5');
+  });
+  it('stays when the octave is outside the list', () => {
+    assert.equal(pick(octaveNote(scale, { name: 'E', octave: 6 }, 1)), 'E6');
+    assert.equal(pick(octaveNote(scale, { name: 'H', octave: 3 }, -1)), 'H3');
+  });
+  it('returns undefined for a note that is not in the list', () => {
+    assert.equal(octaveNote(scale, { name: 'F', octave: 4 }, 1), undefined);
+  });
+});
+
+describe('rangeEndNote', () => {
+  const notes = [{ name: 'G', octave: 4 }, { name: 'H', octave: 3 }, { name: 'C', octave: 6 }, { name: 'D', octave: 5 }];
+
+  it('gives the lowest and the highest note by pitch', () => {
+    assert.equal(pick(rangeEndNote(notes, -1)), 'H3');
+    assert.equal(pick(rangeEndNote(notes, 1)), 'C6');
+  });
+  it('orders by pitch, not by octave number (Ces5 is below C5)', () => {
+    const tricky = [{ name: 'C', octave: 5 }, { name: 'Ces', octave: 5 }];
+    assert.equal(pick(rangeEndNote(tricky, -1)), 'Ces5');
+  });
+  it('covers the alto sax range B3–F6', () => {
+    assert.equal(pick(rangeEndNote(buildAltSaxRange(true), -1)), 'B3');
+    assert.equal(pick(rangeEndNote(buildAltSaxRange(true), 1)), 'F6');
+  });
+  it('returns undefined for no notes', () => {
+    assert.equal(rangeEndNote([], 1), undefined);
+  });
+});
+
+function pick(note) {
+  return note && `${note.name}${note.octave}`;
+}

@@ -1,6 +1,6 @@
 // Renders an instrument key diagram as an SVG string (no DOM).
 // Instrument-agnostic: geometry comes from the instrument descriptor
-// ({ viewBox, decorations, keys }), see instrument/<id>/instrument.js.
+// ({ viewBox, decorations, keys }), see instrument/<family>/<instrument>/instrument.js.
 
 const STYLE = `
   .body { fill: none; stroke: var(--fingering-body, #c8c8c8); stroke-width: 1.5; }
@@ -14,6 +14,7 @@ const STYLE = `
 `;
 
 const LABEL_GAP = 4;
+const CROP_PADDING = 3;   // room for the key outline (stroke) around the cropped drawing
 
 function decoration(d) {
   if (d.type === 'line') {
@@ -57,15 +58,39 @@ function keyLabel(key, isPressed) {
   }
 }
 
+// Bounding box { x, y, width, height } of the keys and decorations (labels are not
+// included), grown by `padding` on every side.
+export function diagramBounds(instrument, padding = 0) {
+  const boxes = instrument.keys.map((k) => [k.x - k.w / 2, k.y - k.h / 2, k.x + k.w / 2, k.y + k.h / 2]);
+  for (const d of instrument.decorations ?? []) {
+    boxes.push(d.type === 'line'
+      ? [Math.min(d.x1, d.x2), Math.min(d.y1, d.y2), Math.max(d.x1, d.x2), Math.max(d.y1, d.y2)]
+      : [d.x, d.y, d.x + d.width, d.y + d.height]);
+  }
+  const x = Math.min(...boxes.map((b) => b[0])) - padding;
+  const y = Math.min(...boxes.map((b) => b[1])) - padding;
+
+  return {
+    x,
+    y,
+    width: Math.max(...boxes.map((b) => b[2])) + padding - x,
+    height: Math.max(...boxes.map((b) => b[3])) + padding - y,
+  };
+}
+
 // instrument: descriptor with { viewBox, decorations, keys }
 // pressed:    array of key ids drawn as pressed (filled)
 // highlight:  array of key ids drawn with an accent outline
 // showLabels: draw key labels
 // width:      rendered width in px (height follows the aspect ratio)
-export function renderKeyDiagram(instrument, pressed = [], { highlight = [], showLabels = false, width = 120 } = {}) {
+// crop:       drop the empty margins of the viewBox (kept for labels) — the keys fill
+//             the image; meant for small diagrams without labels
+export function renderKeyDiagram(instrument, pressed = [], { highlight = [], showLabels = false, width = 120, crop = false } = {}) {
   const pressedSet = new Set(pressed);
   const highlightSet = new Set(highlight);
-  const { width: vw, height: vh } = instrument.viewBox;
+  const { x: vx, y: vy, width: vw, height: vh } = crop
+    ? diagramBounds(instrument, CROP_PADDING)
+    : { x: 0, y: 0, ...instrument.viewBox };
   const height = Math.round(width * vh / vw);
 
   const keys = instrument.keys.map(key => {
@@ -76,7 +101,7 @@ export function renderKeyDiagram(instrument, pressed = [], { highlight = [], sho
     return showLabels ? shape + keyLabel(key, isPressed) : shape;
   });
 
-  return `<svg class="key-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${vw} ${vh}" `
+  return `<svg class="key-diagram" xmlns="http://www.w3.org/2000/svg" viewBox="${vx} ${vy} ${vw} ${vh}" `
     + `width="${width}" height="${height}" role="img">`
     + `<style>${STYLE}</style>`
     + (instrument.decorations ?? []).map(decoration).join('')

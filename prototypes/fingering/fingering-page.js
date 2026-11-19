@@ -1,6 +1,6 @@
 // Instrument-agnostic prototype page: interactive key map + grid of all fingerings.
-import { renderKeyDiagram } from './fingering-diagram.js';
-import { noteSpellingLabels } from './fingering.js';
+import { renderKeyDiagram } from '../../docs/js/fingering-diagram.js';
+import { noteSpellingLabels } from '../../docs/js/fingering.js';
 
 export function mountKeymap(instrument, diagramEl, legendEl) {
   const pressed = new Set();
