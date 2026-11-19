@@ -9,6 +9,7 @@ import {
   rangeScaleNotes,
   findSamePitch,
   adjacentNote,
+  scaleNeighborsLabel,
   octaveNote,
   rangeEndNote,
   buildScaleRange,
@@ -19,6 +20,7 @@ import {
   scaleStartOctave,
   enharmonicEquivalent,
   enharmonicSpellings,
+  pitchSpellings,
   notePitchMidi,
   scaleFocusRange,
   adjacentScales,
@@ -26,11 +28,13 @@ import {
   dedupePairs,
   shortNoteName,
   noteTooltipLines,
+  longNoteName,
   splitOctaveNumbers,
   noteLabelParts,
   keySignatureLabel,
   scaleAccidentalsLabel,
   scaleNotesText,
+  scaleNoteLabels,
   scalesStartingAt,
   shortScaleName,
   SCALE_CATALOG,
@@ -744,7 +748,7 @@ describe('enharmonicSpellings', () => {
 describe('shortNoteName', () => {
   it('sharp',        () => assert.equal(shortNoteName('Fis'), 'F♯'));
   it('flat',         () => assert.equal(shortNoteName('Es'), 'E♭'));
-  it('B → H♭',       () => assert.equal(shortNoteName('B'), 'H♭'));
+  it('B stays B (Czech short name of H♭)', () => assert.equal(shortNoteName('B'), 'B'));
   it('double-sharp', () => assert.equal(shortNoteName('Fisis'), 'F×'));
   it('natural',      () => assert.equal(shortNoteName('C'), 'C'));
 });
@@ -760,6 +764,18 @@ describe('noteTooltipLines', () => {
 
   it('lowercase for minor scales', () => {
     assert.deepEqual(noteTooltipLines('Fis', 5, true), ['f♯5 – fis5', 'g♭5 – ges5']);
+  });
+
+  it('writes B as "B3 – Hes3" (short B, long Hes)', () => {
+    assert.deepEqual(noteTooltipLines('Ais', 3), ['A♯3 – Ais3', 'B3 – Hes3']);
+    assert.deepEqual(noteTooltipLines('B', 3, true), ['b3 – hes3', 'a♯3 – ais3']);
+  });
+});
+
+describe('longNoteName', () => {
+  it('spells B out as Hes', () => assert.equal(longNoteName('B'), 'Hes'));
+  it('keeps the other names', () => {
+    for (const name of ['H', 'Ais', 'Es', 'Ces', 'Fisis']) assert.equal(longNoteName(name), name);
   });
 });
 
@@ -966,7 +982,7 @@ describe('keySignatureLabel', () => {
     assert.equal(keySignatureLabel(2), '2 ♯ : F♯ C♯');
   });
   it('lists flats in key signature order', () => {
-    assert.equal(keySignatureLabel(-3), '3 ♭ : H♭ E♭ A♭');
+    assert.equal(keySignatureLabel(-3), '3 ♭ : B E♭ A♭');
   });
   it('uses double sharps for theoretical keys (Ais dur, 10 sharps)', () => {
     assert.equal(keySignatureLabel(10), '10 ♯ : F♯ C♯ G♯ D♯ A♯ E♯ H♯ F× C× G×');
@@ -975,7 +991,7 @@ describe('keySignatureLabel', () => {
 
 describe('scaleAccidentalsLabel', () => {
   it('uses the key signature for dur / moll', () => {
-    assert.equal(scaleAccidentalsLabel(catalogEntry('B-major')), '2 ♭ : H♭ E♭');
+    assert.equal(scaleAccidentalsLabel(catalogEntry('B-major')), '2 ♭ : B E♭');
     assert.equal(scaleAccidentalsLabel(catalogEntry('e-minor')), '1 ♯ : F♯');
   });
   it('is empty for C dur', () => {
@@ -994,8 +1010,8 @@ describe('scaleNotesText', () => {
   it('joins short names without octaves with a middle dot', () => {
     assert.equal(scaleNotesText(generateScale('Fis-major', 4)), 'F♯ · G♯ · A♯ · H · C♯ · D♯ · E♯ · F♯');
   });
-  it('writes B as H♭', () => {
-    assert.equal(scaleNotesText(generateScale('B-major', 3)), 'H♭ · C · D · E♭ · F · G · A · H♭');
+  it('writes B as B', () => {
+    assert.equal(scaleNotesText(generateScale('B-major', 3)), 'B · C · D · E♭ · F · G · A · B');
   });
   it('lowercases minor scales', () => {
     assert.equal(scaleNotesText(generateScale('a-minor', 4, 'harmonic'), true), 'a · h · c · d · e · f · g♯ · a');
@@ -1032,12 +1048,12 @@ describe('scalesStartingAt', () => {
 describe('shortScaleName', () => {
   it('uses the short root name', () => {
     assert.equal(shortScaleName(catalogEntry('Fis-major'), 'dur'), 'F♯ dur');
-    assert.equal(shortScaleName(catalogEntry('B-major'), 'dur'), 'H♭ dur');
+    assert.equal(shortScaleName(catalogEntry('B-major'), 'dur'), 'B dur');
     assert.equal(shortScaleName(catalogEntry('C-whole-tone'), 'celotónová'), 'C celotónová');
   });
   it('keeps minor roots lowercase', () => {
     assert.equal(shortScaleName(catalogEntry('fis-minor'), 'moll'), 'f♯ moll');
-    assert.equal(shortScaleName(catalogEntry('b-minor'), 'moll'), 'h♭ moll');
+    assert.equal(shortScaleName(catalogEntry('b-minor'), 'moll'), 'b moll');
   });
   it('works for theoretical keys (Gis dur)', () => {
     assert.equal(shortScaleName(catalogEntry('Gis-major-from'), 'dur'), 'G♯ dur');
@@ -1117,8 +1133,14 @@ describe('adjacentNote', () => {
     assert.deepEqual(adjacentNote(notes, { name: 'A', octave: 4 }, 1), { name: 'A', octave: 4 });
     assert.deepEqual(adjacentNote(notes, { name: 'E', octave: 4 }, -1), { name: 'E', octave: 4 });
   });
-  it('returns undefined for a note that is not in the list', () => {
-    assert.equal(adjacentNote(notes, { name: 'F', octave: 4 }, 1), undefined);
+  it('moves from a note outside the list to the nearest one in the step\'s direction', () => {
+    assert.deepEqual(adjacentNote(notes, { name: 'F', octave: 4 }, 1), { name: 'Fis', octave: 4 });
+    assert.deepEqual(adjacentNote(notes, { name: 'F', octave: 4 }, -1), { name: 'E', octave: 4 });
+    assert.deepEqual(adjacentNote(notes, { name: 'Gis', octave: 4 }, 1), { name: 'A', octave: 4 });
+  });
+  it('gives undefined from outside the list when no note lies in that direction', () => {
+    assert.equal(adjacentNote(notes, { name: 'H', octave: 4 }, 1), undefined);
+    assert.equal(adjacentNote(notes, { name: 'D', octave: 4 }, -1), undefined);
   });
   it('walks the full alto sax range chromatically', () => {
     const range = buildAltSaxRange(false);
@@ -1143,6 +1165,12 @@ describe('octaveNote', () => {
   });
   it('returns undefined for a note that is not in the list', () => {
     assert.equal(octaveNote(scale, { name: 'F', octave: 4 }, 1), undefined);
+  });
+  it('moves a note outside the scale by an octave among all range notes', () => {
+    const range = buildAltSaxRange(false);
+    assert.equal(pick(octaveNote(range, { name: 'F', octave: 4 }, 1)), 'F5');
+    assert.equal(pick(octaveNote(range, { name: 'Es', octave: 5 }, -1)), 'Dis4');
+    assert.equal(pick(octaveNote(range, { name: 'F', octave: 6 }, 1)), 'F6');
   });
 });
 
@@ -1169,3 +1197,63 @@ describe('rangeEndNote', () => {
 function pick(note) {
   return note && `${note.name}${note.octave}`;
 }
+
+describe('scaleNoteLabels', () => {
+  it('gives each note its short name and pitch class', () => {
+    assert.deepEqual(scaleNoteLabels(generateScale('Fis-major', 4)).slice(0, 3),
+      [{ label: 'F♯', semitone: 6 }, { label: 'G♯', semitone: 8 }, { label: 'A♯', semitone: 10 }]);
+  });
+  it('uses the pitch class of special spellings (E♯ = F, H♯ = C, F× = G)', () => {
+    const labels = scaleNoteLabels(generateScale('Gis-major-from', 4));
+    assert.deepEqual(labels.map((l) => l.semitone), [8, 10, 0, 1, 3, 5, 7, 8]);
+  });
+  it('lowercases minor scales and matches scaleNotesText', () => {
+    const scale = generateScale('a-minor', 4, 'harmonic');
+    assert.deepEqual(scaleNoteLabels(scale, true).map((l) => l.label), ['a', 'h', 'c', 'd', 'e', 'f', 'g♯', 'a']);
+    assert.equal(scaleNoteLabels(scale, true).map((l) => l.label).join(' · '), scaleNotesText(scale, true));
+  });
+});
+
+describe('scaleNeighborsLabel', () => {
+  const eMinor = rangeScaleNotes(buildAltSaxRange(false), generateScale('e-minor', 4, 'natural'));
+  const gMajor = rangeScaleNotes(buildAltSaxRange(false), generateScale('G-major', 4, 'natural'));
+
+  it('names the nearest scale notes below and above', () => {
+    assert.equal(scaleNeighborsLabel(gMajor, { name: 'F', octave: 4 }), 'mezi E a F♯');
+    assert.equal(scaleNeighborsLabel(gMajor, { name: 'Gis', octave: 5 }), 'mezi G a A');
+  });
+  it('lowercases minor scales', () => {
+    assert.equal(scaleNeighborsLabel(eMinor, { name: 'F', octave: 4 }, true), 'mezi e a f♯');
+  });
+  it('says "pod" / "nad" at the ends of the range', () => {
+    assert.equal(scaleNeighborsLabel(eMinor, { name: 'Ais', octave: 3 }), 'pod H');
+    assert.equal(scaleNeighborsLabel(gMajor, { name: 'F', octave: 6 }), 'nad E');
+  });
+  it('writes B with the short name', () => {
+    const fMajor = rangeScaleNotes(buildAltSaxRange(true), generateScale('F-major', 4, 'natural'));
+    assert.equal(scaleNeighborsLabel(fMajor, { name: 'H', octave: 4 }), 'mezi B a C');
+  });
+  it('gives an empty label for no notes', () => {
+    assert.equal(scaleNeighborsLabel([], { name: 'F', octave: 4 }), '');
+  });
+});
+
+describe('pitchSpellings', () => {
+  const names = (name, octave) => pitchSpellings(name, octave).map((n) => n.name + n.octave);
+
+  it('puts the natural name first, then its other names', () => {
+    assert.deepEqual(names('H', 3), ['H3', 'Ces4']);
+    assert.deepEqual(names('C', 4), ['C4', 'His3']);
+    assert.deepEqual(names('E', 4), ['E4', 'Fes4']);
+    assert.deepEqual(names('F', 4), ['F4', 'Eis4']);
+    assert.deepEqual(names('G', 4), ['G4', 'Fisis4']);
+  });
+  it('puts the sharp name above the flat one, whichever is given', () => {
+    assert.deepEqual(names('Es', 4), ['Dis4', 'Es4']);
+    assert.deepEqual(names('Dis', 4), ['Dis4', 'Es4']);
+    assert.deepEqual(names('B', 3), ['Ais3', 'B3']);
+  });
+  it('gives the same names for every spelling of a pitch', () => {
+    assert.deepEqual(names('Ces', 4), names('H', 3));
+  });
+});

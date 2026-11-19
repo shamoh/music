@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scales-1.0.52';
+const CACHE_NAME = 'scales-1.0.53';
 const ASSETS = [
   '/',
   '/index.html',
@@ -15,6 +15,8 @@ const ASSETS = [
   '/js/metronome.js',
   '/js/fingering.js',
   '/js/fingering-diagram.js',
+  '/js/note-highlight.js',
+  '/js/page-keys.js',
   '/js/instrument/saxophone/keys.js',
   '/js/instrument/saxophone/fingerings.js',
   '/js/instrument/saxophone/alto/instrument.js',

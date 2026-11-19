@@ -5,16 +5,21 @@ import {
   filteredScales,
   accidentalType,
   scaleStartOctave,
+  noteNameToSemitone,
+  longNoteName,
 } from './music.js';
 import { renderScaleStaff, whenMusicFontReady } from './notation.js';
 import { applyProfile, savedProfileId, initProfileSelect } from './themes.js';
 import { DEFAULT_SCALE_ID, APP_VERSION, BUILD_DATE } from './defaults.js';
 import { initAnalytics, trackScaleView } from './analytics.js';
+import { toggledSemitone, elementSemitone, markHighlightedNote, staffLabelSemitone } from './note-highlight.js';
+import { initPageKeys, blurFocused } from './page-keys.js';
 
 const state = {
   scaleId: DEFAULT_SCALE_ID,
   filterType: new Set(['major', 'minor']),
   filterAcc:  new Set(['sharp', 'flat']),
+  highlight:  null,   // semitone (0–11) of the note highlighted in every octave
 };
 
 
@@ -30,9 +35,9 @@ function saveLastScaleId(id) {
 // ─── Key signature labels and variant helpers ─────────────────────────────────
 
 const SHARP_NAMES = ['fis', 'cis', 'gis', 'dis', 'ais', 'eis', 'his'];
-const FLAT_NAMES  = ['be',  'es',  'as',  'des', 'ges', 'ces', 'fes'];
+const FLAT_NAMES  = ['hes', 'es',  'as',  'des', 'ges', 'ces', 'fes'];
 
-// Main scale title label: "(2♯ fis, cis)" or "(3♭ be, es, as)"
+// Main scale title label: "(2♯ fis, cis)" or "(3♭ hes, es, as)" — long names, B is "hes"
 function keySigLabel(keySig) {
   if (keySig === 0) return '';
   if (keySig > 0) {
@@ -43,7 +48,7 @@ function keySigLabel(keySig) {
 }
 
 function noteDisplayName(name) {
-  return name === 'B' ? 'be' : name.toLowerCase();
+  return longNoteName(name).toLowerCase();
 }
 
 const DOUBLE_SHARP_ENHARMONIC = { Fisis: 'G', Cisis: 'D', Gisis: 'A' };
@@ -53,7 +58,7 @@ function noteChipLabel(name) {
   return enh ? `${name} (=${enh})` : name;
 }
 
-// Compute label like "(2♭ es, as)" or "(1♭ be, 1♯ cis)" from actual variant notes
+// Compute label like "(2♭ es, as)" or "(1♭ hes, 1♯ cis)" from actual variant notes
 function scaleAccidentalLabel(notes) {
   const flatNames = [], sharpNames = [];
   const seen = new Set();
@@ -179,15 +184,45 @@ function renderNoteRow(containerEl, scaleNotes, chordNoteNames) {
   const tonicName = scaleNotes[0]?.name;
   clearEl(containerEl);
   scaleNotes.forEach((note) => {
-    const span = document.createElement('span');
-    span.textContent = noteChipLabel(note.name);
+    // A chip is a button: a click highlights the note in every octave (chips, staves)
+    const chip = Object.assign(document.createElement('button'), { type: 'button', textContent: noteChipLabel(note.name) });
     let cls = 'note-chip';
     if (note.name === tonicName)       cls += ' tonic';
     else if (chordSet.has(note.name))  cls += ' chord';
-    span.className = cls;
-    span.setAttribute('role', 'listitem');
-    containerEl.appendChild(span);
+    chip.className = cls;
+    chip.dataset.semitone = noteNameToSemitone(note.name);
+    containerEl.appendChild(chip);
   });
+}
+
+// ─── Highlighted note (every octave) ─────────────────────────────────────────
+
+// A note chip or the name label under a staff note highlights that note in every
+// octave; a second click (or Escape) turns it off — like the saxophone range page.
+function initNoteHighlight() {
+  document.querySelectorAll('.note-row').forEach((row) => row.addEventListener('click', (e) => {
+    const chip = e.target.closest('.note-chip');
+    if (chip) toggleHighlight(elementSemitone(chip));
+  }));
+  document.querySelectorAll('.staff-container').forEach((staff) => staff.addEventListener('click', (e) => {
+    const semitone = staffLabelSemitone(e);
+    if (semitone !== null) toggleHighlight(semitone);
+  }));
+  initPageKeys((e) => {
+    if (e.key !== 'Escape' || state.highlight === null) return;
+    toggleHighlight(state.highlight);
+    blurFocused('.note-chip');
+  });
+}
+
+function toggleHighlight(semitone) {
+  state.highlight = toggledSemitone(state.highlight, semitone);
+  markHighlight();
+}
+
+function markHighlight() {
+  markHighlightedNote(document.querySelectorAll('.note-chip'), state.highlight, { pressable: true });
+  markHighlightedNote(document.querySelectorAll('.staff-container [data-note]'), state.highlight);
 }
 
 // ─── Main update ──────────────────────────────────────────────────────────────
@@ -207,6 +242,7 @@ function update() {
     $('minor-view').hidden = false;
     renderMinorView(entry);
   }
+  markHighlight();
 }
 
 function renderMajorView(entry) {
@@ -319,6 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   repopulateSelect();
   registerSW();
+  initNoteHighlight();
 
   const footer = document.getElementById('app-footer');
   if (footer) {

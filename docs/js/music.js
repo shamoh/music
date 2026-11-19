@@ -394,14 +394,33 @@ export function findSamePitch(notes, { name, octave }) {
 
 // The note `step` places above (+1) or below (-1) `current` among `notes`, ordered by
 // pitch; `current` may be spelled differently. Stays on the matching note at either
-// end; undefined when no note has the pitch of `current`.
+// end. A `current` that is not among the notes (e.g. outside the scale) moves to the
+// nearest note in the step's direction — undefined when there is none.
 export function adjacentNote(notes, current, step) {
-  const sorted = [...notes].sort((a, b) => notePitchMidi(a.name, a.octave) - notePitchMidi(b.name, b.octave));
+  const pitchOf = (n) => notePitchMidi(n.name, n.octave);
+  const sorted = [...notes].sort((a, b) => pitchOf(a) - pitchOf(b));
   const match = findSamePitch(sorted, current);
-  if (!match) return undefined;
+  if (!match) {
+    const pitch = pitchOf(current);
+
+    return step > 0 ? sorted.find((n) => pitchOf(n) > pitch) : sorted.findLast((n) => pitchOf(n) < pitch);
+  }
   const index = Math.min(sorted.length - 1, Math.max(0, sorted.indexOf(match) + step));
 
   return sorted[index];
+}
+
+// Where a note outside the scale lies: "mezi E a F♯" (between the nearest scale notes
+// below and above, short names without octaves), "pod H" / "nad E" at an end of the
+// notes; '' for no notes. lowercase=true for minor scales.
+export function scaleNeighborsLabel(scaleNotes, note, lowercase = false) {
+  const name = (n) => (lowercase ? shortNoteName(n.name).toLowerCase() : shortNoteName(n.name));
+  const below = adjacentNote(scaleNotes, note, -1);
+  const above = adjacentNote(scaleNotes, note, 1);
+  if (below && above) return `mezi ${name(below)} a ${name(above)}`;
+  if (above) return `pod ${name(above)}`;
+
+  return below ? `nad ${name(below)}` : '';
 }
 
 // The note an octave above (+1) or below (-1) `current` among `notes` (in any spelling);
@@ -495,14 +514,31 @@ export function enharmonicSpellings(name, octave) {
   return [{ name, octave }, ...alternatives];
 }
 
+// Every name of a pitch (enharmonicSpellings) in display order: natural name first,
+// then the sharp ones (♯, ×) above the flat ones — the order of the full range staves.
+// e.g. ('Es', 4) → [Dis4, Es4]; ('H', 3) → [H3, Ces4]; ('G', 4) → [G4, Fisis4]
+const DISPLAY_SPELLING_ORDER = { null: 0, sharp: 1, 'double-sharp': 2, flat: 3 };
+
+export function pitchSpellings(name, octave) {
+  return enharmonicSpellings(name, octave)
+    .sort((a, b) => DISPLAY_SPELLING_ORDER[accidentalType(a.name)] - DISPLAY_SPELLING_ORDER[accidentalType(b.name)]);
+}
+
 // Short letter + accidental symbol form of a Czech note name:
 // 'Fis' → 'F♯', 'Es' → 'E♭', 'Fisis' → 'F×', 'C' → 'C'.
-// 'B' is H-flat in Czech notation, so it becomes 'H♭' (letter follows diatonicLetter).
+// 'B' (H-flat) stays 'B' — the usual Czech short name; its long name is 'Hes'.
 export function shortNoteName(name) {
+  if (name === 'B') return 'B';
   const acc = accidentalType(name);
   const symbol = acc === 'double-sharp' ? '×' : acc === 'sharp' ? '♯' : acc === 'flat' ? '♭' : '';
 
   return diatonicLetter(name) + symbol;
+}
+
+// Long (spelled-out) form of a Czech note name: the name itself, only B (H-flat)
+// becomes 'Hes' — its short name is 'B' (see shortNoteName).
+export function longNoteName(name) {
+  return name === 'B' ? 'Hes' : name;
 }
 
 // Splits a tooltip label into parts, marking octave numbers so they can be
@@ -532,7 +568,8 @@ export function noteLabelParts(name, lowercase = false) {
 // lowercase=true is used for minor scales.
 export function noteTooltipLines(name, octave, lowercase = false) {
   return enharmonicSpellings(name, octave).map((n) => {
-    const longName  = (lowercase ? n.name.toLowerCase() : n.name) + n.octave;
+    const long      = longNoteName(n.name);
+    const longName  = (lowercase ? long.toLowerCase() : long) + n.octave;
     if (accidentalType(n.name) === null) return longName;
     const shortName = (lowercase ? shortNoteName(n.name).toLowerCase() : shortNoteName(n.name)) + n.octave;
 
@@ -548,7 +585,7 @@ const KEY_SIG_FLAT_ORDER  = ['B', 'Es', 'As', 'Des', 'Ges', 'Ces', 'Fes'];
 
 const shortNames = (names) => names.map(shortNoteName).join(' ');
 
-// "2 ♯ : F♯ C♯" / "3 ♭ : H♭ E♭ A♭"; '' for no key signature.
+// "2 ♯ : F♯ C♯" / "3 ♭ : B E♭ A♭"; '' for no key signature.
 export function keySignatureLabel(keySig) {
   if (keySig === 0) return '';
   if (keySig > 0) return `${keySig} ♯ : ${shortNames(KEY_SIG_SHARP_ORDER.slice(0, keySig))}`;
@@ -572,7 +609,7 @@ export function scaleAccidentalsLabel(entry) {
   return groups.join('; ');
 }
 
-// Short scale name: 'F♯ dur', 'H♭ dur', 'f♯ moll', 'C celotónová'.
+// Short scale name: 'F♯ dur', 'B dur', 'f♯ moll', 'C celotónová'.
 // typeLabel is the Czech type word ('dur', 'moll', ...); minor roots stay lowercase.
 export function shortScaleName(entry, typeLabel) {
   const root = shortNoteName(entry.root[0].toUpperCase() + entry.root.slice(1));
@@ -581,9 +618,18 @@ export function shortScaleName(entry, typeLabel) {
 }
 
 // Short note names without octaves, separated by a middle dot:
-// "H♭ · C · D · E♭ · F · G · A · H♭" (lowercase for minor).
+// "B · C · D · E♭ · F · G · A · B" (lowercase for minor).
 export function scaleNotesText(notes, lowercase = false) {
-  return notes.map((n) => (lowercase ? shortNoteName(n.name).toLowerCase() : shortNoteName(n.name))).join(' · ');
+  return scaleNoteLabels(notes, lowercase).map((n) => n.label).join(' · ');
+}
+
+// The notes of scaleNotesText one by one, each with its pitch class, so they can be
+// drawn (and clicked) separately: [{ label: 'F♯', semitone: 6 }, …].
+export function scaleNoteLabels(notes, lowercase = false) {
+  return notes.map((n) => ({
+    label: lowercase ? shortNoteName(n.name).toLowerCase() : shortNoteName(n.name),
+    semitone: noteNameToSemitone(n.name),
+  }));
 }
 
 // ─── Staff slot calculation ──────────────────────────────────────────────────

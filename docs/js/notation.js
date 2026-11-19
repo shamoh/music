@@ -226,6 +226,7 @@ function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor'
         height: ls * (LABEL_PILL_TOP_LS + LABEL_PILL_BOTTOM_LS),
         rx: Math.round(ls * 0.4),
         fill: labelBg,
+        'data-note-label': '',
       }));
     }
     const { letter, accidental } = noteLabelParts(note.name, lowercase);
@@ -237,6 +238,7 @@ function drawNoteScaled(svg, x, note, staffTop, ls, nr, { color = 'currentColor'
       'text-anchor': 'middle',
       'font-family': 'sans-serif',
       'font-weight': 'bold',
+      'data-note-label': '',   // the name label (pill + text) — a click target of its own
     }), letter);
     if (accidental) {
       const accFontSize = ls * 1.6 * LABEL_ACC_FONT_SCALE;
@@ -357,6 +359,7 @@ export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig
   );
 
   const pillW = Math.min(ls * 3.5, step * 0.9);
+  const noteGap = Math.max(1.5, step * 0.06);
   scaleNotes.forEach((note, i) => {
     const x = notesStartX + (i + 1) * step;
     const k = note.name === tonicName ? 'tonic' : chordSet.has(note.name) ? 'chord' : 'scale';
@@ -364,7 +367,16 @@ export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig
     const ledgerColor = `var(--note-${k}-ledger)`;
     const labelColor  = `var(--note-${k}-label)`;
     const labelBg     = `var(--note-${k}-label-bg, transparent)`;
-    drawNoteScaled(notesLayer, x, note, staffTop, ls, noteRadius, { color, ledgerColor, labelColor, labelBg, pillW, showLabel: true, lowercase: isMinor, inlineAcc: inlineAccs[i], labelY, halo: true, shine, ledgerLayer: staffLayer });
+    // Each note in its own group with an (invisible) column outline, so the page can
+    // find it and highlight it — same structure as the range staff
+    const g = svgEl('g', { 'data-note': note.name, 'data-octave': note.octave });
+    g.appendChild(svgEl('rect', {
+      x: x - step * 0.5 + noteGap, y: 0,
+      width: step - noteGap * 2, height: totalHeight,
+      fill: 'none', 'data-highlight': '',
+    }));
+    notesLayer.appendChild(g);
+    drawNoteScaled(g, x, note, staffTop, ls, noteRadius, { color, ledgerColor, labelColor, labelBg, pillW, showLabel: true, lowercase: isMinor, inlineAcc: inlineAccs[i], labelY, halo: true, shine, ledgerLayer: staffLayer });
   });
 }
 

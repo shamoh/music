@@ -45,6 +45,6 @@ describe('fingeringGridHtml', () => {
   });
 
   it('titles cards with all spellings of the note', () => {
-    assert.match(fingeringGridHtml(TOY), /B4 <span class="alt">· Ais4<\/span>/);
+    assert.match(fingeringGridHtml(TOY), /Hes4 <span class="alt">· Ais4<\/span>/);
   });
 });

@@ -285,6 +285,23 @@ header h1 {
   vertical-align: -0.25em;
   line-height: 0;
 }
+/* Notes in the scale summary: a click highlights the note in every octave */
+.subtitle-note {
+  padding: 0 0.1em;
+  border: none;
+  border-radius: 3px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.subtitle-note:hover { text-decoration: underline; }
+.subtitle-note.active {
+  color: var(--accent2);
+  font-weight: 700;
+  text-decoration: underline dashed;
+  text-underline-offset: 0.2em;
+}
 
 /* ─── Main layout — mobile portrait (default) ─── */
 main {
@@ -558,7 +575,14 @@ main {
   background: var(--bg-input);
   border: 1px solid var(--border);
   color: var(--text-muted);
+  font-family: inherit;
+  cursor: pointer;
   transition: background 0.15s;
+}
+/* Highlighted note (every octave) — dashed like on the saxophone range page */
+.note-chip.same-note {
+  outline: 2px dashed var(--accent2);
+  outline-offset: 2px;
 }
 
 .note-chip.chord {
@@ -627,6 +651,7 @@ main {
 }
 .note-fingerings[hidden] { display: none; }
 .note-fingerings-title { font-weight: 600; margin-bottom: 0.4rem; }
+.note-fingerings-outside { margin: -0.2rem 0 0.4rem; }
 .note-fingerings-groups { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; }
 .note-fingerings-label { color: var(--text-muted); margin-bottom: 0.2rem; }
 .note-fingerings-list { display: flex; flex-wrap: wrap; gap: 0.6rem; }
@@ -662,7 +687,45 @@ main {
   gap: 4px;
   margin-bottom: 4px;
 }
-.fingering-cell {
+/* Column names above and below the chart: the same note in every row of a column */
+.fingering-header.top { margin-bottom: 2px; }
+.fingering-header.bottom { margin-top: 2px; }
+/* Names stacked: in the full range the sharp name above the flat one */
+.fingering-header-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  line-height: 1.2;
+  padding: 1px 0 3px;
+  border: none;
+  border-bottom: 2px solid var(--border);
+  background: none;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+}
+.fingering-header-cell:hover { border-color: var(--text-muted); }
+/* Highlighted column note: its name and its fingerings in every octave */
+.fingering-header-cell.active { color: var(--accent2); border-color: var(--accent2); }
+/* The section tint stays inside the border, so the dashes don't blend with it */
+.fingering-cell.same-note { border-style: dashed; border-color: var(--accent2); background-clip: padding-box; }
+.fingering-header.bottom .fingering-header-cell { justify-content: flex-start; padding: 3px 0 1px; border-top: 2px solid var(--border); border-bottom: none; }
+.fingering-header.bottom .fingering-header-cell:hover { border-top-color: var(--text-muted); }
+.fingering-header.bottom .fingering-header-cell.active { border-top-color: var(--accent2); }
+/* Scale page: column names of the chord notes boxed black, the tonic red — the staff label colors */
+.fingering-header-cell.chord,
+.fingering-header-cell.tonic { border-radius: 5px; }
+.fingering-header-cell.chord { background: var(--note-chord-label-bg); color: var(--note-chord-label); }
+.fingering-header-cell.tonic { background: var(--note-tonic-label-bg); color: var(--note-tonic-label); }
+/* A boxed name keeps its colors when highlighted — dashed outline like the fingerings instead */
+.fingering-header-cell.chord.active,
+.fingering-header-cell.tonic.active { outline: 2px dashed var(--accent2); outline-offset: 2px; }
+
+.fingering-cell,
+.fingering-slot {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -676,40 +739,45 @@ main {
   font-weight: 600;
   line-height: 1.25;
 }
-/* Note names in the top right corner — the key diagram leaves that corner empty */
-.fingering-cell-names {
-  position: absolute;
-  top: 3px;
-  right: 5px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-.fingering-cell .alt { color: var(--text-muted); font-weight: 400; }
 /* Narrow screens: the columns shrink to their minimum (~51 px) — smaller names
    tucked closer into the corner so they don't touch the top keys */
 @media (max-width: 800px) {
   .fingering-cell { font-size: 0.62rem; line-height: 1.15; }
-  .fingering-cell-names { top: 2px; right: 3px; }
+  .fingering-header-cell { font-size: 0.7rem; line-height: 1.15; }
 }
 /* Cropped diagram from the top, growing with the cell (the chart is as wide as the page) */
-.fingering-cell .key-diagram { width: 100%; max-width: 80px; height: auto; }
+.fingering-cell .key-diagram,
+.fingering-slot .key-diagram { width: 100%; max-width: 80px; height: auto; }
+/* Positions without a fingering: grey = the instrument has no such note (outside its
+   range), empty = the note exists but is not in the shown scale */
+.fingering-slot .key-diagram { visibility: hidden; }
+/* A note outside the scale: click shows its fingerings (dashed outline on hover / when selected) */
+.fingering-slot.unused { padding: 4px 2px; border: 2px dashed transparent; border-radius: 6px; background: none; font: inherit; cursor: pointer; }
+.fingering-slot.unused:hover { border-color: var(--border); }
+.fingering-slot.unused.selected { border-color: var(--accent2); }
+.fingering-slot.missing {
+  background: repeating-linear-gradient(135deg,
+    color-mix(in srgb, var(--text-muted) 14%, transparent) 0 6px,
+    color-mix(in srgb, var(--text-muted) 8%, transparent) 6px 12px);
+}
 .fingering-cell { cursor: pointer; }
 .fingering-cell:hover { border-color: var(--border); }
-/* Scale page: the tonic's name colored like its label on the staff */
-.fingering-cell.tonic .fingering-cell-name {
-  padding: 0 0.3em;
-  border-radius: 4px;
-  background: var(--note-tonic-label-bg);
-  color: var(--note-tonic-label);
-}
-.fingering-cell.tonic .fingering-cell-name .note-octave { color: inherit; }
-.fingering-cell.selected { border-color: var(--accent2); }
+.fingering-cell.selected { border-style: solid; border-color: var(--accent2); }
 
-/* Full range: the selected note on the staves, same outline as its fingering */
+/* The note name label under a staff note highlights the note in every octave */
+.staff-container [data-note-label] { cursor: pointer; }
+.staff-container [data-layer="muted-notes"] [data-note-label] { cursor: default; }
+/* The highlighted column note on the staves (every octave), dashed like its fingerings */
+.staff-container g.same-note [data-highlight] {
+  stroke: var(--accent2);
+  stroke-width: 2;
+  stroke-dasharray: 5 3;
+}
+/* The selected note on the staves, same outline as its fingering */
 .staff-container g.selected [data-highlight] {
   stroke: var(--accent2);
   stroke-width: 2;
+  stroke-dasharray: none;
 }
 
 .range-dir-label {
@@ -735,6 +803,16 @@ main {
   text-align: left;
   line-height: 1.45;
   transform: translate(-50%, calc(-100% - 10px));
+}
+/* Note under a tone's names ("mimo stupnici · mezi E a F♯") — staff tooltip and the
+   fingerings panel: smaller, muted, set apart by a line */
+.note-extra {
+  margin-top: 0.15rem;
+  padding-top: 0.15rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.85em;
+  font-weight: 400;
 }
 /* Octave number after a note name ("C♯4"): smaller, lowered and muted.
    Shared by the note tooltip and the start-scales panel title. */

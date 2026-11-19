@@ -48,6 +48,8 @@ docs/                               GitHub Pages publishing root
     analytics.js                    Google Analytics integration
     fingering-diagram.js            SVG key diagram of an instrument (string, no DOM)
     fingering.js                    fingering helpers: lookup by note, rows of the fingering chart
+    note-highlight.js               one note highlighted in every octave (scales + range pages)
+    page-keys.js                    key presses meant for the page (not the settings menu / form fields), focus ring
     instrument/saxophone/           key map + fingerings shared by saxophones; alto/instrument.js = descriptor
   scales/
     index.html                      main page — scale staff
@@ -67,9 +69,9 @@ Three values must always be updated together:
 
 | File | Key | Current |
 | --- | --- | --- |
-| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.52'` |
-| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-11-19 13:52'` |
-| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.52'` |
+| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.53'` |
+| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-11-19 21:34'` |
+| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.53'` |
 
 `APP_VERSION` and `BUILD_DATE` drive the footer display (`Scales vX.Y.Z · YYYY-MM-DD HH:MM`).
 `CACHE_NAME` forces the browser to drop the old PWA cache and re-fetch all assets.
