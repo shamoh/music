@@ -31,7 +31,11 @@ import { renderKeyDiagram } from '/js/fingering-diagram.js';
 import { fingeringFor, fingeringRows, columnLabels } from '/js/fingering.js';
 import { SAXOPHONE_ALTO } from '/js/instrument/saxophone/alto/instrument.js';
 import { toggledSemitone, elementSemitone, markHighlightedNote, staffLabelSemitone } from '/js/note-highlight.js';
-import { initPageKeys, blurFocused, isFormField } from '/js/page-keys.js';
+import { initPageKeys, blurFocused, isFormField, navigationKey } from '/js/page-keys.js';
+import { playSlideIn } from '/js/swipe-gesture.js';
+import { renderScaleNavHeading, initScaleNavigation } from '/js/scale-nav.js';
+import { loadSavedFilters, saveFilters, syncFilterChips } from '/js/scale-filters.js';
+import { registerServiceWorker } from '/js/service-worker-registration.js';
 import { applyProfile, savedProfileId, initProfileSelect, initSectionTintSelect } from '/js/themes.js';
 import { DEFAULT_SCALE_ID, APP_VERSION, BUILD_DATE } from '/js/defaults.js';
 import { initAnalytics, trackScaleView } from '/js/analytics.js';
@@ -167,28 +171,45 @@ function initFilterChips() {
   });
 }
 
+// Filters remembered between visits (scale-filters.js: the type filter per page, sharp /
+// flat shared with the Stupnice page); this page offers all scale types
+const FILTER_STORAGE_KEY = 'scales-range-filters';
+const ALL_FILTERS = { type: SCALE_TYPE_ORDER, acc: ['sharp', 'flat'] };
+
 function toggleFilter(btn, stateKey, value) {
   const set = state[stateKey];
   if (set.has(value) && set.size === 1) return;
-  if (set.has(value)) {
-    set.delete(value);
-    btn.classList.remove('active');
-    btn.setAttribute('aria-pressed', 'false');
-  } else {
-    set.add(value);
-    btn.classList.add('active');
-    btn.setAttribute('aria-pressed', 'true');
+  if (set.has(value)) set.delete(value);
+  else set.add(value);
+  applyFilterChange();
+}
+
+// "Vše zapnout" in the sticky row's filters
+function enableAllFilters() {
+  state.filterType = new Set(ALL_FILTERS.type);
+  state.filterAcc  = new Set(ALL_FILTERS.acc);
+  applyFilterChange();
+}
+
+// After the user changed the filters: remember them, redraw the chips and keep the shown
+// scale (or the one offered for its enharmonic pair), else the first scale offered.
+function applyFilterChange() {
+  saveFilters(FILTER_STORAGE_KEY, state);
+  syncFilterChips(state);
+  if (state.scaleId !== FULL_RANGE_ID) {
+    const visible = visibleScales();
+    const shown = visible.find((s) => scalePair(s).some((p) => p.id === state.scaleId));
+    state.scaleId = shown?.id ?? visible[0]?.id ?? DEFAULT_SCALE_ID;
   }
-  if (state.scaleId === FULL_RANGE_ID) {
-    repopulateSelect();
-    update();
-    return;
-  }
-  const visible = visibleScales();
-  const shown = visible.find((s) => scalePair(s).some((p) => p.id === state.scaleId));
-  state.scaleId = shown?.id ?? visible[0]?.id ?? DEFAULT_SCALE_ID;
   repopulateSelect();
   update();
+}
+
+// Remembered filters, before the URL's scale (which switches its own filters on)
+function applySavedFilters() {
+  const saved = loadSavedFilters(FILTER_STORAGE_KEY, ALL_FILTERS);
+  if (saved.filterType) state.filterType = saved.filterType;
+  if (saved.filterAcc) state.filterAcc = saved.filterAcc;
 }
 
 // ─── Scale select ─────────────────────────────────────────────────────────────
@@ -220,6 +241,9 @@ function makeOption(s) {
 
 // ─── Type sub-nav ─────────────────────────────────────────────────────────────
 
+// Variant switcher: Aiolská | Harmonická | Melodická. On touch devices it has ‹ / ›
+// buttons at its sides (CSS) — the previous / next variant, disabled at the ends —
+// which also show that the switcher takes a swipe.
 function updateTypeNav(entry, currentType) {
   const nav = $('type-nav');
   if (entry?.type !== 'minor') {
@@ -227,7 +251,9 @@ function updateTypeNav(entry, currentType) {
     return;
   }
   nav.hidden = false;
-  while (nav.firstChild) nav.removeChild(nav.firstChild);
+  nav.replaceChildren();
+  const currentIndex = VALID_TYPES.indexOf(currentType);
+  nav.appendChild(makeVariantArrow({ step: -1, disabled: currentIndex === 0 }));
   VALID_TYPES.forEach((type, i) => {
     if (i > 0) {
       nav.appendChild(Object.assign(document.createElement('span'), { className: 'type-nav-sep' }));
@@ -235,76 +261,49 @@ function updateTypeNav(entry, currentType) {
     if (type === currentType) {
       nav.appendChild(Object.assign(document.createElement('strong'), { textContent: TYPE_LABELS[type] }));
     } else {
-      nav.appendChild(Object.assign(document.createElement('a'), { href: makeHash(entry, type), textContent: TYPE_LABELS[type] }));
+      const link = Object.assign(document.createElement('a'), { href: makeHash(entry, type), textContent: TYPE_LABELS[type] });
+      link.dataset.variantStep = String(i - currentIndex);
+      nav.appendChild(link);
     }
   });
+  nav.appendChild(makeVariantArrow({ step: 1, disabled: currentIndex === VALID_TYPES.length - 1 }));
+}
+
+function makeVariantArrow({ step, disabled }) {
+  const button = Object.assign(document.createElement('button'), {
+    type: 'button',
+    className: 'type-nav-arrow',
+    textContent: step < 0 ? '‹' : '›',
+    disabled,
+  });
+  button.dataset.variantStep = String(step);
+  button.setAttribute('aria-label', step < 0 ? 'Předchozí varianta' : 'Další varianta');
+
+  return button;
 }
 
 // ─── Heading: ‹ previous | current | next › ──────────────────────────────────
 
-// Previous / next scale of the same type, in the order of the scale select
-// (respects the active filters). Each of the three sections gets a fixed width
-// — the widest name within the group — so switching scales never moves the links.
+// Previous / next scale in the order of the scale select (scale-nav.js); the full range
+// has only its title. The hints about switching don't apply there.
 function updateScaleHeading(entry) {
-  const prevEl = $('scale-nav-prev');
-  const nextEl = $('scale-nav-next');
-  const titleEl = $('range-title');
-  const isFullRange = !entry;
-  const group = isFullRange ? [] : visibleScales().filter((s) => s.type === entry.type);
-  const { prev, next } = isFullRange ? { prev: null, next: null } : adjacentScales(visibleScales(), entry.id);
-
-  titleEl.textContent = isFullRange ? FULL_RANGE_LABEL : pairName(entry);
-  fillNavItem(prevEl, prev, 'Předchozí stupnice', (name) => `‹ ${name}`);
-  fillNavItem(nextEl, next, 'Další stupnice', (name) => `${name} ›`);
-  $('scale-heading').classList.toggle('single', isFullRange);
-  if (isFullRange) {
-    for (const el of [prevEl, titleEl, nextEl]) el.style.width = '';
-    return;
-  }
-
-  const names = group.map(pairName);
-  prevEl.style.width  = maxTextWidth(prevEl, names.map((n) => `‹ ${n}`)) + 'px';
-  titleEl.style.width = maxTextWidth(titleEl, names) + 'px';
-  nextEl.style.width  = maxTextWidth(nextEl, names.map((n) => `${n} ›`)) + 'px';
-
-  // Depends only on the group's widest names, so it doesn't flip while browsing the group
-  const heading = $('scale-heading');
-  heading.classList.remove('stacked');
-  heading.classList.toggle('stacked', heading.scrollWidth > heading.parentNode.clientWidth);
-}
-
-function fillNavItem(el, target, ariaLabel, format) {
-  while (el.firstChild) el.removeChild(el.firstChild);
-  el.classList.toggle('disabled', !target);
-  el.removeAttribute('aria-label');
-  if (!target) {
-    el.textContent = format('').trim();
-    return;
-  }
-  const a = Object.assign(document.createElement('a'), {
-    href: makeHash(target, 'natural'),
-    textContent: format(pairName(target)),
+  renderScaleNavHeading(SCALE_NAV_HEADING(), {
+    current: entry ?? null,
+    scales: visibleScales(),
+    typeOrder: SCALE_TYPE_ORDER,
+    scaleLabel: pairName,
+    groupLabel: (type) => SCALE_TYPE_GROUP_LABEL[type],
+    href: (target) => makeHash(target, 'natural'),
+    emptyTitle: FULL_RANGE_LABEL,
   });
-  a.setAttribute('aria-label', `${ariaLabel}: ${pairName(target)}`);
-  el.appendChild(a);
+  const isMinor = entry?.type === 'minor';
+  $('touch-hint').hidden = !entry;
+  $('touch-hint-variant').hidden = !isMinor;
+  $('scale-switch-key-hint').hidden = !entry;
+  $('variant-switch-key-hint').hidden = !isMinor;
 }
 
-// Widest rendered width (px, including the element's padding) of the given
-// texts in the font of el. Measured with an invisible clone of el.
-function maxTextWidth(el, texts) {
-  const probe = el.cloneNode(false);
-  probe.removeAttribute('id');
-  Object.assign(probe.style, { position: 'absolute', visibility: 'hidden', width: 'auto', whiteSpace: 'nowrap' });
-  el.parentNode.appendChild(probe);
-  let max = 0;
-  for (const text of texts) {
-    probe.textContent = text;
-    max = Math.max(max, probe.getBoundingClientRect().width);
-  }
-  probe.remove();
-
-  return Math.ceil(max);
-}
+const SCALE_NAV_HEADING = () => ({ root: $('scale-heading'), prev: $('scale-nav-prev'), title: $('range-title'), next: $('scale-nav-next') });
 
 // ─── Subtitle: "B dur: B3 C4 … B4 (2♭ : be, es)" ─────────────────────────────
 
@@ -482,6 +481,8 @@ const SELECTION_MOVES = {
 
 function initSelectionKeys() {
   initPageKeys((e) => {
+    // Shift+arrows switch the scale / variant (scale-nav.js)
+    if (navigationKey(e)) return;
     const note = selectedNote();
     if (e.key === 'Escape') {
       // Clears the selected note and the highlighted column note
@@ -503,6 +504,63 @@ function initSelectionKeys() {
     e.preventDefault();   // the keys don't scroll the page or the staff
     setSelectedNote({ name: next.name, octave: next.octave });
     blurFingeringCell();
+  });
+}
+
+// Switches to the previous (step −1) / next (+1) scale in the order of the scale
+// select (scale-nav.js: keys, swipe, the ‹ / › links). The page slides in from the side
+// it came from. Nothing on the full range and at the ends of the list.
+function switchScale(step) {
+  if (state.scaleId === FULL_RANGE_ID) return;
+  const { prev, next } = adjacentScales(visibleScales(), state.scaleId, SCALE_TYPE_ORDER);
+  const target = step < 0 ? prev : next;
+  if (!target) return;
+
+  saveLastScaleId(target.id);
+  pendingSlideStep = step;
+  location.hash = makeHash(target, 'natural');
+}
+
+// Switches a minor scale by `step` variants (aiolská → harmonická → melodická; −1 / +1
+// from keys and swipes, also ±2 from the variant switcher). Nothing for other scales
+// and beyond the ends.
+function switchVariant(step) {
+  const entry = SCALE_CATALOG.find((s) => s.id === state.scaleId);
+  if (entry?.type !== 'minor') return;
+  const type = VALID_TYPES[VALID_TYPES.indexOf(state.variantType) + step];
+  if (!type) return;
+
+  pendingSlideStep = step;
+  location.hash = makeHash(entry, type);
+}
+
+// Step of the switch whose page is being rendered (hashchange), for its slide animation
+let pendingSlideStep = 0;
+
+// Everything in the scale box below the (sticky) heading slides in, and the title
+function playScaleSlide() {
+  if (pendingSlideStep === 0) return;
+  const step = pendingSlideStep;
+  pendingSlideStep = 0;
+  playSlideIn([...document.querySelectorAll('.range-section > :not(.title-row)'), $('range-title')], step);
+}
+
+function initScaleSwitching() {
+  // A variant picked in the switcher (or its ‹ / › buttons) slides in like a variant switched by a key
+  $('type-nav').addEventListener('click', (event) => {
+    const control = event.target.closest('[data-variant-step]');
+    if (!control || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    switchVariant(Number(control.dataset.variantStep));
+  });
+  initScaleNavigation({
+    heading: SCALE_NAV_HEADING(),
+    stickyRow: document.querySelector('.range-section > .scale-nav-row'),
+    swipeArea: document.querySelector('.range-section'),
+    variantSwipeArea: $('type-nav'),
+    onScaleStep: switchScale,
+    onVariantStep: switchVariant,
+    onEnableAllFilters: enableAllFilters,
   });
 }
 
@@ -929,25 +987,22 @@ function update() {
 
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 
-function registerSW() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js').catch(() => {});
-  }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
   initAnalytics();
   applyProfile(savedProfileId());
+  applySavedFilters();
   applyHashToState();
+  syncFilterChips(state);
   initFilterChips();
   initProfileSelect($('profile-select'));
   initSectionTintSelect($('section-tint-select'));
   repopulateSelect();
-  registerSW();
+  registerServiceWorker();
   initTooltip();
   initStartScales();
   initSelectionKeys();
   initColumnHighlight();
+  initScaleSwitching();
 
   $('scale-select').addEventListener('change', (e) => {
     state.scaleId     = e.target.value;
@@ -958,8 +1013,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.addEventListener('hashchange', () => {
     applyHashToState();
+    syncFilterChips(state);
     repopulateSelect();
     update();
+    playScaleSlide();
   });
 
   const footer = document.getElementById('app-footer');

@@ -333,16 +333,17 @@ export function dedupePairs(scales) {
   });
 }
 
-// Previous and next scale of the same type as scaleId within an ordered list
-// (e.g. the result of filteredScales). Returns { prev, next }, null at the ends
-// or when the scale is not in the list.
-export function adjacentScales(scales, scaleId) {
-  const entry = scales.find((s) => s.id === scaleId);
-  if (!entry) return { prev: null, next: null };
-  const sameType = scales.filter((s) => s.type === entry.type);
-  const idx = sameType.indexOf(entry);
+// Previous and next scale of scaleId within an ordered list (e.g. the result of
+// filteredScales), the scales grouped by type in typeOrder — like the groups of the
+// scale select. The first scale of a group steps back to the last scale of the previous
+// group, the last one on to the first scale of the next group.
+// Returns { prev, next }; null at the ends of the list or when the scale is not in it.
+export function adjacentScales(scales, scaleId, typeOrder) {
+  const ordered = typeOrder.flatMap((type) => scales.filter((s) => s.type === type));
+  const idx = ordered.findIndex((s) => s.id === scaleId);
+  if (idx < 0) return { prev: null, next: null };
 
-  return { prev: sameType[idx - 1] ?? null, next: sameType[idx + 1] ?? null };
+  return { prev: ordered[idx - 1] ?? null, next: ordered[idx + 1] ?? null };
 }
 
 // Scales starting on the given written note, in catalog order.

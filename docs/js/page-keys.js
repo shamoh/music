@@ -53,3 +53,19 @@ export function initUndoKey(handler, doc = document) {
     handler(event);
   });
 }
+
+// Navigation keys with Shift: ← / → step to the previous / next scale, ↑ / ↓ to the
+// previous / next variant of a minor scale (plain arrows move the selected note).
+// Returns { axis: 'scale' | 'variant', step: −1 | +1 }, or null for any other key.
+const NAVIGATION_KEYS = {
+  ArrowLeft:  { axis: 'scale', step: -1 },
+  ArrowRight: { axis: 'scale', step: 1 },
+  ArrowUp:    { axis: 'variant', step: -1 },
+  ArrowDown:  { axis: 'variant', step: 1 },
+};
+
+export function navigationKey(event) {
+  if (!event.shiftKey) return null;
+
+  return NAVIGATION_KEYS[event.key] ?? null;
+}

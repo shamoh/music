@@ -67,22 +67,35 @@
     <!-- Filter + scale selector -->
     <section class="filter-bar" aria-label="Výběr stupnice">
 
-      <div class="filter-group">
-        <span class="filter-label">Typ</span>
-        <button class="filter-chip active" data-filter-type="major" aria-pressed="true">Dur</button>
-        <button class="filter-chip active" data-filter-type="minor" aria-pressed="true">Moll</button>
-      </div>
-
-      <div class="filter-group">
-        <span class="filter-label">Klíč</span>
-        <button class="filter-chip active" data-filter-acc="sharp" aria-pressed="true">♯ Kříže</button>
-        <button class="filter-chip active" data-filter-acc="flat"  aria-pressed="true">♭ Béčka</button>
-      </div>
-
       <div class="filter-group scale-select-group">
         <select id="scale-select" aria-label="Výběr stupnice"></select>
       </div>
 
+    </section>
+
+    <!-- Sticky heading: ‹ previous | current | next › (scale-nav.js) and the filters -->
+    <section class="scale-nav-bar scale-nav-row filters-pending" aria-label="Předchozí a další stupnice">
+      <div id="scale-heading" class="scale-heading">
+        <span id="scale-nav-prev" class="scale-nav-item scale-nav-prev"></span>
+        <span class="scale-nav-sep scale-nav-sep-first" aria-hidden="true"></span>
+        <h2 id="scale-nav-title" class="scale-nav-current"></h2>
+        <span class="scale-nav-sep" aria-hidden="true"></span>
+        <span id="scale-nav-next" class="scale-nav-item scale-nav-next"></span>
+      </div>
+      <!-- Dur / Moll and sharp / flat filters: at hand while browsing the scales;
+           on narrow screens hidden behind the toggle (scale-nav.js) -->
+      <button type="button" class="scale-nav-filters-toggle" aria-expanded="false" aria-controls="scale-nav-filters">Filtry <span class="scale-nav-filters-arrow" aria-hidden="true">▾</span></button>
+      <div id="scale-nav-filters" class="scale-nav-filters">
+        <div class="filter-group" role="group" aria-label="Typ stupnice">
+          <button class="filter-chip active" data-filter-type="major" aria-pressed="true">Dur</button>
+          <button class="filter-chip active" data-filter-type="minor" aria-pressed="true">Moll</button>
+        </div>
+        <div class="filter-group" role="group" aria-label="Předznamenání">
+          <button class="filter-chip active" data-filter-acc="sharp" aria-pressed="true">♯ Kříže</button>
+          <button class="filter-chip active" data-filter-acc="flat"  aria-pressed="true">♭ Béčka</button>
+        </div>
+        <button type="button" class="scale-nav-filters-reset" hidden>Vše zapnout</button>
+      </div>
     </section>
 
     <!-- Major view (single scale) -->
@@ -135,6 +148,12 @@
 
   </main>
 
+  <!-- Swipe hint (touch devices only) and keyboard shortcuts (hidden on touch devices) -->
+  <p class="touch-hint">Tahem prstem doleva / doprava přepnete na další / předchozí stupnici.</p>
+  <p class="key-hint">
+    <span><kbd>Shift</kbd> + <kbd>←</kbd> <kbd>→</kbd> předchozí / další stupnice</span>
+    <span><kbd>Esc</kbd> zruší zvýraznění tónu</span>
+  </p>
   <footer class="app-footer" id="app-footer"></footer>
   <script type="module" src="/js/app.js"></script>
 </body>

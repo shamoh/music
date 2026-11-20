@@ -1,4 +1,4 @@
 export const DEFAULT_SCALE_ID   = 'C-major';
 export const DEFAULT_PROFILE_ID = 'large';
-export const APP_VERSION        = '1.0.53';
-export const BUILD_DATE         = '2026-11-19 21:55';
+export const APP_VERSION        = '1.0.54';
+export const BUILD_DATE         = '2026-11-20 21:04';

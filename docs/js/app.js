@@ -7,6 +7,8 @@ import {
   scaleStartOctave,
   noteNameToSemitone,
   longNoteName,
+  adjacentScales,
+  shortScaleName,
 } from './music.js';
 import { renderScaleStaff, whenMusicFontReady } from './notation.js';
 import { applyProfile, savedProfileId, initProfileSelect } from './themes.js';
@@ -14,6 +16,10 @@ import { DEFAULT_SCALE_ID, APP_VERSION, BUILD_DATE } from './defaults.js';
 import { initAnalytics, trackScaleView } from './analytics.js';
 import { toggledSemitone, elementSemitone, markHighlightedNote, staffLabelSemitone } from './note-highlight.js';
 import { initPageKeys, blurFocused } from './page-keys.js';
+import { playSlideIn } from './swipe-gesture.js';
+import { renderScaleNavHeading, initScaleNavigation } from './scale-nav.js';
+import { loadSavedFilters, saveFilters, syncFilterChips } from './scale-filters.js';
+import { registerServiceWorker } from './service-worker-registration.js';
 
 const state = {
   scaleId: DEFAULT_SCALE_ID,
@@ -118,25 +124,44 @@ function initFilterChips() {
   });
 }
 
+// Filters remembered between visits (scale-filters.js: the type filter per page, sharp /
+// flat shared with the saxophone range page); this page offers dur and moll only
+const FILTER_STORAGE_KEY = 'scales-filters';
+const ALL_FILTERS = { type: ['major', 'minor'], acc: ['sharp', 'flat'] };
+
 function toggleFilter(btn, stateKey, value) {
   const set = state[stateKey];
   if (set.has(value) && set.size === 1) return; // keep at least one active
-  if (set.has(value)) {
-    set.delete(value);
-    btn.classList.remove('active');
-    btn.setAttribute('aria-pressed', 'false');
-  } else {
-    set.add(value);
-    btn.classList.add('active');
-    btn.setAttribute('aria-pressed', 'true');
-  }
-  // If selected scale no longer visible, pick first visible scale
+  if (set.has(value)) set.delete(value);
+  else set.add(value);
+  applyFilterChange();
+}
+
+// "Vše zapnout" in the sticky row's filters
+function enableAllFilters() {
+  state.filterType = new Set(ALL_FILTERS.type);
+  state.filterAcc  = new Set(ALL_FILTERS.acc);
+  applyFilterChange();
+}
+
+// After the user changed the filters: remember them, redraw the chips and keep the shown
+// scale, else the first scale offered.
+function applyFilterChange() {
+  saveFilters(FILTER_STORAGE_KEY, state);
+  syncFilterChips(state);
   const visible = filteredScales(state.filterType, state.filterAcc);
   if (!visible.find((s) => s.id === state.scaleId)) {
     state.scaleId = visible[0]?.id ?? DEFAULT_SCALE_ID;
   }
   repopulateSelect();
   update();
+}
+
+// Remembered filters, before the URL's (or last) scale, which switches its own filters on
+function applySavedFilters() {
+  const saved = loadSavedFilters(FILTER_STORAGE_KEY, ALL_FILTERS);
+  if (saved.filterType) state.filterType = saved.filterType;
+  if (saved.filterAcc) state.filterAcc = saved.filterAcc;
 }
 
 // ─── Scale select ─────────────────────────────────────────────────────────────
@@ -225,6 +250,52 @@ function markHighlight() {
   markHighlightedNote(document.querySelectorAll('.staff-container [data-note]'), state.highlight);
 }
 
+// ─── Previous / next scale (scale-nav.js) ────────────────────────────────────
+
+// Groups of the scale select, in its order
+const SCALE_TYPE_ORDER = ['major', 'minor'];
+const SCALE_TYPE_LABEL = { major: 'dur', minor: 'moll' };
+const SCALE_TYPE_GROUP_LABEL = { major: 'Dur', minor: 'Moll' };
+
+const SCALE_NAV_HEADING = () => ({ root: $('scale-heading'), prev: $('scale-nav-prev'), title: $('scale-nav-title'), next: $('scale-nav-next') });
+
+function updateScaleHeading(entry) {
+  renderScaleNavHeading(SCALE_NAV_HEADING(), {
+    current: entry,
+    scales: filteredScales(state.filterType, state.filterAcc),
+    typeOrder: SCALE_TYPE_ORDER,
+    scaleLabel: (s) => shortScaleName(s, SCALE_TYPE_LABEL[s.type]),
+    groupLabel: (type) => SCALE_TYPE_GROUP_LABEL[type],
+    href: (target) => '#' + scaleIdToHash(target.id),
+  });
+}
+
+// Switches to the previous (step −1) / next (+1) scale in the order of the scale select
+// (keys, swipe, the ‹ / › links), like picking it in the select. The scale slides in
+// from the side it came from. Nothing at the ends of the list.
+function switchScale(step) {
+  const { prev, next } = adjacentScales(filteredScales(state.filterType, state.filterAcc), state.scaleId, SCALE_TYPE_ORDER);
+  const target = step < 0 ? prev : next;
+  if (!target) return;
+
+  state.scaleId = target.id;
+  saveLastScaleId(state.scaleId);
+  $('scale-select').value = state.scaleId;
+  update();
+  playSlideIn([$(target.type === 'major' ? 'major-view' : 'minor-view'), $('scale-nav-title')], step);
+}
+
+// All three minor variants are on the page at once — no variant switching here
+function initScaleSwitching() {
+  initScaleNavigation({
+    heading: SCALE_NAV_HEADING(),
+    stickyRow: document.querySelector('.scale-nav-row'),
+    swipeArea: document.querySelector('main'),
+    onScaleStep: switchScale,
+    onEnableAllFilters: enableAllFilters,
+  });
+}
+
 // ─── Main update ──────────────────────────────────────────────────────────────
 
 function update() {
@@ -242,6 +313,7 @@ function update() {
     $('minor-view').hidden = false;
     renderMinorView(entry);
   }
+  updateScaleHeading(entry);
   markHighlight();
 }
 
@@ -324,20 +396,16 @@ function pushHash() {
 
 // ─── Bootstrap ───────────────────────────────────────────────────────────────
 
-function registerSW() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js').catch(() => {});
-  }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
   initAnalytics();
   applyProfile(savedProfileId());
+  applySavedFilters();
   if (!location.hash) {
     const saved = savedLastScaleId();
     if (saved) applyHash('#' + scaleIdToHash(saved));
   }
   applyHash(location.hash);
+  syncFilterChips(state);
   initFilterChips();
   initProfileSelect($('profile-select'), update);
 
@@ -349,13 +417,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.addEventListener('hashchange', () => {
     applyHash(location.hash);
+    syncFilterChips(state);
     repopulateSelect();
     update();
   });
 
   repopulateSelect();
-  registerSW();
+  registerServiceWorker();
   initNoteHighlight();
+  initScaleSwitching();
 
   const footer = document.getElementById('app-footer');
   if (footer) {

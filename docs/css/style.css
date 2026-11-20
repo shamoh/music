@@ -210,14 +210,118 @@ header h1 {
   background: var(--bg-card);
   color: var(--text);
 }
+/* ‹ / › buttons of the variant switcher — shown on touch devices only (media query below) */
+.type-nav-arrow {
+  display: none;
+  align-items: center;
+  appearance: none;
+  border: none;
+  margin: 0;
+  padding: 0 0.65rem;
+  background: var(--bg);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.type-nav-arrow:first-child { border-right: 1px solid var(--border); }
+.type-nav-arrow:last-child  { border-left: 1px solid var(--border); }
+.type-nav-arrow:disabled { opacity: 0.35; cursor: default; }
 .type-nav-sep {
   width: 1px;
   background: var(--border);
   flex-shrink: 0;
 }
 
-/* ─── Range page heading: ‹ previous | current | next › ─── */
-.range-section > .title-row { flex-wrap: wrap; }
+/* ─── Scale heading: ‹ previous | current | next › (scale-nav.js) ─── */
+/* The heading row stays at the top of the window while the page scrolls (top: -1px
+   lets the script tell when it is stuck — then it gets a dividing shadow) */
+.scale-nav-row {
+  position: sticky;
+  top: -1px;
+  z-index: 5;
+  background: var(--bg-card);
+  transition: box-shadow 0.15s;
+}
+.scale-nav-row.stuck {
+  border-radius: 0;
+  box-shadow: 0 1px 0 var(--border), 0 4px 8px -4px rgba(0, 0, 0, 0.18);
+}
+/* Range page: the row is the top of the scale box, across its full width */
+.range-section > .title-row {
+  flex-wrap: wrap;
+  margin: -0.4rem calc(-1 * var(--range-section-pad-x)) 0.3rem;
+  padding: 0.4rem var(--range-section-pad-x);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+/* Scales page: the row is a card of its own above the scale, the Dur / Moll filter on its right */
+.scale-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 1rem;
+}
+.scale-nav-bar.stuck { border-top-color: transparent; }
+/* Filters in the sticky row, on its right; on narrow screens behind the "Filtry" toggle */
+.scale-nav-filters { display: flex; flex-wrap: wrap; gap: 0.4rem 0.8rem; margin-left: auto; }
+.scale-nav-filters-toggle {
+  display: none;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+  appearance: none;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 0.28rem 0.75rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  background: var(--bg-input);
+  color: var(--text-muted);
+}
+.scale-nav-filters-arrow { display: inline-block; transition: transform 0.15s; }
+.scale-nav-filters-toggle[aria-expanded="true"] .scale-nav-filters-arrow { transform: rotate(180deg); }
+/* Collapsed when they don't fit next to the heading (scale-nav.js measures it) */
+.scale-nav-row.filters-collapsed .scale-nav-filters-toggle { display: inline-flex; }
+.scale-nav-row.filters-collapsed .scale-nav-filters { display: none; flex-basis: 100%; margin-left: 0; }
+.scale-nav-row.filters-collapsed.filters-open .scale-nav-filters { display: flex; }
+/* Before the first measurement: laid out (measurable), but not shown */
+.scale-nav-row.filters-pending .scale-nav-filters,
+.scale-nav-row.filters-pending .scale-nav-filters-toggle { visibility: hidden; }
+/* "Vše zapnout" among the filters (while some filter is off) */
+.scale-nav-filters-reset {
+  appearance: none;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0.28rem 0.2rem;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+.scale-nav-filters-reset[hidden] { display: none; }
+/* Number of switched off filters on the toggle */
+.scale-nav-filters-count {
+  min-width: 1.3em;
+  padding: 0 0.3em;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+}
+.scale-nav-filters-count[hidden] { display: none; }
+.scale-nav-bar h2 { font-size: 1.2rem; }
 .range-section > .title-row > .type-nav { margin: 0; }
 .scale-heading {
   display: flex;
@@ -250,6 +354,17 @@ header h1 {
 }
 .scale-nav-item a:hover { color: var(--text); }
 .scale-nav-item.disabled { opacity: 0.4; }
+/* Link into another group (end of a group): the group's name as a small tag */
+.scale-nav-group {
+  display: inline-block;
+  padding: 0 0.35em;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.78em;
+  line-height: 1.35;
+  color: var(--accent);
+  vertical-align: 0.08em;
+}
 .scale-nav-sep {
   align-self: stretch;
   width: 1px;
@@ -483,10 +598,11 @@ main {
 /* ─── Cards ─── */
 .scale-section,
 .range-section {
+  --range-section-pad-x: 1rem;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem;
+  padding: 1rem var(--range-section-pad-x);
 }
 
 .scale-section h2,
@@ -863,11 +979,13 @@ main {
 
   .filter-bar { padding: 0.5rem 0.8rem; }
 
-  .scale-section,
-  .range-section { padding: 0.6rem 0.8rem; }
+  .scale-section { padding: 0.6rem 0.8rem; }
+  .range-section { --range-section-pad-x: 0.8rem; padding: 0.6rem var(--range-section-pad-x); }
 
   .scale-section h2 { font-size: 1rem; margin-bottom: 0.2rem; }
   .range-section h2 { font-size: 1rem; margin-bottom: 0.2rem; }
+  .scale-nav-bar { padding: 0.4rem 0.8rem; }
+  .scale-nav-bar h2 { font-size: 1rem; }
 
   .chord-label  { margin-bottom: 0.4rem; }
   .note-row     { margin-bottom: 0.5rem; }
@@ -911,9 +1029,20 @@ main {
   text-align: center;
   line-height: 1.4;
 }
-/* No keyboard on touch-only devices */
+/* Swipe hint: only on touch-only devices, which have no keyboard (no key hint) */
+.touch-hint { display: none; }
 @media (hover: none) and (pointer: coarse) {
   .key-hint { display: none; }
+  /* The variant switcher takes a swipe and taps on its ‹ / › buttons */
+  .type-nav-arrow { display: flex; }
+  .touch-hint:not([hidden]) {
+    display: block;
+    margin-top: auto;
+    padding: 0.4rem 1rem 0;
+    font-size: 0.72rem;
+    text-align: center;
+    color: var(--text-muted);
+  }
 }
 .app-footer a:hover { opacity: 0.7; }
 

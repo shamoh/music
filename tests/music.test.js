@@ -790,42 +790,59 @@ describe('filteredScales — major-from order', () => {
 });
 
 describe('adjacentScales', () => {
-  const all = filteredScales(new Set(['major','minor','whole-tone','major-from']), new Set(['sharp','flat']));
+  const RANGE_ORDER = ['major', 'minor', 'whole-tone', 'major-from'];
+  const all = filteredScales(new Set(RANGE_ORDER), new Set(['sharp','flat']));
 
   it('major: neighbours by key signature (G dur → D dur / C dur)', () => {
-    const { prev, next } = adjacentScales(all, 'G-major');
+    const { prev, next } = adjacentScales(all, 'G-major', RANGE_ORDER);
     assert.equal(prev.id, 'D-major');
     assert.equal(next.id, 'C-major');
   });
 
-  it('stays within the same type (C dur next is F dur, not a minor)', () => {
-    const { next } = adjacentScales(all, 'C-major');
+  it('within a group it skips the other types (C dur next is F dur, not a minor)', () => {
+    const { next } = adjacentScales(all, 'C-major', RANGE_ORDER);
     assert.equal(next.id, 'F-major');
   });
 
-  it('ends of the category return null', () => {
-    assert.equal(adjacentScales(all, 'Cis-major').prev, null);
-    assert.equal(adjacentScales(all, 'Ces-major').next, null);
-    assert.equal(adjacentScales(all, 'Ais-major-from').prev, null);
-    assert.equal(adjacentScales(all, 'A-major-from').next, null);
+  it('the end of a group continues with the next group in typeOrder', () => {
+    assert.equal(adjacentScales(all, 'Ces-major', RANGE_ORDER).next.id, 'ais-minor');
+    assert.equal(adjacentScales(all, 'ais-minor', RANGE_ORDER).prev.id, 'Ces-major');
+    assert.equal(adjacentScales(all, 'as-minor', RANGE_ORDER).next.type, 'whole-tone');
+    assert.equal(adjacentScales(all, 'Ais-major-from', RANGE_ORDER).prev.type, 'whole-tone');
+  });
+
+  it('the ends of the list have no neighbour (the link is greyed out)', () => {
+    assert.equal(adjacentScales(all, 'Cis-major', RANGE_ORDER).prev, null);
+    assert.equal(adjacentScales(all, 'A-major-from', RANGE_ORDER).next, null);
   });
 
   it('major-from: neighbours by start pitch (C → H/Ces before, Cis after)', () => {
-    const { prev, next } = adjacentScales(all, 'C-major-from');
+    const { prev, next } = adjacentScales(all, 'C-major-from', RANGE_ORDER);
     assert.equal(prev.id, 'Ces-major-from');
     assert.equal(next.id, 'Cis-major-from');
   });
 
   it('whole-tone: C ↔ Des', () => {
-    assert.equal(adjacentScales(all, 'C-whole-tone').next.id, 'Des-whole-tone');
-    assert.equal(adjacentScales(all, 'Des-whole-tone').prev.id, 'C-whole-tone');
+    assert.equal(adjacentScales(all, 'C-whole-tone', RANGE_ORDER).next.id, 'Des-whole-tone');
+    assert.equal(adjacentScales(all, 'Des-whole-tone', RANGE_ORDER).prev.id, 'C-whole-tone');
   });
 
   it('respects filters — scale missing from the list has no neighbours', () => {
     const sharpsOnly = filteredScales(new Set(['major']), new Set(['sharp']));
-    assert.deepEqual(adjacentScales(sharpsOnly, 'F-major'), { prev: null, next: null });
-    assert.equal(adjacentScales(sharpsOnly, 'C-major').prev.id, 'G-major');
-    assert.equal(adjacentScales(sharpsOnly, 'C-major').next, null);
+    assert.deepEqual(adjacentScales(sharpsOnly, 'F-major', RANGE_ORDER), { prev: null, next: null });
+    assert.equal(adjacentScales(sharpsOnly, 'C-major', RANGE_ORDER).prev.id, 'G-major');
+    assert.equal(adjacentScales(sharpsOnly, 'C-major', RANGE_ORDER).next, null);
+  });
+
+  it('types missing from typeOrder are left out (scales page: dur and moll only)', () => {
+    const { next } = adjacentScales(all, 'Ces-major', ['major', 'minor']);
+    assert.equal(next.id, 'ais-minor');
+    assert.equal(adjacentScales(all, 'as-minor', ['major', 'minor']).next, null);
+    assert.deepEqual(adjacentScales(all, 'C-whole-tone', ['major', 'minor']), { prev: null, next: null });
+  });
+
+  it('a single scale has no neighbours', () => {
+    assert.deepEqual(adjacentScales([SCALE_CATALOG.find((s) => s.id === 'C-major')], 'C-major', RANGE_ORDER), { prev: null, next: null });
   });
 });
 
@@ -859,8 +876,8 @@ describe('scalePair / dedupePairs', () => {
 
   it('adjacentScales on deduped list steps by pitch (Ais/B → H/Ces)', () => {
     const list = dedupePairs(filteredScales(new Set(['major-from']), new Set(['sharp','flat'])));
-    assert.equal(adjacentScales(list, 'Ais-major-from').next.id, 'H-major-from');
-    assert.equal(adjacentScales(list, 'C-major-from').prev.id, 'H-major-from');
+    assert.equal(adjacentScales(list, 'Ais-major-from', ['major-from']).next.id, 'H-major-from');
+    assert.equal(adjacentScales(list, 'C-major-from', ['major-from']).prev.id, 'H-major-from');
   });
 
   it('dedupePairs leaves regular scales untouched', () => {

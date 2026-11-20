@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { isPageKey, initPageKeys, blurFocused, isFormField, activatesOnKey, isUndoKey, initUndoKey } from '../docs/js/page-keys.js';
+import { isPageKey, initPageKeys, blurFocused, isFormField, activatesOnKey, isUndoKey, initUndoKey, navigationKey } from '../docs/js/page-keys.js';
 
 // Minimal stand-in for document: the settings panel, a focused element, keydown listeners
 function fakeDocument({ menuOpen = false, hasMenu = true, focused = null } = {}) {
@@ -127,5 +127,23 @@ describe('initUndoKey', () => {
     initUndoKey(() => calls++, menuDoc);
     press(menuDoc, { key: 'z', metaKey: true });
     assert.equal(calls, 0);
+  });
+});
+
+describe('navigationKey', () => {
+  it('Shift+← / Shift+→ step through the scales', () => {
+    assert.deepEqual(navigationKey({ key: 'ArrowLeft', shiftKey: true }), { axis: 'scale', step: -1 });
+    assert.deepEqual(navigationKey({ key: 'ArrowRight', shiftKey: true }), { axis: 'scale', step: 1 });
+  });
+  it('Shift+↑ / Shift+↓ step through the minor variants', () => {
+    assert.deepEqual(navigationKey({ key: 'ArrowUp', shiftKey: true }), { axis: 'variant', step: -1 });
+    assert.deepEqual(navigationKey({ key: 'ArrowDown', shiftKey: true }), { axis: 'variant', step: 1 });
+  });
+  it('ignores plain arrows (they move the selected note)', () => {
+    for (const key of ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']) assert.equal(navigationKey({ key }), null, key);
+  });
+  it('ignores other keys with Shift', () => {
+    assert.equal(navigationKey({ key: 'Home', shiftKey: true }), null);
+    assert.equal(navigationKey({ key: 'A', shiftKey: true }), null);
   });
 });
