@@ -1,8 +1,10 @@
-const CACHE_NAME = 'scales-1.0.54';
+const CACHE_NAME = 'scales-1.0.55';
 const ASSETS = [
   '/',
   '/index.html',
   '/history.html',
+  '/license.html',
+  '/fonts/Bravura-OFL.txt',
   '/manifest.json',
   '/css/style.css',
   '/fonts/ScalesMusic.woff',
@@ -11,6 +13,11 @@ const ASSETS = [
   '/js/app.js',
   '/js/themes.js',
   '/js/defaults.js',
+  '/js/apply-saved-profile-vars.js',
+  '/js/app-footer.js',
+  '/js/settings-menu.js',
+  '/js/site-header.js',
+  '/js/site-layout.js',
   '/js/analytics.js',
   '/js/metronome.js',
   '/js/fingering.js',

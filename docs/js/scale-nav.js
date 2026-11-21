@@ -219,3 +219,34 @@ function initStickyRow(row) {
     row.classList.toggle('stuck', observed.intersectionRatio < 1 && observed.boundingClientRect.top < 0);
   }, { threshold: [1] }).observe(row);
 }
+
+// ─── Last shown scale (shared by both scale pages) ───────────────────────────
+
+const LAST_SCALE_STORAGE_KEY = 'scales-last-scale';
+
+export function savedLastScaleId(storage = globalThis.localStorage) {
+  try {
+    return storage?.getItem(LAST_SCALE_STORAGE_KEY) ?? null;
+  } catch (_) {
+    return null;
+  }
+}
+
+export function saveLastScaleId(scaleId, storage = globalThis.localStorage) {
+  try {
+    storage?.setItem(LAST_SCALE_STORAGE_KEY, scaleId);
+  } catch (_) {}
+}
+
+// ─── Scale select ─────────────────────────────────────────────────────────────
+
+// Appends an <optgroup> with the scales to the scale select; nothing for no scales.
+// makeOption(scale) creates the <option> of one scale.
+export function appendScaleOptionGroup(select, label, scales, makeOption, documentRef = document) {
+  if (scales.length === 0) return;
+
+  const group = documentRef.createElement('optgroup');
+  group.label = label;
+  scales.forEach((scale) => group.appendChild(makeOption(scale)));
+  select.appendChild(group);
+}

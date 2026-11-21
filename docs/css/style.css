@@ -69,6 +69,9 @@ header {
   gap: 0.6rem;
 }
 
+/* Height of the header before site-header.js renders it (logo + padding + border) */
+header:empty { min-height: calc(34px + 1rem + 1px); }
+
 header h1 {
   display: flex;
   align-items: center;
@@ -533,6 +536,9 @@ main {
 .settings {
   position: relative;
   flex-shrink: 0;
+  /* Room for the gear button before settings-menu.js renders it (no header shift) */
+  min-width: 2rem;
+  min-height: 2rem;
 }
 .settings-toggle {
   display: flex;
@@ -582,9 +588,15 @@ main {
   color: var(--text-muted);
 }
 .settings-row .profile-select { max-width: none; width: 100%; }
-.settings-link {
+/* Links at the bottom of the settings menu, side by side */
+.settings-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1rem;
   padding-top: 0.5rem;
   border-top: 1px solid var(--border);
+}
+.settings-link {
   font-size: 0.8rem;
   color: var(--accent2);
   text-decoration: none;
@@ -970,6 +982,7 @@ main {
 /* ─── Landscape mobile: compact header + tighter layout ─── */
 @media (orientation: landscape) and (max-height: 560px) {
   header { padding: 0.25rem 0.8rem; }
+  header:empty { min-height: calc(26px + 0.5rem + 1px); }
   .logo { height: 26px; }
   .bc-current { font-size: 0.95rem; }
   .bc-link { font-size: 0.78rem; }
@@ -990,6 +1003,17 @@ main {
   .chord-label  { margin-bottom: 0.4rem; }
   .note-row     { margin-bottom: 0.5rem; }
   .minor-variant { margin-top: 0.5rem; padding-top: 0.5rem; }
+}
+
+/* ─── Text pages (history, license): a single readable column ─── */
+.text-page-main {
+  width: 100%;
+  max-width: 760px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1;
 }
 
 /* ─── App footer ─── */

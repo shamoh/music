@@ -30,10 +30,6 @@ const SHARP_KEY_SIG_SLOTS = [6, 3, 7, 4, 1, 5, 2]; // Fis Cis Gis Dis Ais Eis Hi
 // Flats: B Es As Des Ges Ces Fes
 const FLAT_KEY_SIG_SLOTS  = [2, 5, 1, 4, 0, 3, -1];
 
-function clearEl(el) {
-  while (el.firstChild) el.removeChild(el.firstChild);
-}
-
 // ls = line spacing (px between adjacent staff lines)
 function slotToY(slot, staffTop, ls) {
   return staffTop + (6 - slot) * (ls / 2);
@@ -92,6 +88,25 @@ export function whenMusicFontReady(fonts = globalThis.document?.fonts, timeoutMs
     .catch(() => {});
 
   return Promise.race([loaded, timeout]).then(() => clearTimeout(timer));
+}
+
+// Draws the staves first once the music font is ready (whenMusicFontReady), then again
+// whenever one of the observed elements changes its size — or the window, where
+// ResizeObserver is missing. The resize observer also calls render when it starts.
+export function renderStavesWhenFontReady(render, observedElements, {
+  fonts = globalThis.document?.fonts,
+  ResizeObserverClass = globalThis.ResizeObserver,
+  windowRef = globalThis.window,
+} = {}) {
+  return whenMusicFontReady(fonts).then(() => {
+    render();
+    if (ResizeObserverClass) {
+      const observer = new ResizeObserverClass(() => render());
+      observedElements.forEach((element) => observer.observe(element));
+    } else {
+      windowRef?.addEventListener('resize', () => render());
+    }
+  });
 }
 
 // Staff lines start left of the clef (the Bravura G clef is about 2.7 line spacings wide).
@@ -329,7 +344,7 @@ function createStaffLayers(svg, ls) {
 }
 
 export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig = 0, isMinor = false) {
-  clearEl(containerEl);
+  containerEl.replaceChildren();
 
   const chordSet = new Set(chordNoteNames);
   const tonicName = scaleNotes[0]?.name;
@@ -363,20 +378,34 @@ export function renderScaleStaff(containerEl, scaleNotes, chordNoteNames, keySig
   scaleNotes.forEach((note, i) => {
     const x = notesStartX + (i + 1) * step;
     const k = note.name === tonicName ? 'tonic' : chordSet.has(note.name) ? 'chord' : 'scale';
-    const color       = `var(--note-${k})`;
-    const ledgerColor = `var(--note-${k}-ledger)`;
-    const labelColor  = `var(--note-${k}-label)`;
-    const labelBg     = `var(--note-${k}-label-bg, transparent)`;
+    const { color, ledgerColor, labelColor, labelBg } = noteKindColors(k);
     // Each note in its own group with an (invisible) column outline, so the page can
     // find it and highlight it — same structure as the range staff
     const g = svgEl('g', { 'data-note': note.name, 'data-octave': note.octave });
-    g.appendChild(svgEl('rect', {
-      x: x - step * 0.5 + noteGap, y: 0,
-      width: step - noteGap * 2, height: totalHeight,
-      fill: 'none', 'data-highlight': '',
-    }));
+    g.appendChild(noteHighlightOutline(x, step, noteGap, totalHeight));
     notesLayer.appendChild(g);
     drawNoteScaled(g, x, note, staffTop, ls, noteRadius, { color, ledgerColor, labelColor, labelBg, pillW, showLabel: true, lowercase: isMinor, inlineAcc: inlineAccs[i], labelY, halo: true, shine, ledgerLayer: staffLayer });
+  });
+}
+
+// Colors of a note by its kind ('tonic' | 'chord' | 'scale' | 'muted'): CSS variables of
+// the visual profile (themes.js).
+export function noteKindColors(kind) {
+  return {
+    color:       `var(--note-${kind})`,
+    ledgerColor: `var(--note-${kind}-ledger)`,
+    labelColor:  `var(--note-${kind}-label)`,
+    labelBg:     `var(--note-${kind}-label-bg, transparent)`,
+  };
+}
+
+// The (invisible) outline of a note's column, filled when the page highlights the note
+// (data-highlight) — the same on the scale staff and the range staff.
+function noteHighlightOutline(x, step, noteGap, totalHeight) {
+  return svgEl('rect', {
+    x: x - step * 0.5 + noteGap, y: 0,
+    width: step - noteGap * 2, height: totalHeight,
+    fill: 'none', 'data-highlight': '',
   });
 }
 
@@ -393,7 +422,7 @@ function nameSetWithEnharmonics(names) {
 
 // showTonic=false draws no tonic highlight (e.g. the full instrument range).
 export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteNames, keySig = 0, isMinor = false, { showTonic = true } = {}) {
-  clearEl(containerEl);
+  containerEl.replaceChildren();
 
   const scaleSet  = nameSetWithEnharmonics(scaleNotes.map((n) => n.name));
   const chordSet  = nameSetWithEnharmonics(chordNoteNames);
@@ -455,20 +484,13 @@ export function renderRangeStaff(containerEl, rangeNotes, scaleNotes, chordNoteN
             : chordSet.has(note.name) ? 'chord'
             : scaleSet.has(note.name) ? 'scale'
             :                           'muted';
-    const color       = `var(--note-${k})`;
-    const ledgerColor = `var(--note-${k}-ledger)`;
-    const labelColor  = `var(--note-${k}-label)`;
-    const labelBg     = `var(--note-${k}-label-bg, transparent)`;
+    const { color, ledgerColor, labelColor, labelBg } = noteKindColors(k);
     const inlineAcc = accidentalType(note.name);
     const tooltipLabel = noteTooltipLines(note.name, note.octave, isMinor).join('\n');
 
     const g = svgEl('g', { 'data-tooltip': tooltipLabel, 'data-note': note.name, 'data-octave': note.octave });
     g.appendChild(svgEl('rect', { x: x - step * 0.5, y: 0, width: step, height: totalHeight, fill: 'transparent' }));
-    g.appendChild(svgEl('rect', {
-      x: x - step * 0.5 + noteGap, y: 0,
-      width: step - noteGap * 2, height: totalHeight,
-      fill: 'none', 'data-highlight': '',
-    }));
+    g.appendChild(noteHighlightOutline(x, step, noteGap, totalHeight));
     (k === 'muted' ? mutedLayer : notesLayer).appendChild(g);
 
     const pillW = Math.min(ls * 3.5, step * 0.9);

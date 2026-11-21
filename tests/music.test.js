@@ -952,6 +952,17 @@ describe('visual profiles', () => {
     assert.deepEqual(VISUAL_PROFILES.map((p) => p.name), ['Kompaktní', 'Větší']);
   });
 
+  it('the profiles share their colors and differ in size only', () => {
+    const [compact, large] = VISUAL_PROFILES.map((p) => p.vars);
+    const differing = Object.keys(compact).filter((name) => compact[name] !== large[name]);
+
+    assert.deepEqual(differing.sort(), ['--font-scale', '--note-col-width']);
+    assert.deepEqual(Object.keys(compact).sort(), Object.keys(large).sort());
+    assert.equal(compact['--note-tonic-label-bg'], '#b81838');
+    assert.deepEqual([compact['--font-scale'], large['--font-scale']], ['1', '1.1']);
+    assert.deepEqual([compact['--note-col-width'], large['--note-col-width']], ['28', '36']);
+  });
+
   it('auto: phone (short side < 600) → Kompaktní, larger screens → Větší', () => {
     assert.equal(autoProfileId(390), 'compact');
     assert.equal(autoProfileId(599), 'compact');

@@ -1,19 +1,12 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { pickFilterValues, parseSavedJson, loadSavedFilters, saveFilters, syncFilterChips, ACC_STORAGE_KEY } from '../docs/js/scale-filters.js';
+import {
+  pickFilterValues, parseSavedJson, loadSavedFilters, saveFilters, syncFilterChips, ACC_STORAGE_KEY,
+  toggleFilterValue, enableAllFilters, applySavedFilters, initFilterChips,
+} from '../docs/js/scale-filters.js';
+import { memoryStorage, fakeEventTarget } from './helpers/fake-dom.js';
 
 const ALLOWED = { type: ['major', 'minor', 'whole-tone'], acc: ['sharp', 'flat'] };
-
-// In-memory stand-in for localStorage
-function memoryStorage(initial = {}) {
-  const items = { ...initial };
-
-  return {
-    items,
-    getItem: (key) => items[key] ?? null,
-    setItem: (key, value) => { items[key] = value; },
-  };
-}
 
 describe('pickFilterValues', () => {
   it('keeps the values the page offers', () => {
@@ -91,5 +84,98 @@ describe('syncFilterChips', () => {
     assert.equal(major.attributes['aria-pressed'], 'false');
     assert.equal(minor.classList.has('active'), true);
     assert.equal(sharp.attributes['aria-pressed'], 'true');
+  });
+});
+
+describe('toggleFilterValue', () => {
+  it('switches a value on and off', () => {
+    const filter = new Set(['major', 'minor']);
+
+    assert.equal(toggleFilterValue(filter, 'minor'), true);
+    assert.deepEqual([...filter], ['major']);
+    assert.equal(toggleFilterValue(filter, 'whole-tone'), true);
+    assert.deepEqual([...filter], ['major', 'whole-tone']);
+  });
+
+  it('keeps the last active value on', () => {
+    const filter = new Set(['sharp']);
+
+    assert.equal(toggleFilterValue(filter, 'sharp'), false);
+    assert.deepEqual([...filter], ['sharp']);
+  });
+});
+
+describe('enableAllFilters', () => {
+  it('switches on everything the page offers', () => {
+    const state = { filterType: new Set(['major']), filterAcc: new Set(['flat']) };
+    enableAllFilters(state, ALLOWED);
+
+    assert.deepEqual([...state.filterType], ALLOWED.type);
+    assert.deepEqual([...state.filterAcc], ALLOWED.acc);
+  });
+
+  it('does not share the arrays of the offered filters', () => {
+    const state = { filterType: new Set(), filterAcc: new Set() };
+    enableAllFilters(state, ALLOWED);
+    state.filterType.delete('major');
+
+    assert.ok(ALLOWED.type.includes('major'));
+  });
+});
+
+describe('applySavedFilters', () => {
+  it('puts the stored filters into the state', () => {
+    const state = { filterType: new Set(ALLOWED.type), filterAcc: new Set(ALLOWED.acc) };
+    const storage = memoryStorage({ 'page-filters': JSON.stringify({ type: ['minor'] }), [ACC_STORAGE_KEY]: JSON.stringify({ acc: ['flat'] }) });
+    applySavedFilters(state, 'page-filters', ALLOWED, storage);
+
+    assert.deepEqual([...state.filterType], ['minor']);
+    assert.deepEqual([...state.filterAcc], ['flat']);
+  });
+
+  it('keeps the current values of a group with nothing valid stored', () => {
+    const state = { filterType: new Set(['major']), filterAcc: new Set(['sharp']) };
+    const storage = memoryStorage({ 'page-filters': JSON.stringify({ type: ['major-from'] }) });
+    applySavedFilters(state, 'page-filters', ALLOWED, storage);
+
+    assert.deepEqual([...state.filterType], ['major']);
+    assert.deepEqual([...state.filterAcc], ['sharp']);
+  });
+});
+
+describe('initFilterChips', () => {
+  // Filter chips with click listeners, found by the selectors of initFilterChips
+  function fakeChipRoot() {
+    const chip = (dataset) => fakeEventTarget({ dataset });
+    const chips = { minor: chip({ filterType: 'minor' }), major: chip({ filterType: 'major' }), flat: chip({ filterAcc: 'flat' }) };
+
+    return {
+      chips,
+      querySelectorAll: (selector) => (selector === '[data-filter-type]' ? [chips.major, chips.minor] : selector === '[data-filter-acc]' ? [chips.flat] : []),
+    };
+  }
+
+  it('toggles the clicked value and reports the change', () => {
+    const state = { filterType: new Set(['major', 'minor']), filterAcc: new Set(['sharp', 'flat']) };
+    const root = fakeChipRoot();
+    let changes = 0;
+    initFilterChips(state, () => { changes += 1; }, root);
+
+    root.chips.minor.click();
+    root.chips.flat.click();
+    assert.deepEqual([...state.filterType], ['major']);
+    assert.deepEqual([...state.filterAcc], ['sharp']);
+    assert.equal(changes, 2);
+  });
+
+  it('reports nothing when the last active value is clicked', () => {
+    const state = { filterType: new Set(['major']), filterAcc: new Set(['sharp']) };
+    const root = fakeChipRoot();
+    let changes = 0;
+    initFilterChips(state, () => { changes += 1; }, root);
+
+    root.chips.major.click();
+    assert.deepEqual([...state.filterType], ['major']);
+    assert.equal(changes, 0);
   });
 });

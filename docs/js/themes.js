@@ -1,84 +1,58 @@
 import { DEFAULT_PROFILE_ID } from './defaults.js';
 
+// Colors shared by the profiles; the profiles differ in size only
+const PROFILE_COLORS = {
+  '--bg':         '#f4f4f8',
+  '--bg-card':    '#ffffff',
+  '--bg-input':   '#e4e4f0',
+  '--text':       '#1a1a2e',
+  '--text-muted': '#505068',
+  '--accent':     '#c0002a',
+  '--accent2':    '#c07000',
+  '--border':     '#c0c0d8',
+  '--note-tonic':           '#000000',
+  '--note-tonic-ledger':    '#000000',
+  '--note-tonic-label':     '#ffffff',
+  '--note-tonic-label-bg':  '#b81838',
+  '--note-chord':           '#000000',
+  '--note-chord-ledger':    '#000000',
+  '--note-chord-label':     '#ffffff',
+  '--note-chord-label-bg':  '#000000',
+  '--note-scale':           '#000000',
+  '--note-scale-ledger':    '#000000',
+  '--note-scale-label':     '#505068',
+  '--note-scale-label-bg':  '#d4d4e4',
+  '--note-muted':           '#e8e8f2',
+  '--note-muted-ledger':    '#e8e8f2',
+  '--note-muted-label':     '#b4b4c8',
+  '--note-muted-label-bg':  'transparent',
+  '--note-shadow':          'rgba(40,40,80,0.3)',
+  '--chip-text': '#ffffff',
+  '--tonic-col-bg': 'rgba(184,24,56,0.22)',
+  '--logo-clef':   '#3d2e1e',
+  '--logo-staff':  '#8a8aa0',
+  '--logo-tonic':  '#8a1530',
+  '--logo-chord':  '#1a1a2e',
+  '--logo-accent': '#2f4a36',
+};
+
 export const VISUAL_PROFILES = [
   {
     id: 'compact',
     name: 'Kompaktní',
     vars: {
-      '--bg':         '#f4f4f8',
-      '--bg-card':    '#ffffff',
-      '--bg-input':   '#e4e4f0',
-      '--text':       '#1a1a2e',
-      '--text-muted': '#505068',
-      '--accent':     '#c0002a',
-      '--accent2':    '#c07000',
-      '--border':     '#c0c0d8',
-      '--note-tonic':           '#000000',
-      '--note-tonic-ledger':    '#000000',
-      '--note-tonic-label':     '#ffffff',
-      '--note-tonic-label-bg':  '#b81838',
-      '--note-chord':           '#000000',
-      '--note-chord-ledger':    '#000000',
-      '--note-chord-label':     '#ffffff',
-      '--note-chord-label-bg':  '#000000',
-      '--note-scale':           '#000000',
-      '--note-scale-ledger':    '#000000',
-      '--note-scale-label':     '#505068',
-      '--note-scale-label-bg':  '#d4d4e4',
-      '--note-muted':           '#e8e8f2',
-      '--note-muted-ledger':    '#e8e8f2',
-      '--note-muted-label':     '#b4b4c8',
-      '--note-muted-label-bg':  'transparent',
-      '--note-shadow':          'rgba(40,40,80,0.3)',
+      ...PROFILE_COLORS,
       '--font-scale': '1',
       '--note-col-width': '28',
-      '--chip-text': '#ffffff',
-      '--tonic-col-bg': 'rgba(184,24,56,0.22)',
-      '--logo-clef':   '#3d2e1e',
-      '--logo-staff':  '#8a8aa0',
-      '--logo-tonic':  '#8a1530',
-      '--logo-chord':  '#1a1a2e',
-      '--logo-accent': '#2f4a36',
     },
   },
   {
     id: 'large',
     name: 'Větší',
     vars: {
-      '--bg':         '#f4f4f8',
-      '--bg-card':    '#ffffff',
-      '--bg-input':   '#e4e4f0',
-      '--text':       '#1a1a2e',
-      '--text-muted': '#505068',
-      '--accent':     '#c0002a',
-      '--accent2':    '#c07000',
-      '--border':     '#c0c0d8',
-      '--note-tonic':           '#000000',
-      '--note-tonic-ledger':    '#000000',
-      '--note-tonic-label':     '#ffffff',
-      '--note-tonic-label-bg':  '#b81838',
-      '--note-chord':           '#000000',
-      '--note-chord-ledger':    '#000000',
-      '--note-chord-label':     '#ffffff',
-      '--note-chord-label-bg':  '#000000',
-      '--note-scale':           '#000000',
-      '--note-scale-ledger':    '#000000',
-      '--note-scale-label':     '#505068',
-      '--note-scale-label-bg':  '#d4d4e4',
-      '--note-muted':           '#e8e8f2',
-      '--note-muted-ledger':    '#e8e8f2',
-      '--note-muted-label':     '#b4b4c8',
-      '--note-muted-label-bg':  'transparent',
-      '--note-shadow':          'rgba(40,40,80,0.3)',
+      ...PROFILE_COLORS,
       '--font-scale': '1.1',
       '--note-col-width': '36',
-      '--chip-text': '#ffffff',
-      '--tonic-col-bg': 'rgba(184,24,56,0.22)',
-      '--logo-clef':   '#3d2e1e',
-      '--logo-staff':  '#8a8aa0',
-      '--logo-tonic':  '#8a1530',
-      '--logo-chord':  '#1a1a2e',
-      '--logo-accent': '#2f4a36',
     },
   },
 ];
@@ -140,7 +114,7 @@ export function savedProfileId() {
 }
 
 // Applies a profile's CSS variables ('auto' resolves for this device). The vars
-// are cached so the inline head script can apply them before first paint.
+// are cached so apply-saved-profile-vars.js can apply them before first paint.
 export function applyProfile(id) {
   const profile = VISUAL_PROFILES.find((p) => p.id === resolveProfileId(id, deviceShortSide()))
     ?? VISUAL_PROFILES.find((p) => p.id === DEFAULT_PROFILE_ID);
@@ -154,7 +128,6 @@ export function applyProfile(id) {
 // Fills the profile <select> ('Automaticky' + profiles), selects the saved choice
 // and applies + remembers the choice on change. onChange runs after applying.
 export function initProfileSelect(sel, onChange = () => {}) {
-  initSettingsMenu();
   if (!sel) return;
   const options = [{ id: AUTO_PROFILE_ID, name: AUTO_PROFILE_NAME }, ...VISUAL_PROFILES];
   const current = savedProfileChoice();
@@ -233,31 +206,5 @@ export function initSectionTintSelect(sel, onChange = () => {}) {
     try { localStorage.setItem(SECTION_TINT_KEY, e.target.value); } catch (_) {}
     applySectionTint(e.target.value);
     onChange();
-  });
-}
-
-// ─── Settings menu (gear button in the header) ───────────────────────────────
-
-// Opens / closes the header settings panel (#settings-toggle / #settings-panel).
-// Closes on a click outside the menu and on Escape. Safe to call more than once.
-export function initSettingsMenu() {
-  const toggle = document.getElementById('settings-toggle');
-  const panel  = document.getElementById('settings-panel');
-  if (!toggle || !panel || toggle.dataset.ready) return;
-  toggle.dataset.ready = '1';
-
-  const setOpen = (open) => {
-    panel.hidden = !open;
-    toggle.setAttribute('aria-expanded', String(open));
-  };
-  toggle.addEventListener('click', () => setOpen(panel.hidden));
-  document.addEventListener('click', (e) => {
-    if (!panel.hidden && !e.target.closest('.settings')) setOpen(false);
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !panel.hidden) {
-      setOpen(false);
-      toggle.focus();
-    }
   });
 }

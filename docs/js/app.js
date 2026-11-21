@@ -10,16 +10,15 @@ import {
   adjacentScales,
   shortScaleName,
 } from './music.js';
-import { renderScaleStaff, whenMusicFontReady } from './notation.js';
-import { applyProfile, savedProfileId, initProfileSelect } from './themes.js';
-import { DEFAULT_SCALE_ID, APP_VERSION, BUILD_DATE } from './defaults.js';
-import { initAnalytics, trackScaleView } from './analytics.js';
+import { renderScaleStaff, renderStavesWhenFontReady } from './notation.js';
+import { DEFAULT_SCALE_ID } from './defaults.js';
+import { initSitePage } from './site-layout.js';
+import { trackScaleView } from './analytics.js';
 import { toggledSemitone, elementSemitone, markHighlightedNote, staffLabelSemitone } from './note-highlight.js';
 import { initPageKeys, blurFocused } from './page-keys.js';
 import { playSlideIn } from './swipe-gesture.js';
-import { renderScaleNavHeading, initScaleNavigation } from './scale-nav.js';
-import { loadSavedFilters, saveFilters, syncFilterChips } from './scale-filters.js';
-import { registerServiceWorker } from './service-worker-registration.js';
+import { renderScaleNavHeading, initScaleNavigation, savedLastScaleId, saveLastScaleId, appendScaleOptionGroup } from './scale-nav.js';
+import { saveFilters, syncFilterChips, applySavedFilters, enableAllFilters, initFilterChips } from './scale-filters.js';
 
 const state = {
   scaleId: DEFAULT_SCALE_ID,
@@ -31,12 +30,6 @@ const state = {
 
 function $(id) { return document.getElementById(id); }
 
-function savedLastScaleId() {
-  try { return localStorage.getItem('scales-last-scale') ?? null; } catch (_) { return null; }
-}
-function saveLastScaleId(id) {
-  try { localStorage.setItem('scales-last-scale', id); } catch (_) {}
-}
 
 // ─── Key signature labels and variant helpers ─────────────────────────────────
 
@@ -97,7 +90,7 @@ function variantChangeText(entry, variant) {
 // Rebuild h3 content: "baseTitle (keySig) [hint] [· changes]"
 function setVariantHeader(sectionId, baseTitle, variantNotes, hintText, changesText) {
   const h3 = $(sectionId).querySelector('h3');
-  clearEl(h3);
+  h3.replaceChildren();
   h3.appendChild(document.createTextNode(baseTitle + scaleAccidentalLabel(variantNotes)));
   if (hintText) {
     const span = document.createElement('span');
@@ -115,32 +108,14 @@ function setVariantHeader(sectionId, baseTitle, variantNotes, hintText, changesT
 
 // ─── Filter chips ────────────────────────────────────────────────────────────
 
-function initFilterChips() {
-  document.querySelectorAll('[data-filter-type]').forEach((btn) => {
-    btn.addEventListener('click', () => toggleFilter(btn, 'filterType', btn.dataset.filterType));
-  });
-  document.querySelectorAll('[data-filter-acc]').forEach((btn) => {
-    btn.addEventListener('click', () => toggleFilter(btn, 'filterAcc', btn.dataset.filterAcc));
-  });
-}
-
 // Filters remembered between visits (scale-filters.js: the type filter per page, sharp /
 // flat shared with the saxophone range page); this page offers dur and moll only
 const FILTER_STORAGE_KEY = 'scales-filters';
 const ALL_FILTERS = { type: ['major', 'minor'], acc: ['sharp', 'flat'] };
 
-function toggleFilter(btn, stateKey, value) {
-  const set = state[stateKey];
-  if (set.has(value) && set.size === 1) return; // keep at least one active
-  if (set.has(value)) set.delete(value);
-  else set.add(value);
-  applyFilterChange();
-}
-
 // "Vše zapnout" in the sticky row's filters
-function enableAllFilters() {
-  state.filterType = new Set(ALL_FILTERS.type);
-  state.filterAcc  = new Set(ALL_FILTERS.acc);
+function enableAllScaleFilters() {
+  enableAllFilters(state, ALL_FILTERS);
   applyFilterChange();
 }
 
@@ -157,38 +132,23 @@ function applyFilterChange() {
   update();
 }
 
-// Remembered filters, before the URL's (or last) scale, which switches its own filters on
-function applySavedFilters() {
-  const saved = loadSavedFilters(FILTER_STORAGE_KEY, ALL_FILTERS);
-  if (saved.filterType) state.filterType = saved.filterType;
-  if (saved.filterAcc) state.filterAcc = saved.filterAcc;
-}
-
 // ─── Scale select ─────────────────────────────────────────────────────────────
 
 function repopulateSelect() {
   const sel = $('scale-select');
-  while (sel.firstChild) sel.removeChild(sel.firstChild);
+  sel.replaceChildren();
 
   const scales = filteredScales(state.filterType, state.filterAcc);
   const bothTypes = state.filterType.has('major') && state.filterType.has('minor');
 
   if (bothTypes) {
-    appendGroup(sel, 'Dur',  scales.filter((s) => s.type === 'major'));
-    appendGroup(sel, 'Moll', scales.filter((s) => s.type === 'minor'));
+    appendScaleOptionGroup(sel, 'Dur',  scales.filter((s) => s.type === 'major'), makeOption);
+    appendScaleOptionGroup(sel, 'Moll', scales.filter((s) => s.type === 'minor'), makeOption);
   } else {
     scales.forEach((s) => sel.appendChild(makeOption(s)));
   }
 
   sel.value = state.scaleId;
-}
-
-function appendGroup(sel, label, scales) {
-  if (scales.length === 0) return;
-  const grp = document.createElement('optgroup');
-  grp.label = label;
-  scales.forEach((s) => grp.appendChild(makeOption(s)));
-  sel.appendChild(grp);
 }
 
 function makeOption(s) {
@@ -200,14 +160,10 @@ function makeOption(s) {
 
 // ─── Rendering helpers ────────────────────────────────────────────────────────
 
-function clearEl(el) {
-  while (el.firstChild) el.removeChild(el.firstChild);
-}
-
 function renderNoteRow(containerEl, scaleNotes, chordNoteNames) {
   const chordSet = new Set(chordNoteNames);
   const tonicName = scaleNotes[0]?.name;
-  clearEl(containerEl);
+  containerEl.replaceChildren();
   scaleNotes.forEach((note) => {
     // A chip is a button: a click highlights the note in every octave (chips, staves)
     const chip = Object.assign(document.createElement('button'), { type: 'button', textContent: noteChipLabel(note.name) });
@@ -292,7 +248,7 @@ function initScaleSwitching() {
     stickyRow: document.querySelector('.scale-nav-row'),
     swipeArea: document.querySelector('main'),
     onScaleStep: switchScale,
-    onEnableAllFilters: enableAllFilters,
+    onEnableAllFilters: enableAllScaleFilters,
   });
 }
 
@@ -397,17 +353,16 @@ function pushHash() {
 // ─── Bootstrap ───────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  initAnalytics();
-  applyProfile(savedProfileId());
-  applySavedFilters();
+  initSitePage({ currentSectionId: 'scales', onProfileChange: () => update(), analytics: true });
+  // Remembered filters, before the URL's (or last) scale, which switches its own filters on
+  applySavedFilters(state, FILTER_STORAGE_KEY, ALL_FILTERS);
   if (!location.hash) {
     const saved = savedLastScaleId();
     if (saved) applyHash('#' + scaleIdToHash(saved));
   }
   applyHash(location.hash);
   syncFilterChips(state);
-  initFilterChips();
-  initProfileSelect($('profile-select'), update);
+  initFilterChips(state, applyFilterChange);
 
   $('scale-select').addEventListener('change', (e) => {
     state.scaleId = e.target.value;
@@ -423,24 +378,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   repopulateSelect();
-  registerServiceWorker();
   initNoteHighlight();
   initScaleSwitching();
 
-  const footer = document.getElementById('app-footer');
-  if (footer) {
-    const a = Object.assign(document.createElement('a'), { href: '/history.html', textContent: `Scales v${APP_VERSION} · ${BUILD_DATE}` });
-    footer.appendChild(a);
-  }
 
-  // First staff render waits for the music font (the resize observer also renders on observe)
-  whenMusicFontReady().then(() => {
-    update();
-    if (typeof ResizeObserver !== 'undefined') {
-      const ro = new ResizeObserver(() => update());
-      document.querySelectorAll('.staff-container').forEach((el) => ro.observe(el));
-    } else {
-      window.addEventListener('resize', () => update());
-    }
-  });
+  renderStavesWhenFontReady(update, document.querySelectorAll('.staff-container'));
 });

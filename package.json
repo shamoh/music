@@ -1,6 +1,7 @@
 {
   "name": "scales",
   "version": "1.0.0",
+  "license": "FSL-1.1-MIT",
   "type": "module",
   "scripts": {
     "test": "node --test 'tests/**/*.test.js'",

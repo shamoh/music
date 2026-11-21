@@ -34,6 +34,7 @@ node --test tests/music.test.js
 docs/                               GitHub Pages publishing root
   index.html                        circle of fifths page
   history.html                      version history
+  license.html                      license (FSL-1.1-MIT) — full text of LICENSE, keep in sync
   favicon.ico
   manifest.json                     PWA manifest (scope: /)
   service-worker.js                 cache-first PWA offline support
@@ -45,14 +46,19 @@ docs/                               GitHub Pages publishing root
     app.js                          scales page UI state, filter logic, rendering
     themes.js                       visual profiles Kompaktní / Větší (auto: Kompaktní on phones, Větší on larger screens)
     defaults.js                     APP_VERSION, DEFAULT_SCALE_ID, DEFAULT_PROFILE_ID
+    app-footer.js                   footer of every page: version link (history) + license link
+    site-layout.js                  initSitePage — one call per page: header, footer, visual profile + its select, service worker, optional analytics
+    apply-saved-profile-vars.js     classic <head> script of every page: saved profile colors before first paint
+    site-header.js                  header of every page: logo, nav Hudební nauka | Stupnice | Metronom, settings menu; rendered into <header id="site-header">
+    settings-menu.js                header settings menu of every page (gear + panel), rendered into #settings-menu
     analytics.js                    Google Analytics integration
     fingering-diagram.js            SVG key diagram of an instrument (string, no DOM)
     fingering.js                    fingering helpers: lookup by note, rows of the fingering chart
     note-highlight.js               one note highlighted in every octave (scales + range pages)
     page-keys.js                    key presses meant for the page (not the settings menu / form fields), focus ring
     swipe-gesture.js                horizontal swipe → previous / next step (touch devices), slide animation
-    scale-nav.js                    shared scale navigation of both scale pages: sticky ‹ › heading with filters, Shift+arrows, swipes
-    scale-filters.js                scale filters of both scale pages: remembered (type per page, sharp/flat shared; localStorage), drawn on the chips
+    scale-nav.js                    shared scale navigation of both scale pages: sticky ‹ › heading with filters, Shift+arrows, swipes, last scale, select groups
+    scale-filters.js                scale filters of both scale pages: remembered (type per page, sharp/flat shared; localStorage), chips, toggling, "Vše zapnout"
     service-worker-registration.js  registers the PWA service worker — not on localhost (unregisters it there)
     instrument/saxophone/           key map + fingerings shared by saxophones; alto/instrument.js = descriptor
   scales/
@@ -66,6 +72,7 @@ tools/
   subset-music-font.py              builds ScalesMusic.woff; add new SMuFL glyphs here AND in notation.js
 tests/
   music.test.js                     unit tests for music theory functions
+  helpers/fake-dom.js               shared stand-ins for the DOM and localStorage used by the tests
 ```
 
 ## Version bump — REQUIRED on every change
@@ -74,9 +81,9 @@ Three values must always be updated together:
 
 | File | Key | Current |
 | --- | --- | --- |
-| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.54'` |
-| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-11-20 21:04'` |
-| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.54'` |
+| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.55'` |
+| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-11-21 18:37'` |
+| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.55'` |
 
 `APP_VERSION` and `BUILD_DATE` drive the footer display (`Scales vX.Y.Z · YYYY-MM-DD HH:MM`).
 `CACHE_NAME` forces the browser to drop the old PWA cache and re-fetch all assets.

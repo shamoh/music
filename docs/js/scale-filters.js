@@ -62,3 +62,45 @@ function setChipActive(chip, active) {
   chip.classList.toggle('active', active);
   chip.setAttribute('aria-pressed', String(active));
 }
+
+// ─── Filter state shared by the scale pages ──────────────────────────────────
+// state: { filterType: Set, filterAcc: Set }; allFilters: { type: [...], acc: [...] } —
+// what the page offers.
+
+// Switches a filter value on / off. The last active value of a group stays on (at least
+// one chip of each group). Returns true when the filter changed.
+export function toggleFilterValue(filterSet, value) {
+  if (filterSet.has(value) && filterSet.size === 1) return false;
+  if (filterSet.has(value)) {
+    filterSet.delete(value);
+  } else {
+    filterSet.add(value);
+  }
+
+  return true;
+}
+
+// Every filter the page offers on ("Vše zapnout").
+export function enableAllFilters(state, allFilters) {
+  state.filterType = new Set(allFilters.type);
+  state.filterAcc = new Set(allFilters.acc);
+}
+
+// Filters remembered for the page (loadSavedFilters) put into the state; a group with
+// nothing valid stored keeps its current values.
+export function applySavedFilters(state, typeStorageKey, allFilters, storage = globalThis.localStorage) {
+  const saved = loadSavedFilters(typeStorageKey, allFilters, storage);
+  if (saved.filterType) state.filterType = saved.filterType;
+  if (saved.filterAcc) state.filterAcc = saved.filterAcc;
+}
+
+// A click on a filter chip toggles its value in the state; onFilterChange runs after
+// a change (remember the filters, redraw the chips and the page).
+export function initFilterChips(state, onFilterChange, root = document) {
+  root.querySelectorAll('[data-filter-type]').forEach((chip) => chip.addEventListener('click', () => {
+    if (toggleFilterValue(state.filterType, chip.dataset.filterType)) onFilterChange();
+  }));
+  root.querySelectorAll('[data-filter-acc]').forEach((chip) => chip.addEventListener('click', () => {
+    if (toggleFilterValue(state.filterAcc, chip.dataset.filterAcc)) onFilterChange();
+  }));
+}

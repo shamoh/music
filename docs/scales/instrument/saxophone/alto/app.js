@@ -26,19 +26,20 @@ import {
   shortNoteName,
   shortScaleName,
 } from '/js/music.js';
-import { renderRangeStaff, whenMusicFontReady } from '/js/notation.js';
+import { renderRangeStaff, renderStavesWhenFontReady } from '/js/notation.js';
 import { renderKeyDiagram } from '/js/fingering-diagram.js';
 import { fingeringFor, fingeringRows, columnLabels } from '/js/fingering.js';
 import { SAXOPHONE_ALTO } from '/js/instrument/saxophone/alto/instrument.js';
 import { toggledSemitone, elementSemitone, markHighlightedNote, staffLabelSemitone } from '/js/note-highlight.js';
 import { initPageKeys, blurFocused, isFormField, navigationKey } from '/js/page-keys.js';
 import { playSlideIn } from '/js/swipe-gesture.js';
-import { renderScaleNavHeading, initScaleNavigation } from '/js/scale-nav.js';
-import { loadSavedFilters, saveFilters, syncFilterChips } from '/js/scale-filters.js';
-import { registerServiceWorker } from '/js/service-worker-registration.js';
-import { applyProfile, savedProfileId, initProfileSelect, initSectionTintSelect } from '/js/themes.js';
-import { DEFAULT_SCALE_ID, APP_VERSION, BUILD_DATE } from '/js/defaults.js';
-import { initAnalytics, trackScaleView } from '/js/analytics.js';
+import { renderScaleNavHeading, initScaleNavigation, saveLastScaleId, appendScaleOptionGroup } from '/js/scale-nav.js';
+import { saveFilters, syncFilterChips, applySavedFilters, enableAllFilters, initFilterChips } from '/js/scale-filters.js';
+import { initSectionTintSelect } from '/js/themes.js';
+import { DEFAULT_SCALE_ID } from '/js/defaults.js';
+import { SECTION_TINT_ROW } from '/js/settings-menu.js';
+import { initSitePage } from '/js/site-layout.js';
+import { trackScaleView } from '/js/analytics.js';
 
 const VALID_TYPES = ['natural', 'harmonic', 'melodic'];
 const TYPE_LABELS = { natural: 'Aiolská', harmonic: 'Harmonická', melodic: 'Melodická' };
@@ -81,9 +82,6 @@ function visibleScales() {
 
 function $(id) { return document.getElementById(id); }
 
-function saveLastScaleId(id) {
-  try { localStorage.setItem('scales-last-scale', id); } catch (_) {}
-}
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -162,32 +160,14 @@ function clearHash() {
 
 // ─── Filter chips ─────────────────────────────────────────────────────────────
 
-function initFilterChips() {
-  document.querySelectorAll('[data-filter-type]').forEach((btn) => {
-    btn.addEventListener('click', () => toggleFilter(btn, 'filterType', btn.dataset.filterType));
-  });
-  document.querySelectorAll('[data-filter-acc]').forEach((btn) => {
-    btn.addEventListener('click', () => toggleFilter(btn, 'filterAcc', btn.dataset.filterAcc));
-  });
-}
-
 // Filters remembered between visits (scale-filters.js: the type filter per page, sharp /
 // flat shared with the Stupnice page); this page offers all scale types
 const FILTER_STORAGE_KEY = 'scales-range-filters';
 const ALL_FILTERS = { type: SCALE_TYPE_ORDER, acc: ['sharp', 'flat'] };
 
-function toggleFilter(btn, stateKey, value) {
-  const set = state[stateKey];
-  if (set.has(value) && set.size === 1) return;
-  if (set.has(value)) set.delete(value);
-  else set.add(value);
-  applyFilterChange();
-}
-
 // "Vše zapnout" in the sticky row's filters
-function enableAllFilters() {
-  state.filterType = new Set(ALL_FILTERS.type);
-  state.filterAcc  = new Set(ALL_FILTERS.acc);
+function enableAllScaleFilters() {
+  enableAllFilters(state, ALL_FILTERS);
   applyFilterChange();
 }
 
@@ -205,31 +185,16 @@ function applyFilterChange() {
   update();
 }
 
-// Remembered filters, before the URL's scale (which switches its own filters on)
-function applySavedFilters() {
-  const saved = loadSavedFilters(FILTER_STORAGE_KEY, ALL_FILTERS);
-  if (saved.filterType) state.filterType = saved.filterType;
-  if (saved.filterAcc) state.filterAcc = saved.filterAcc;
-}
-
 // ─── Scale select ─────────────────────────────────────────────────────────────
 
 function repopulateSelect() {
   const sel = $('scale-select');
-  while (sel.firstChild) sel.removeChild(sel.firstChild);
+  sel.replaceChildren();
   const scales = visibleScales();
   // "Celý rozsah" on top; scales grouped by type so they stay visually apart from it
   sel.appendChild(Object.assign(document.createElement('option'), { value: FULL_RANGE_ID, textContent: FULL_RANGE_LABEL }));
-  SCALE_TYPE_ORDER.forEach((t) => appendGroup(sel, SCALE_TYPE_GROUP_LABEL[t], scales.filter((s) => s.type === t)));
+  SCALE_TYPE_ORDER.forEach((t) => appendScaleOptionGroup(sel, SCALE_TYPE_GROUP_LABEL[t], scales.filter((s) => s.type === t), makeOption));
   sel.value = state.scaleId;
-}
-
-function appendGroup(sel, label, scales) {
-  if (scales.length === 0) return;
-  const grp = document.createElement('optgroup');
-  grp.label = label;
-  scales.forEach((s) => grp.appendChild(makeOption(s)));
-  sel.appendChild(grp);
 }
 
 function makeOption(s) {
@@ -310,7 +275,7 @@ const SCALE_NAV_HEADING = () => ({ root: $('scale-heading'), prev: $('scale-nav-
 // "**Fis dur**: F♯ G♯ A♯ H C♯ D♯ E♯ F♯" — bold name, then the text.
 // Octave numbers in the text (full range bounds) are drawn as a smaller subscript.
 function setSubtitle(el, name, text, suffix = '') {
-  while (el.firstChild) el.removeChild(el.firstChild);
+  el.replaceChildren();
   el.appendChild(Object.assign(document.createElement('strong'), { textContent: name }));
   el.appendChild(document.createTextNode(': '));
   for (const part of splitOctaveNumbers(text)) {
@@ -325,7 +290,7 @@ function setSubtitle(el, name, text, suffix = '') {
 // every octave (staves, fingerings), like a fingering column name.
 function setScaleSubtitle(el, entry, variant) {
   const notes = generateScale(entry.id, scaleStartOctave(entry.id), variant);
-  while (el.firstChild) el.removeChild(el.firstChild);
+  el.replaceChildren();
   el.appendChild(Object.assign(document.createElement('strong'), { textContent: scaleName(entry) }));
   el.appendChild(document.createTextNode(': '));
   scaleNoteLabels(notes, entry.type === 'minor').forEach(({ label, semitone }, i) => {
@@ -345,7 +310,7 @@ function setScaleSubtitle(el, entry, variant) {
 const OUTSIDE_SCALE_PREFIX = 'mimo stupnici';
 
 function setTooltipContent(el, label) {
-  while (el.firstChild) el.removeChild(el.firstChild);
+  el.replaceChildren();
   for (const line of label.split('\n')) {
     const lineEl = document.createElement('div');
     if (line.startsWith(OUTSIDE_SCALE_PREFIX)) {
@@ -414,7 +379,7 @@ const START_SCALE_GROUPS = [
 
 function renderStartScales() {
   const panel = $('start-scales');
-  while (panel.firstChild) panel.removeChild(panel.firstChild);
+  panel.replaceChildren();
   const note = state.startNote;
   panel.hidden = !note;
   if (!note) return;
@@ -560,7 +525,7 @@ function initScaleSwitching() {
     variantSwipeArea: $('type-nav'),
     onScaleStep: switchScale,
     onVariantStep: switchVariant,
-    onEnableAllFilters: enableAllFilters,
+    onEnableAllFilters: enableAllScaleFilters,
   });
 }
 
@@ -640,7 +605,7 @@ function noteNameElement(tag, className, { name, octave }) {
 // them); otherwise with the scale's spelling only.
 function renderFingeringChart(scaleNotes = null, tonicName = null, chordNames = [], lowercase = false, rangeNotes = [], allNames = false) {
   const chart = $('fingering-chart');
-  while (chart.firstChild) chart.removeChild(chart.firstChild);
+  chart.replaceChildren();
   chart.hidden = false;
   chart.appendChild(Object.assign(document.createElement('h3'), { textContent: scaleNotes ? 'Hmaty tónů stupnice' : 'Hmaty' }));
 
@@ -774,7 +739,7 @@ function markSelectedNote() {
 // Basic and alternative fingerings of the selected note, next to its start scales.
 function renderNoteFingerings() {
   const panel = $('note-fingerings');
-  while (panel.firstChild) panel.removeChild(panel.firstChild);
+  panel.replaceChildren();
   const note = selectedNote();
   const entry = note && fingeringFor(SAXOPHONE_ALTO.fingerings, note.name, note.octave);
   panel.hidden = !entry;
@@ -988,16 +953,14 @@ function update() {
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  initAnalytics();
-  applyProfile(savedProfileId());
-  applySavedFilters();
+  initSitePage({ settingsRows: [SECTION_TINT_ROW], analytics: true });
+  // Remembered filters, before the URL's scale (which switches its own filters on)
+  applySavedFilters(state, FILTER_STORAGE_KEY, ALL_FILTERS);
   applyHashToState();
   syncFilterChips(state);
-  initFilterChips();
-  initProfileSelect($('profile-select'));
+  initFilterChips(state, applyFilterChange);
   initSectionTintSelect($('section-tint-select'));
   repopulateSelect();
-  registerServiceWorker();
   initTooltip();
   initStartScales();
   initSelectionKeys();
@@ -1019,20 +982,6 @@ document.addEventListener('DOMContentLoaded', () => {
     playScaleSlide();
   });
 
-  const footer = document.getElementById('app-footer');
-  if (footer) {
-    const a = Object.assign(document.createElement('a'), { href: '/history.html', textContent: `Scales v${APP_VERSION} · ${BUILD_DATE}` });
-    footer.appendChild(a);
-  }
 
-  // First staff render waits for the music font (the resize observer also renders on observe)
-  whenMusicFontReady().then(() => {
-    update();
-    if (typeof ResizeObserver !== 'undefined') {
-      const ro = new ResizeObserver(update);
-      ro.observe($('range-staff'));
-    } else {
-      window.addEventListener('resize', update);
-    }
-  });
+  renderStavesWhenFontReady(update, [$('range-staff')]);
 });

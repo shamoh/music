@@ -1,6 +1,10 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { navLabelParts, initScaleNavigation, initFilterToggle, filtersWrapped, inactiveFilterCount } from '../docs/js/scale-nav.js';
+import {
+  navLabelParts, initScaleNavigation, initFilterToggle, filtersWrapped, inactiveFilterCount,
+  savedLastScaleId, saveLastScaleId, appendScaleOptionGroup,
+} from '../docs/js/scale-nav.js';
+import { memoryStorage, blockedStorage, fakeContainer, fakeDocument, fakeEventTarget } from './helpers/fake-dom.js';
 import { SCALE_CATALOG } from '../docs/js/music.js';
 
 const byId = (id) => SCALE_CATALOG.find((s) => s.id === id);
@@ -23,19 +27,17 @@ describe('navLabelParts', () => {
   });
 });
 
-// Stand-ins: a document collecting keydown listeners and a heading root collecting clicks
-function fakeDocument() {
-  const listeners = [];
+// Stand-ins: a document taking key presses (Shift held) and a heading root collecting clicks
+function fakeKeyDocument() {
+  const doc = fakeDocument();
+  doc.press = (key, extra = {}) => {
+    const event = { key, shiftKey: true, prevented: false, preventDefault() { event.prevented = true; }, target: null, ...extra };
+    doc.dispatch('keydown', event);
 
-  return {
-    getElementById: () => null,
-    addEventListener: (type, fn) => listeners.push(fn),
-    press: (key, extra = {}) => {
-      const event = { key, shiftKey: true, prevented: false, preventDefault() { event.prevented = true; }, target: null, ...extra };
-      listeners.forEach((fn) => fn(event));
-      return event;
-    },
+    return event;
   };
+
+  return doc;
 }
 
 function fakeHeading() {
@@ -52,7 +54,7 @@ function fakeHeading() {
 }
 
 function setup({ withVariants = true } = {}) {
-  const doc = fakeDocument();
+  const doc = fakeKeyDocument();
   const { heading, click } = fakeHeading();
   const steps = [];
   initScaleNavigation({
@@ -116,10 +118,8 @@ describe('initFilterToggle', () => {
   // Stand-ins: a row with the toggle and chips, a document and a window collecting listeners
   function setup({ withToggle = true, chips = [chip(true), chip(false)], onEnableAllFilters = null } = {}) {
     const classes = new Set(['filters-collapsed']);
-    const element = (extra = {}) => ({
+    const element = (extra = {}) => fakeEventTarget({
       attributes: {},
-      listeners: [],
-      addEventListener(type, fn) { this.listeners.push(fn); },
       setAttribute(name, value) { this.attributes[name] = value; },
       ...extra,
     });
@@ -142,14 +142,14 @@ describe('initFilterToggle', () => {
     const target = (inside) => ({ closest: () => (inside ? {} : null) });
     const escape = () => {
       const event = { key: 'Escape', stopped: false, stopPropagation() { event.stopped = true; } };
-      win.listeners.forEach((fn) => fn(event));
+      win.dispatch('keydown', event);
       return event;
     };
 
     return {
       isOpen: () => classes.has('filters-open'),
-      clickToggle: () => toggle.listeners.forEach((fn) => fn()),
-      clickPage: (inside) => doc.listeners.forEach((fn) => fn({ target: target(inside) })),
+      clickToggle: () => toggle.click(),
+      clickPage: (inside) => doc.click({ target: target(inside) }),
       escape,
       toggle,
       reset,
@@ -196,7 +196,7 @@ describe('initFilterToggle', () => {
     let calls = 0;
     const page = setup({ chips: [chip(false), chip(true)], onEnableAllFilters: () => { calls += 1; } });
     assert.equal(page.reset.hidden, false);
-    page.reset.listeners.forEach((fn) => fn());
+    page.reset.click();
     assert.equal(calls, 1);
   });
   it('"Vše zapnout" stays hidden while every filter is on or without the page callback', () => {
@@ -205,5 +205,44 @@ describe('initFilterToggle', () => {
   });
   it('a row without the toggle is left alone', () => {
     assert.doesNotThrow(() => setup({ withToggle: false }));
+  });
+});
+
+describe('last shown scale', () => {
+  it('is remembered for both scale pages under one key', () => {
+    const storage = memoryStorage();
+    saveLastScaleId('A-minor', storage);
+
+    assert.equal(savedLastScaleId(storage), 'A-minor');
+    assert.deepEqual(storage.items, { 'scales-last-scale': 'A-minor' });
+  });
+
+  it('is null when nothing is stored or the storage fails', () => {
+    assert.equal(savedLastScaleId(memoryStorage()), null);
+    assert.equal(savedLastScaleId(blockedStorage()), null);
+    assert.doesNotThrow(() => saveLastScaleId('C-major', blockedStorage()));
+  });
+});
+
+describe('appendScaleOptionGroup', () => {
+  const fakeSelect = () => fakeContainer();
+  const documentRef = fakeDocument();
+  const makeOption = (scale) => ({ value: scale.id });
+
+  it('appends a labelled group with an option per scale', () => {
+    const select = fakeSelect();
+    appendScaleOptionGroup(select, 'Moll', [byId('a-minor'), byId('e-minor')], makeOption, documentRef);
+
+    assert.equal(select.children.length, 1);
+    assert.equal(select.children[0].tagName, 'optgroup');
+    assert.equal(select.children[0].label, 'Moll');
+    assert.deepEqual(select.children[0].children, [{ value: 'a-minor' }, { value: 'e-minor' }]);
+  });
+
+  it('appends nothing for no scales', () => {
+    const select = fakeSelect();
+    appendScaleOptionGroup(select, 'Moll', [], makeOption, documentRef);
+
+    assert.equal(select.children.length, 0);
   });
 });

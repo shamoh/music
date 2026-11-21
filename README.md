@@ -156,3 +156,24 @@ No other changes are needed — the UI selector is populated automatically from 
 2. **Application** → **Service Workers** — verify SW is registered
 3. **Network** tab → set **Offline** → reload — app should load from cache
 4. On mobile: Chrome menu → **Add to Home screen**
+
+## License
+
+The source code is released under the
+[Functional Source License, Version 1.1, MIT Future License](LICENSE)
+(FSL-1.1-MIT). You may use, modify and redistribute it for any purpose other
+than a competing commercial product or service. Each version becomes available
+under the MIT License two years after its release.
+
+Versions up to and including commit `69be3d9` (app version 1.0.54) were
+released under the MIT License and remain available under it.
+
+Contributions are accepted under the Contributor License Agreement described
+in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+The license covers the code only. It does not grant any rights to the name
+"Scales" or to the app's logo and icons, which may not be used to identify
+derived works or products without permission.
+
+The music font `docs/fonts/ScalesMusic.woff` is a subset of Bravura, licensed
+under the [SIL Open Font License](docs/fonts/Bravura-OFL.txt).

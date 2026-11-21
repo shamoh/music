@@ -661,23 +661,7 @@ if (typeof document !== 'undefined') {
   function initMetronome() {
     state = loadState();
 
-    import('/js/themes.js').then(({ applyProfile, savedProfileId, initProfileSelect }) => {
-      applyProfile(savedProfileId());
-      initProfileSelect(document.getElementById('profile-select'));
-    });
-
-    import('/js/analytics.js').then(({ initAnalytics }) => initAnalytics());
-
-    import('/js/defaults.js').then(({ APP_VERSION, BUILD_DATE }) => {
-      const footer = document.getElementById('app-footer');
-      if (footer) {
-        const a = Object.assign(document.createElement('a'), {
-          href: '/history.html',
-          textContent: `Scales v${APP_VERSION} · ${BUILD_DATE}`,
-        });
-        footer.appendChild(a);
-      }
-    });
+    import('/js/site-layout.js').then(({ initSitePage }) => initSitePage({ currentSectionId: 'metronome', analytics: true }));
 
     renderPatternChips();
     renderBeatDots();
