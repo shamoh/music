@@ -25,8 +25,13 @@ python3 server.py   # serves from docs/, then open http://localhost:8023
 ## Tests
 
 ```bash
-node --test tests/music.test.js
+npm test                          # all tests (node --test 'tests/**/*.test.js')
+node --test tests/music.test.js   # a single file
 ```
+
+**Before finishing any change, run `npm test` — a change is not done until all tests pass** (also for refactors and moves of code between modules).
+
+`tests/modules.test.js` guards the wiring between the browser modules: every named import must be exported by its module, a name of another module must not be used without importing it, and every module must load in Node. Run it after moving code between modules.
 
 ## Architecture overview
 
@@ -60,6 +65,14 @@ docs/                               GitHub Pages publishing root
     scale-nav.js                    shared scale navigation of both scale pages: sticky ‹ › heading with filters, Shift+arrows, swipes, last scale, select groups
     scale-view.js                   scales page building blocks without page side effects: variant header, select option, note chips, URL hash → state
     scales-page.js                  scales page state + rendering (update, select, switching, filters) with injected document / storage; app.js only wires it up
+    range-page.js                   saxophone range page state + rendering (update, select, hash, selection keys) with injected document / storage; alto/app.js only wires it up
+    range-names.js                  range page names, labels, constants, URL codes (pure)
+    range-tooltip.js                range page note tooltip
+    range-fingerings.js             range page fingering chart + fingerings panel + marking of selected notes
+    range-selection.js              range page selected note + highlighted column note: clicks and keys
+    range-start-scales.js           range page "Stupnice od tónu" panel
+    range-header.js                 range page variant switcher, heading, subtitles
+    range-view.js                   range page rendering of the shown scale / full range (staves, hints, links, fingerings)
     scale-filters.js                scale filters of both scale pages: remembered (type per page, sharp/flat shared; localStorage), chips, toggling, "Vše zapnout"
     service-worker-registration.js  registers the PWA service worker — not on localhost (unregisters it there)
     instrument/saxophone/           key map + fingerings shared by saxophones; alto/instrument.js = descriptor
