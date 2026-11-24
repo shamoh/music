@@ -58,6 +58,8 @@ docs/                               GitHub Pages publishing root
     page-keys.js                    key presses meant for the page (not the settings menu / form fields), focus ring
     swipe-gesture.js                horizontal swipe → previous / next step (touch devices), slide animation
     scale-nav.js                    shared scale navigation of both scale pages: sticky ‹ › heading with filters, Shift+arrows, swipes, last scale, select groups
+    scale-view.js                   scales page building blocks without page side effects: variant header, select option, note chips, URL hash → state
+    scales-page.js                  scales page state + rendering (update, select, switching, filters) with injected document / storage; app.js only wires it up
     scale-filters.js                scale filters of both scale pages: remembered (type per page, sharp/flat shared; localStorage), chips, toggling, "Vše zapnout"
     service-worker-registration.js  registers the PWA service worker — not on localhost (unregisters it there)
     instrument/saxophone/           key map + fingerings shared by saxophones; alto/instrument.js = descriptor
@@ -81,9 +83,9 @@ Three values must always be updated together:
 
 | File | Key | Current |
 | --- | --- | --- |
-| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.55'` |
-| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-11-21 18:37'` |
-| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.55'` |
+| `docs/js/defaults.js` | `APP_VERSION` | `'1.0.56'` |
+| `docs/js/defaults.js` | `BUILD_DATE` | `'2026-11-24 23:03'` |
+| `docs/service-worker.js` | `CACHE_NAME` | `'scales-1.0.56'` |
 
 `APP_VERSION` and `BUILD_DATE` drive the footer display (`Scales vX.Y.Z · YYYY-MM-DD HH:MM`).
 `CACHE_NAME` forces the browser to drop the old PWA cache and re-fetch all assets.

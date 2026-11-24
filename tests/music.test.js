@@ -2,6 +2,10 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   generateScale,
+  keySigLabel,
+  scaleAccidentalLabel,
+  noteChipLabel,
+  variantChangeText,
   getChordNotes,
   noteToStaffSlot,
   buildAltSaxRange,
@@ -1283,5 +1287,66 @@ describe('pitchSpellings', () => {
   });
   it('gives the same names for every spelling of a pitch', () => {
     assert.deepEqual(names('Ces', 4), names('H', 3));
+  });
+});
+
+describe('keySigLabel', () => {
+  it('is empty without accidentals', () => {
+    assert.equal(keySigLabel(0), '');
+  });
+  it('lists sharps', () => {
+    assert.equal(keySigLabel(2), ' (2♯ : fis, cis)');
+  });
+  it('lists flats with B written as "b"', () => {
+    assert.equal(keySigLabel(-3), ' (3♭ : b, es, as)');
+    assert.equal(keySigLabel(-1), ' (1♭ : b)');
+  });
+});
+
+describe('scaleAccidentalLabel', () => {
+  it('is empty for a scale without accidentals', () => {
+    assert.equal(scaleAccidentalLabel(['C', 'D', 'E', 'F', 'G', 'A', 'H', 'C']), '');
+  });
+  it('lists flats of Es major with B as "b"', () => {
+    assert.equal(scaleAccidentalLabel(['Es', 'F', 'G', 'As', 'B', 'C', 'D', 'Es']), ' (3♭ : es, as, b)');
+  });
+  it('lists sharps', () => {
+    assert.equal(scaleAccidentalLabel(['G', 'A', 'H', 'C', 'D', 'E', 'Fis', 'G']), ' (1♯ : fis)');
+  });
+  it('lists flats and sharps together', () => {
+    assert.equal(scaleAccidentalLabel(['A', 'B', 'H', 'C', 'D', 'E', 'Fis', 'A']), ' (1♭ : b, 1♯ : fis)');
+  });
+});
+
+describe('noteChipLabel', () => {
+  it('keeps ordinary names', () => {
+    assert.equal(noteChipLabel('Fis'), 'Fis');
+  });
+  it('adds the enharmonic equivalent of double sharps', () => {
+    assert.equal(noteChipLabel('Fisis'), 'Fisis (=G)');
+    assert.equal(noteChipLabel('Cisis'), 'Cisis (=D)');
+    assert.equal(noteChipLabel('Gisis'), 'Gisis (=A)');
+  });
+});
+
+describe('variantChangeText', () => {
+  const entry = {
+    notes: ['A', 'H', 'C', 'D', 'E', 'F', 'G', 'A'],
+    harmonicNotes: ['A', 'H', 'C', 'D', 'E', 'F', 'Gis', 'A'],
+    melodicNotes: ['A', 'H', 'C', 'D', 'E', 'Fis', 'Gis', 'A'],
+  };
+  it('lists the notes changed in the harmonic variant', () => {
+    assert.equal(variantChangeText(entry, 'harmonic'), 'G → Gis');
+  });
+  it('lists all notes changed in the melodic variant', () => {
+    assert.equal(variantChangeText(entry, 'melodic'), 'F → Fis, G → Gis');
+  });
+  it('is empty when the variant does not exist', () => {
+    assert.equal(variantChangeText({ notes: entry.notes }, 'harmonic'), '');
+  });
+  it('adds the enharmonic hint for double sharps', () => {
+    const e = { notes: ['Gis', 'Ais', 'H', 'Cis', 'Dis', 'E', 'Fis', 'Gis'],
+      harmonicNotes: ['Gis', 'Ais', 'H', 'Cis', 'Dis', 'E', 'Fisis', 'Gis'] };
+    assert.equal(variantChangeText(e, 'harmonic'), 'Fis → Fisis (=G)');
   });
 });

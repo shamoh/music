@@ -681,3 +681,61 @@ export function computeInlineAccidentals(noteNames, keySig) {
 
 // ─── Legacy constants (kept for notation.js compatibility) ───────────────────
 export const DIATONIC_LETTERS = DIATONIC_NAMES;
+
+// ─── Key signature labels ─────────────────────────────────────────────────────
+
+const SHARP_NAMES = ['fis', 'cis', 'gis', 'dis', 'ais', 'eis', 'his'];
+const FLAT_NAMES  = ['b',   'es',  'as',  'des', 'ges', 'ces', 'fes'];
+
+// Main scale title label: "(2♯ fis, cis)" or "(3♭ : b, es, as)" — B (H-flat) is written "b"
+export function keySigLabel(keySig) {
+  if (keySig === 0) return '';
+  if (keySig > 0) {
+    return ` (${keySig}♯ : ${SHARP_NAMES.slice(0, keySig).join(', ')})`;
+  }
+  const n = Math.abs(keySig);
+  return ` (${n}♭ : ${FLAT_NAMES.slice(0, n).join(', ')})`;
+}
+
+function noteDisplayName(name) {
+  return name.toLowerCase();
+}
+
+// Compute label like "(2♭ es, as)" or "(1♭ : b, 1♯ : cis)" from actual variant notes
+export function scaleAccidentalLabel(notes) {
+  const flatNames = [], sharpNames = [];
+  const seen = new Set();
+  for (const name of notes.slice(0, 7)) {
+    const letter = name === 'B' ? 'H' : name[0].toUpperCase();
+    if (seen.has(letter)) continue;
+    seen.add(letter);
+    const acc = accidentalType(name);
+    if (acc === 'flat') flatNames.push(noteDisplayName(name));
+    else if (acc === 'sharp') sharpNames.push(noteDisplayName(name));
+  }
+  const parts = [];
+  if (flatNames.length > 0)  parts.push(`${flatNames.length}♭ : ${flatNames.join(', ')}`);
+  if (sharpNames.length > 0) parts.push(`${sharpNames.length}♯ : ${sharpNames.join(', ')}`);
+  return parts.length > 0 ? ` (${parts.join(', ')})` : '';
+}
+
+// ─── Note chips and variant changes ───────────────────────────────────────────
+
+const DOUBLE_SHARP_ENHARMONIC = { Fisis: 'G', Cisis: 'D', Gisis: 'A' };
+
+export function noteChipLabel(name) {
+  const enh = DOUBLE_SHARP_ENHARMONIC[name];
+  return enh ? `${name} (=${enh})` : name;
+}
+
+// "G → Gis, F → Fis" — notes that differ in a variant vs natural
+export function variantChangeText(entry, variant) {
+  const natural = entry.notes;
+  const varied  = variant === 'harmonic' ? entry.harmonicNotes : entry.melodicNotes;
+  if (!varied) return '';
+  const changes = [];
+  for (let i = 0; i < natural.length - 1; i++) {
+    if (natural[i] !== varied[i]) changes.push(`${natural[i]} → ${noteChipLabel(varied[i])}`);
+  }
+  return changes.join(', ');
+}

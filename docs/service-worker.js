@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scales-1.0.55';
+const CACHE_NAME = 'scales-1.0.56';
 const ASSETS = [
   '/',
   '/index.html',
@@ -23,6 +23,8 @@ const ASSETS = [
   '/js/fingering.js',
   '/js/fingering-diagram.js',
   '/js/note-highlight.js',
+  '/js/scale-view.js',
+  '/js/scales-page.js',
   '/js/page-keys.js',
   '/js/swipe-gesture.js',
   '/js/scale-nav.js',
